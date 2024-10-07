@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <!-- Meta tags for social media banners, these should be filled in appropriatly as they are your "business card" -->
+    <!-- Replace the content tag with appropriate information -->
+    <meta name="description" content="We introduce VLM2Vec, a unified instruction-guided multimodal embedding model for all tasks.">
+    <meta property="og:title" content="VLM2Vec: Training Vision-Language Models for Massive Multimodal Embedding Tasks" />
+    <meta property="og:description" content="We introduce VLM2Vec, a unified instruction-guided multimodal embedding model for all tasks." />
+    <meta property="og:url" content="https://tiger-ai-lab.github.io/VLM2Vec/" />
+    <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X630-->
+    <meta property="og:image" content="static/images/teaser.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+
+    <meta name="twitter:title" content="VLM2Vec: Training Vision-Language Models for Massive Multimodal Embedding Tasks">
+    <meta name="twitter:description" content="We introduce VLM2Vec, a unified instruction-guided multimodal embedding model for all tasks.">
+    <!-- Path to banner image, should be in the path listed below. Optimal dimenssions are 1200X600-->
+    <meta name="twitter:image" content="static/images/teaser.jpg">
+    <meta name="twitter:card" content="summary_large_image">
+    <!-- Keywords for your paper to be indexed by-->
+    <meta name="keywords" content="VLM2Vec">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+    <title>VLM2Vec</title>
+    <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
+
+    <link rel="stylesheet" href="static/css/bulma.min.css">
+    <link rel="stylesheet" href="static/css/bulma-carousel.min.css">
+    <link rel="stylesheet" href="static/css/bulma-slider.min.css">
+    <link rel="stylesheet" href="static/css/fontawesome.all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+    <link rel="stylesheet" href="static/css/index.css">
+
+    <script src="static/js/jquery.min.js"></script>
+    <script src="static/js/main.js"></script>
+    <script defer src="static/js/fontawesome.all.min.js"></script>
+    <script src="static/js/bulma-carousel.min.js"></script>
+    <script src="static/js/bulma-slider.min.js"></script>
+    <script src="static/js/index.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="static/css/jquery.dataTables.css">
+    <script type="text/javascript" charset="utf8" src="static/js/jquery-3.5.1.js"></script>
+    <script type="text/javascript" charset="utf8" src="static/js/jquery.dataTables.js"></script>
+</head>
+
+<body>
+
+
+    <section class="hero">
+        <div class="hero-body">
+            <div class="container is-max-desktop">
+                <div class="columns is-centered">
+                    <div class="column has-text-centered">
+                        <h1 class="title is-1 publication-title">
+                            VLM2Vec: Training Vision-Language Models for Massive Multimodal Embedding Tasks
+                        </h1>
+                        <div class="is-size-5 publication-authors">
+                            <!-- Paper authors -->
+                            <span class="author-block">
+                                  <sup>♠️</sup><a href="https://xmhzz2018.github.io/" target="_blank">Ziyan Jiang</a>,
+                            </span>
+                            <span class="author-block">
+                                  <sup>♣</sup><a href="https://memray.me/" target="_blank">Rui Meng</a>,
+                            </span>
+                            <span class="author-block">
+                                  <sup>♠</sup><a href="https://scholar.google.com/citations?user=zxtgr18AAAAJ&hl=en" target="_blank">Xinyi Yang</a>,
+                            </span>
+                            <span class="author-block">
+                                  <sup>♣</sup><a href="https://scholar.google.co.uk/citations?user=krh3p8AAAAAJ&hl=en" target="_blank">Semih Yavuz</a>,
+                            </span>
+                            <span class="author-block">
+                                  <sup>♣</sup><a href="https://scholar.google.com/citations?user=H_6RQ7oAAAAJ&hl=en" target="_blank">Yingbo Zhou</a>,
+                            </span>
+                            <span class="author-block">
+                                  <sup>♠️</sup><a href="https://wenhuchen.github.io/" target="_blank">Wenhu Chen</a>
+                            </span>
+                        </div>
+
+                        <div class="is-size-5 publication-authors">
+                            <span class="author-block">
+                            <sup>♠️</sup>University of Waterloo,
+                            <sup>♣</sup>Salesforce Research
+                            </span>
+                            <span class="author-block">
+                                <small>
+                                    ziyanjiang528@gmail.com,
+                                    ruimeng@salesforce.com,
+                                    wenhuchen@uwaterloo.ca
+                                </small>
+                            </span>
+
+                        </div>
+
+                        <div class="column has-text-centered">
+                            <div class="publication-links">
+                                <span class="link-block">
+                                  <a href="#" target="_blank"
+                                  class="external-link button is-normal is-rounded is-dark">
+                                      <span class="icon">
+                                        🤗
+                                      </span>
+                                      <span>MMEB Dataset</span>
+                                  </a>
+                                </span>
+
+                                <!-- Github link -->
+                                <span class="link-block">
+                                  <a href="https://github.com/TIGER-AI-Lab/VLM2Vec" target="_blank"
+                                  class="external-link button is-normal is-rounded is-dark">
+                                  <span class="icon">
+                                    <i class="fab fa-github"></i>
+                                  </span>
+                                      <span>Code</span>
+                                  </a>
+                                </span>
+
+                                <!-- ArXiv abstract Link -->
+                                <span class="link-block">
+                                <a href="#" target="_blank"
+                                  class="external-link button is-normal is-rounded is-dark">
+                                      <span class="icon">
+                                        <i class="ai ai-arxiv"></i>
+                                      </span>
+                                <span>arXiv</span>
+                                </a>
+                                </span>
+                                
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+    <section class="section hero is-light">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-four-fifths">
+            <h1 class="title is-3">Abstract</h1>
+            <div class="content has-text-justified">
+                            <p>Embedding models have been crucial in enabling various downstream tasks such as semantic similarity, information retrieval, and clustering. Recently, there has been a surge of interest in developing universal text embedding models that can generalize across tasks (e.g., MTEB). However, progress in learning universal multimodal embedding models has been relatively slow despite their importance. In this work, we aim to explore the potential for building universal embeddings capable of handling a wide range of downstream tasks. Our contributions are twofold: (1) MMEB (Massive Multimodal Embedding Benchmark), which covers 4 meta-tasks including classification, question answering, retrieval, and visual grounding and 36 datasets, including 20 training and 16 evaluation datasets, and (2) VLM2Vec (Vision-Language Model $\rightarrow$ Vector), a contrastive training framework that converts any state-of-the-art vision-language model into an embedding model via training on MMEB. Unlike previous models such as CLIP and BLIP, VLM2Vec can process any combination of images and text to generate a fixed-dimensional vector based on task instructions. We build a series of VLM2Vec models on Phi-3.5-V and evaluate them on MMEB's evaluation split. Our results show that VLM2Vec achieves an absolute average improvement of 10\% to 20\% over existing multimodal embedding models on both in-distribution and out-of-distribution datasets in MMEB.
+                            </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Image carousel -->
+    <section class="hero">
+        <div class="hero-body">
+            <div class="container is-max-desktop">
+                <div class="columns is-centered">
+                    <div class="column is-full">
+                        <div class="item">
+                            <!-- Your image here -->
+                            <img src="static/images/teaser.jpg" alt="VLM2Vec" />
+                            <h2 class="subtitle">
+                                Figure 1: We develop a universal multimodal embedding benchmark, MMEB, along with VLM2Vec, an embedding model adapted from vision-language models (VLMs). VLM2Vec is capable of following instructions and performing various multimodal embedding tasks, accommodating any combination of image and text modalities.
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- End image carousel -->
+
+
+    <section class="section hero is-light">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-four-fifths">
+            <h1 class="title is-1">VLM2Vec</h1>
+            <div class="content has-text-justified">
+              <p>
+                We propose VLM2Vec framework to learn a single multimodal embedding model that can encode a series of images and text for any downstream task.
+                Unlike traditional CLIP or BLIP embeddings, VLM2Vec can handle images with any resolution and text with any length. It can also follow instruction to produce instruction-guided representation, which fits the downstream tasks better than other task-agnostic multimodal emebddings.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+        <!-- Image carousel -->
+    <section class="hero">
+        <div class="hero-body">
+            <div class="container is-max-desktop">
+                <div class="columns is-centered">
+                    <div class="column is-full">
+                        <div class="item">
+                            <!-- Your image here -->
+                            <img src="static/images/vlm2vec_train.jpg" alt="VLM2Vec" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- End image carousel -->
+
+
+
+
+    <section class="section hero is-light">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-four-fifths">
+            <h1 class="title is-1">MMEB Benchmark</h1>
+            <div class="content has-text-justified">
+              <p>
+                The model was trained with contrastive learning on a massive amount of examples we compiled from 36 datatsets spanning 4 tasks. We name this benchmark as MMEB, which has the train and eval splits separately. We hold out 15 datasets for out-of-distribution evaluation. 
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+     <!-- Image carousel -->
+    <section class="hero">
+        <div class="hero-body">
+            <div class="container is-max-desktop">
+                <div class="columns is-centered">
+                    <div class="column is-full">
+                        <div class="item">
+                            <!-- Your image here -->
+                            <img src="static/images/dataset.png" alt="MMEB" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- End image carousel -->
+
+
+
+    <section class="section hero is-light">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-four-fifths">
+            <h1 class="title is-1">MMEB Evaluation</h1>
+            <div class="content has-text-justified">
+              <p>
+                We evaluated a wide range of multimodal embeddings on MMEB benchmarks. We show our results below. VLM2Vec outperforms all the baselines by a huge margin. The improvement on out-of-distribution evaluation demonstrates the generalization capability of VLM2Vec framework.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+
+    <section class="hero">
+        <div class="hero-body">
+            <div class="container is-max-desktop">
+                <div class="columns is-centered">
+                    <div class="column is-full">
+                        <div class="item">
+                            <img src="static/images/results.png" alt="MMEB" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+    <section class="section hero is-light">
+      <div class="container is-max-desktop">
+        <div class="columns is-centered has-text-centered">
+          <div class="column is-four-fifths">
+            <h1 class="title is-1">VLM2Vec Experiments</h1>
+            <div class="content has-text-justified">
+              <p>
+                We ablate different factors like batch size, step size, and image resolution to understand their impact on the final results.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+
+    <section class="hero">
+        <div class="hero-body">
+            <div class="container is-max-desktop">
+                <div class="columns is-centered">
+                    <div class="column is-full">
+                        <div class="item">
+                            <img src="static/images/ablation_train_setup.jpg" alt="MMEB" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+    <!-- BibTex citation -->
+    <section class="section" id="BibTeX">
+        <div class="container is-max-desktop content">
+            <h2 class="title">Reference</h2>
+            Please kindly cite our paper if you use our code, data, models or results:
+            <br><br>
+            <pre><code></code></pre>
+        </div>
+    </section>
+
+
+    <footer class="footer">
+        <div class="container">
+            <div class="columns is-centered">
+                <div class="column is-8">
+                    <div class="content">
+
+                        <p>
+                            This page was built using the <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank">Academic Project Page Template</a> which was adopted from the <a href="https://nerfies.github.io" target="_blank">Nerfies</a>                            project page. You are free to borrow the of this website, we just ask that you link back to this page in the footer. <br> This website is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"
+                                target="_blank">Creative
+              Commons Attribution-ShareAlike 4.0 International License</a>.
+                        </p>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+</body>
+<style>
+    .buttonGroup {
+        text-align: center;
+    }
+    
+    .buttonGroup>button {
+        padding: 15px;
+        color: white;
+        background-color: #363636;
+        border-radius: 5px;
+    }
+    
+    .buttonGroup>button:hover {
+        box-shadow: 5px;
+    }
+</style>
+
+</html>
