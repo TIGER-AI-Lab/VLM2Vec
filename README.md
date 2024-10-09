@@ -51,7 +51,7 @@ torchrun --nproc_per_node=2 --master_port=22447 --max_restarts=0 train.py \\
 Download the image file zip
 ```
 wget https://huggingface.co/datasets/TIGER-Lab/MMEB-eval/resolve/main/images.zip
-unzip images.zip eval_images/
+unzip images.zip -d eval_images/
 ```
 
 Please add ` --lora` for lora checkpoints.
