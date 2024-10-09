@@ -47,6 +47,13 @@ torchrun --nproc_per_node=2 --master_port=22447 --max_restarts=0 train.py \\
 ```
 
 ### Evaluation
+
+Download the image file zip
+```
+wget https://huggingface.co/datasets/TIGER-Lab/MMEB-eval/resolve/main/images.zip
+unzip images.zip eval_images/
+```
+
 Please add ` --lora` for lora checkpoints.
 ```bash
 python eval.py --model_name microsoft/Phi-3.5-vision-instruct \\
@@ -55,7 +62,7 @@ python eval.py --model_name microsoft/Phi-3.5-vision-instruct \\
 --pooling eos --normalize True --dataset_name TIGER-Lab/MMEB-eval \\
 --subset_name N24News CIFAR-100 HatefulMemes VOC2007 SUN397 ImageNet-A ImageNet-R ObjectNet Country211 \\
 --dataset_split test --per_device_eval_batch_size 16 \\
---image_dir $EVAL_DATA_DIR
+--image_dir eval_images/
 ```
 
 
