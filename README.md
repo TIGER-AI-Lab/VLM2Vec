@@ -4,7 +4,13 @@ This repo contains the code and data for [VLM2Vec: Training Vision-Language Mode
 
 <img width="1432" alt="abs" src="figures/teaser.png">
 
-## Related resources
+## Model
+Our model is based on converting an existing well-trained VLM (Phi-3.5-V) into an embedding model. The basic idea is to add an [EOS] token in the end of the sequence, which will be used as the representation of the multimodal inputs.
+
+<img width="1432" alt="abs" src="figures/vlm2vec_train.jpg">
+
+## Release
+Our model is being trained on MMEB-train and evaluated on MMEB-eval with contrastive learning. We only use in-batch negatives for training. Our best results were based on Lora training with batch size of 1024. We also have checkpoint with full training with batch size of 2048. Our results on 36 evaluation datasets are:
 ### Data
  - Train data: https://huggingface.co/datasets/TIGER-Lab/MMEB-train
  - Eval data: https://huggingface.co/datasets/TIGER-Lab/MMEB-eval
@@ -12,6 +18,10 @@ This repo contains the code and data for [VLM2Vec: Training Vision-Language Mode
 ### Checkpoints
  - [MMEB.lora8.bs1024](https://huggingface.co/TIGER-Lab/MMEB.lora8.bs1024/)
  - [MMEB.fullmodel.bs2048](https://huggingface.co/TIGER-Lab/MMEB.fullmodel.bs2048/)
+
+### Results
+Our model can outperform the existing baselines by a huge margin.
+<img width="900" alt="abs" src="figures/vlm2vec_results.png">
 
 
 ## How to run
