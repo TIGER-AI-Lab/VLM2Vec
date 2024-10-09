@@ -11,7 +11,6 @@ This repo contains the code and data for [VLM2Vec: Training Vision-Language Mode
 
 ### Checkpoints
  - [MMEB.lora8.bs1024](https://huggingface.co/TIGER-Lab/MMEB.lora8.bs1024/)
- - [MMEB.fullmodel.bs1024](https://huggingface.co/TIGER-Lab/MMEB.fullmodel.bs1024/)
  - [MMEB.fullmodel.bs2048](https://huggingface.co/TIGER-Lab/MMEB.fullmodel.bs2048/)
 
 
