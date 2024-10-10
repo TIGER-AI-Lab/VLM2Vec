@@ -34,14 +34,6 @@ class MMEBModel(nn.Module):
         hidden_states = self.encoder(**input, return_dict=True, output_hidden_states=True)
         hidden_states = hidden_states.hidden_states[-1]
         pooled_output = self._pooling(hidden_states, input['attention_mask'])
-        # if self.process_rank == 0:
-        #     if 'pixel_values' in input:
-        #         print(f"\tdevice={self.process_rank}: input_ids.shape={input['input_ids'].shape}, pixel_values.shape={input['pixel_values'].shape}")
-        #     else:
-        #         print(f"\tdevice={self.process_rank}: input_ids.shape={input['input_ids'].shape}")
-        #     print(f"\tdevice={self.process_rank}: hidden_states.shape={hidden_states.shape}")
-        #     print(f"\tdevice={self.process_rank}: pooled_output.shape={pooled_output.shape}")
-        #     pass
         return pooled_output
 
     def _pooling(self, last_hidden_state, attention_mask):
@@ -62,44 +54,22 @@ class MMEBModel(nn.Module):
             train_args: TrainingArguments,
             **hf_kwargs
     ):
+        # Loading the base model
         config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
         config.use_cache = False
-        config._attn_implementation = "flash_attention_2"
         config.padding_side = "right"
-        base_model = cls.TRANSFORMER_CLS.from_pretrained(model_args.model_name, **hf_kwargs, config=config, attn_implementation="flash_attention_2", torch_dtype=torch.bfloat16, trust_remote_code=True)
+        base_model = cls.TRANSFORMER_CLS.from_pretrained(
+            model_args.model_name, **hf_kwargs, config=config, 
+            attn_implementation="flash_attention_2", 
+            torch_dtype=torch.bfloat16, 
+            trust_remote_code=True)
         base_model.padding_side = "right"
-        # linear_modules = [
-        #     # Phi language modules
-        #     'qkv_proj',  # attention
-        #     'o_proj',
-        #     'down_proj',  # MLP
-        #     'gate_up_proj',
-        #     'lm_head',
-        # ]
-        # vision_linear_modules = [
-        #     # CLIP modules
-        #     'q_proj',  # attention
-        #     'k_proj',
-        #     'v_proj',
-        #     'out_proj',
-        #     'fc1',  # MLP
-        #     'fc2',
-        #     'img_projection.0',
-        #     'img_projection.2',
-        # ]
-        # linear_modules.extend(vision_linear_modules)
-
-        config._attn_implementation = "flash_attention_2"
-        config.padding_side = "right"
-        base_model = cls.TRANSFORMER_CLS.from_pretrained(model_args.model_name, **hf_kwargs, config=config, attn_implementation="flash_attention_2", torch_dtype=torch.bfloat16, trust_remote_code=True)
-        _attn_implementation="sdpa"
 
         if model_args.lora:
             lora_config = LoraConfig(
                 r=model_args.lora_r,
                 lora_alpha=model_args.lora_alpha,
                 target_modules=model_args.lora_target_modules.split(','),
-                # target_modules=linear_modules,
                 lora_dropout=model_args.lora_dropout,
                 init_lora_weights="gaussian",
                 use_dora=True,
@@ -127,19 +97,23 @@ class MMEBModel(nn.Module):
             train_args: TrainingArguments,
             **hf_kwargs
             ):
+        # Loading the base model
         config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
         config.use_cache = False
-        model_path = model_args.checkpoint_path if model_args.checkpoint_path else model_args.model_name
-        base_model = cls.TRANSFORMER_CLS.from_pretrained(model_path,
-                                                         **hf_kwargs,
-                                                         config=config,
-                                                         attn_implementation="flash_attention_2",
-                                                         torch_dtype=torch.bfloat16,
-                                                         trust_remote_code=True)
+        config.padding_side = "right"
+
+        checkpoint_path = model_args.checkpoint_path if model_args.checkpoint_path else model_args.model_name
+        base_model = cls.TRANSFORMER_CLS.from_pretrained(
+            checkpoint_path, **hf_kwargs, config=config,
+            attn_implementation="flash_attention_2",
+            torch_dtype=torch.bfloat16,
+            trust_remote_code=True)
         base_model.padding_side = "right"
+
+        # Building the model on top of the base
         if model_args.lora:
-            lora_config = LoraConfig.from_pretrained(model_path)
-            lora_model = PeftModel.from_pretrained(base_model, model_path, config=lora_config)
+            lora_config = LoraConfig.from_pretrained(checkpoint_path)
+            lora_model = PeftModel.from_pretrained(base_model, checkpoint_path, config=lora_config)
             lora_model = lora_model.merge_and_unload()
             model = cls(
                 encoder=lora_model,
@@ -162,11 +136,6 @@ class MMEBModel(nn.Module):
                 qry: Dict[str, Tensor] = None,
                 tgt: Dict[str, Tensor] = None,
                 ):
-        # if qry:
-        #     print(f"qry.shape={qry['input_ids'].shape}")
-        # if tgt:
-        #     print(f"tgt.shape={tgt['input_ids'].shape}")
-        # print(f"qry.shape={qry['input_ids'].shape}")
         qry_reps = self.encode_input(qry) if qry else None  # (bsz_per_device, dim)
         tgt_reps = self.encode_input(tgt) if tgt else None # (bsz_per_device, dim)
 
