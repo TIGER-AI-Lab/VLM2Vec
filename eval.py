@@ -47,7 +47,6 @@ def main():
         processor=processor,
     )
 
-
     # ToDo: This part of code is a little bit hacky. Need to refactor later.
     for idx, subset in enumerate(data_args.subset_name):
         score_path = os.path.join(data_args.encode_output_path, f"{subset}_score.json")
@@ -146,7 +145,7 @@ def main():
                 tgt_t.append(tgt_dict[tt])
                 all_candidates.append(tt)
             tgt_t = np.stack(tgt_t, axis=0)  # (num_candidate, dim)
-            scores, pred = get_pred(qry_t, tgt_t, normalization=model_args.normalize)
+            _, pred = get_pred(qry_t, tgt_t, normalization=model_args.normalize)
             if pred == 0:
                 n_correct += 1
             all_pred.append(all_candidates[pred])
