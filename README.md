@@ -33,16 +33,16 @@ For GPUs with small memory, use GradCache to reduce memory usage, i.e. setting s
 
 Use `--lora --lora_r 16` to enable LoRA tuning.
 ```bash
-torchrun --nproc_per_node=2 --master_port=22447 --max_restarts=0 train.py \\
- --model_name microsoft/Phi-3.5-vision-instruct --bf16 --pooling eos \\
- --dataset_name TIGER-Lab/MMEB-train \\
- --subset_name ImageNet_1K N24News HatefulMemes InfographicsVQA ChartQA Visual7W VisDial CIRR NIGHTS WebQA MSCOCO \\
- --num_sample_per_subset 50000 \\
- --image_dir $TRAIN_DATA_DIR \\
- --max_len 256 --num_crops 4 --output_dir $OUTPUT_DIR --logging_steps 1 \\
- --lr_scheduler_type linear --learning_rate 2e-5 --max_steps 2000 \\
- --warmup_steps 200 --save_steps 1000 --normalize True \\
- --temperature 0.02 --per_device_train_batch_size 8 \\
+torchrun --nproc_per_node=2 --master_port=22447 --max_restarts=0 train.py \
+ --model_name microsoft/Phi-3.5-vision-instruct --bf16 --pooling eos \
+ --dataset_name TIGER-Lab/MMEB-train \
+ --subset_name ImageNet_1K N24News HatefulMemes InfographicsVQA ChartQA Visual7W VisDial CIRR NIGHTS WebQA MSCOCO \
+ --num_sample_per_subset 50000 \
+ --image_dir $TRAIN_DATA_DIR \
+ --max_len 256 --num_crops 4 --output_dir $OUTPUT_DIR --logging_steps 1 \
+ --lr_scheduler_type linear --learning_rate 2e-5 --max_steps 2000 \
+ --warmup_steps 200 --save_steps 1000 --normalize True \
+ --temperature 0.02 --per_device_train_batch_size 8 \
  --grad_cache True --gc_q_chunk_size 2 --gc_p_chunk_size 2 
 ```
 
@@ -56,12 +56,12 @@ unzip images.zip -d eval_images/
 
 Please add ` --lora` for lora checkpoints.
 ```bash
-python eval.py --model_name microsoft/Phi-3.5-vision-instruct \\
---checkpoint_path $CKPT_DIR --encode_output_path $EVAL_OUTPUT_DIR \\
---processor_name processor --num_crops 4 --max_len 256 \\
---pooling eos --normalize True --dataset_name TIGER-Lab/MMEB-eval \\
---subset_name N24News CIFAR-100 HatefulMemes VOC2007 SUN397 ImageNet-A ImageNet-R ObjectNet Country211 \\
---dataset_split test --per_device_eval_batch_size 16 \\
+python eval.py --model_name microsoft/Phi-3.5-vision-instruct \
+--checkpoint_path $CKPT_DIR --encode_output_path $EVAL_OUTPUT_DIR \
+--num_crops 4 --max_len 256 \
+--pooling eos --normalize True --dataset_name TIGER-Lab/MMEB-eval \
+--subset_name N24News CIFAR-100 HatefulMemes VOC2007 SUN397 ImageNet-A ImageNet-R ObjectNet Country211 \
+--dataset_split test --per_device_eval_batch_size 16 \
 --image_dir eval_images/
 ```
 
