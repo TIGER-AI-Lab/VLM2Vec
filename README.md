@@ -28,7 +28,7 @@ Our model can outperform the existing baselines by a huge margin.
 
 ### Training
 
-Download the [train dataset](https://huggingface.co/datasets/TIGER-Lab/MMEB-train/tree/main/images_zip), unzip the image set of each dataset. Put these image folders under $TRAIN_DATA_DIR.
+Download all the dataset zip files from [train dataset](https://huggingface.co/datasets/TIGER-Lab/MMEB-train/tree/main/images_zip), and then unzip them to $TRAIN_DATA_DIR/images/. $TRAIN_DATA_DIR could be '.' (the current folder).
 
 For GPUs with small memory, use GradCache to reduce memory usage, i.e. setting small values to `--gc_q_chunk_size` and `--gc_p_chunk_size`.
 
