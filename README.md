@@ -25,10 +25,11 @@ Our model can outperform the existing baselines by a huge margin.
 
 
 ## How to run
-### Prerequisite
-Download the train and test datasets, unzip the image set of each dataset ([train](https://huggingface.co/datasets/TIGER-Lab/MMEB-train/tree/main/images_zip) and [test](https://huggingface.co/datasets/TIGER-Lab/MMEB-eval/tree/main/images_zip)), and place them in the same directory.
 
 ### Training
+
+Download the [train dataset](https://huggingface.co/datasets/TIGER-Lab/MMEB-train/tree/main/images_zip), unzip the image set of each dataset. Put these image folders under $TRAIN_DATA_DIR.
+
 For GPUs with small memory, use GradCache to reduce memory usage, i.e. setting small values to `--gc_q_chunk_size` and `--gc_p_chunk_size`.
 
 Use `--lora --lora_r 16` to enable LoRA tuning.
@@ -48,21 +49,22 @@ torchrun --nproc_per_node=2 --master_port=22447 --max_restarts=0 train.py \
 
 ### Evaluation
 
-Download the image file zip
-```
+Download the image file zip from huggingface
+```bash
 wget https://huggingface.co/datasets/TIGER-Lab/MMEB-eval/resolve/main/images.zip
 unzip images.zip -d eval_images/
 ```
 
 Please add ` --lora` for lora checkpoints.
 ```bash
-python eval.py --model_name microsoft/Phi-3.5-vision-instruct \
---checkpoint_path $CKPT_DIR --encode_output_path $EVAL_OUTPUT_DIR \
---num_crops 4 --max_len 256 \
---pooling eos --normalize True --dataset_name TIGER-Lab/MMEB-eval \
---subset_name N24News CIFAR-100 HatefulMemes VOC2007 SUN397 ImageNet-A ImageNet-R ObjectNet Country211 \
---dataset_split test --per_device_eval_batch_size 16 \
---image_dir eval_images/
+python eval.py --model_name TIGER-Lab/VLM2Vec-Full \
+  --encode_output_path outputs/ \
+  --num_crops 4 --max_len 256 \
+  --pooling eos --normalize True \
+  --dataset_name TIGER-Lab/MMEB-eval \
+  --subset_name N24News CIFAR-100 HatefulMemes VOC2007 SUN397 ImageNet-A ImageNet-R ObjectNet Country211 \
+  --dataset_split test --per_device_eval_batch_size 16 \
+  --image_dir eval_images/
 ```
 
 
