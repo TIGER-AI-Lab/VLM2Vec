@@ -28,7 +28,14 @@ Our model can outperform the existing baselines by a huge margin.
 
 ### Training
 
-Download all the dataset zip files from [train dataset](https://huggingface.co/datasets/TIGER-Lab/MMEB-train/tree/main/images_zip), and then unzip them to $TRAIN_DATA_DIR/images/. $TRAIN_DATA_DIR could be '.' (the current folder).
+Download the image file zip from huggingface
+```
+git lfs install
+git clone https://huggingface.co/datasets/TIGER-Lab/MMEB-train
+cd MMEB-train
+python unzip_file.py
+cd ../
+```
 
 For GPUs with small memory, use GradCache to reduce memory usage, i.e. setting small values to `--gc_q_chunk_size` and `--gc_p_chunk_size`.
 
@@ -39,7 +46,7 @@ torchrun --nproc_per_node=2 --master_port=22447 --max_restarts=0 train.py \
  --dataset_name TIGER-Lab/MMEB-train \
  --subset_name ImageNet_1K N24News HatefulMemes InfographicsVQA ChartQA Visual7W VisDial CIRR NIGHTS WebQA MSCOCO \
  --num_sample_per_subset 50000 \
- --image_dir $TRAIN_DATA_DIR \
+ --image_dir MMEB-train \
  --max_len 256 --num_crops 4 --output_dir $OUTPUT_DIR --logging_steps 1 \
  --lr_scheduler_type linear --learning_rate 2e-5 --max_steps 2000 \
  --warmup_steps 200 --save_steps 1000 --normalize True \
