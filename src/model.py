@@ -3,8 +3,8 @@ import torch
 import torch.distributed as dist
 from torch import nn, Tensor
 from transformers import PreTrainedModel, AutoModelForCausalLM, AutoConfig
-from peft import LoraConfig, TaskType, get_peft_model, PeftModel
-from src.arguments import ModelArguments, TrainingArguments
+from peft import LoraConfig, get_peft_model, PeftModel
+from src.arguments import ModelArguments
 
 
 class MMEBModel(nn.Module):
@@ -37,23 +37,19 @@ class MMEBModel(nn.Module):
         return pooled_output
 
     def _pooling(self, last_hidden_state, attention_mask):
-            if self.pooling == 'eos':
-                sequence_lengths = attention_mask.sum(dim=1) - 1
-                batch_size = last_hidden_state.shape[0]
-                reps = last_hidden_state[
-                        torch.arange(batch_size, device=last_hidden_state.device), sequence_lengths]
-            else:
-                raise NotImplementedError
-            if self.normalize:
-                reps = torch.nn.functional.normalize(reps, p=2, dim=-1)
-            return reps
+        if self.pooling == 'eos':
+            sequence_lengths = attention_mask.sum(dim=1) - 1
+            batch_size = last_hidden_state.shape[0]
+            reps = last_hidden_state[
+                    torch.arange(batch_size, device=last_hidden_state.device), sequence_lengths]
+        else:
+            raise NotImplementedError
+        if self.normalize:
+            reps = torch.nn.functional.normalize(reps, p=2, dim=-1)
+        return reps
 
     @classmethod
-    def build(cls,
-            model_args: ModelArguments,
-            train_args: TrainingArguments,
-            **hf_kwargs
-    ):
+    def build(cls, model_args: ModelArguments, **hf_kwargs):
         # Loading the base model
         config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
         config.use_cache = False
@@ -92,11 +88,7 @@ class MMEBModel(nn.Module):
         return model
 
     @classmethod
-    def load(cls,
-            model_args: ModelArguments,
-            train_args: TrainingArguments,
-            **hf_kwargs
-            ):
+    def load(cls, model_args: ModelArguments, **hf_kwargs):
         # Loading the base model
         config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
         config.use_cache = False
@@ -128,14 +120,10 @@ class MMEBModel(nn.Module):
             )
         return model
 
-    def save(self,
-             output_dir: str):
+    def save(self, output_dir: str):
         self.encoder.save_pretrained(output_dir)
 
-    def forward(self,
-                qry: Dict[str, Tensor] = None,
-                tgt: Dict[str, Tensor] = None,
-                ):
+    def forward(self, qry: Dict[str, Tensor] = None, tgt: Dict[str, Tensor] = None):
         qry_reps = self.encode_input(qry) if qry else None  # (bsz_per_device, dim)
         tgt_reps = self.encode_input(tgt) if tgt else None # (bsz_per_device, dim)
 
@@ -159,8 +147,7 @@ class MMEBModel(nn.Module):
 
         return loss
 
-    def _dist_gather_tensor(self,
-                            t: Tensor):
+    def _dist_gather_tensor(self, t: Tensor):
         t = t.contiguous()
         all_tensors = [torch.empty_like(t) for _ in range(self.world_size)]
         dist.all_gather(all_tensors, t)

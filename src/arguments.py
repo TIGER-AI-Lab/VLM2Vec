@@ -14,9 +14,6 @@ class ModelArguments:
     checkpoint_path: str = field(
         default=None, metadata={"help": "a local model path"}
     )
-    processor_name: str = field(
-        default=None, metadata={"help": "Pretrained tokenizer name or path if not the same as model_name"}
-    )
     pooling: str = field(
         default='eos',
         metadata={"help": "pooling method for encoder"}
