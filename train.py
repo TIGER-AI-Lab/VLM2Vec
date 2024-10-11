@@ -39,7 +39,7 @@ def main():
         wandb.init(project=training_args.project_name, name=training_args.run_name)
 
     processor = AutoProcessor.from_pretrained(
-        model_args.processor_name if model_args.processor_name else model_args.model_name,
+        model_args.model_name,
         trust_remote_code=True,
         num_crops=model_args.num_crops
     )
@@ -49,7 +49,7 @@ def main():
     train_dataset = TrainDataset(data_args)
     collator = TrainCollator(data_args, processor)
 
-    model = MMEBModel.build(model_args, training_args)
+    model = MMEBModel.build(model_args)
 
     trainer_cls = GradCacheTrainer if training_args.grad_cache else MMEBTrainer
     trainer = trainer_cls(

@@ -2,7 +2,7 @@ import json
 import sys
 
 from src.arguments import ModelArguments, DataArguments, TrainingArguments
-from transformers import HfArgumentParser, AutoTokenizer, AutoProcessor
+from transformers import HfArgumentParser, AutoProcessor
 
 from src.model import MMEBModel
 from src.dataset import EvalDataset
@@ -38,7 +38,7 @@ def main():
     )
 
     processor.tokenizer.padding_side = "right"
-    model = MMEBModel.load(model_args, training_args)
+    model = MMEBModel.load(model_args)
     model.eval()
     model = model.to(training_args.device, dtype=torch.bfloat16)
 
@@ -95,6 +95,7 @@ def main():
             num_workers=training_args.dataloader_num_workers,
         )
 
+        """
         encoded_tensor = []
         with torch.no_grad():
             for batch in tqdm(eval_qry_loader, desc="Encode query"):
@@ -105,6 +106,7 @@ def main():
         encoded_tensor = np.concatenate(encoded_tensor)
         with open(encode_qry_path, 'wb') as f:
             pickle.dump((encoded_tensor, eval_qry_dataset.paired_data), f)
+        """
 
         encoded_tensor = []
         with torch.no_grad():
@@ -145,7 +147,7 @@ def main():
                 tgt_t.append(tgt_dict[tt])
                 all_candidates.append(tt)
             tgt_t = np.stack(tgt_t, axis=0)  # (num_candidate, dim)
-            _, pred = get_pred(qry_t, tgt_t, normalization=model_args.normalize)
+            scores, pred = get_pred(qry_t, tgt_t, normalization=model_args.normalize)
             if pred == 0:
                 n_correct += 1
             all_pred.append(all_candidates[pred])

@@ -55,9 +55,21 @@ wget https://huggingface.co/datasets/TIGER-Lab/MMEB-eval/resolve/main/images.zip
 unzip images.zip -d eval_images/
 ```
 
-Please add ` --lora` for lora checkpoints.
+1. For full-finetuned models, we use
 ```bash
 python eval.py --model_name TIGER-Lab/VLM2Vec-Full \
+  --encode_output_path outputs/ \
+  --num_crops 4 --max_len 256 \
+  --pooling eos --normalize True \
+  --dataset_name TIGER-Lab/MMEB-eval \
+  --subset_name N24News CIFAR-100 HatefulMemes VOC2007 SUN397 ImageNet-A ImageNet-R ObjectNet Country211 \
+  --dataset_split test --per_device_eval_batch_size 16 \
+  --image_dir eval_images/
+```
+
+2. For LoRA-based models, we use
+```bash
+python eval.py --lora --model_name microsoft/Phi-3.5-vision-instruct --checkpoint_path TIGER-Lab/VLM2Vec-LoRA \
   --encode_output_path outputs/ \
   --num_crops 4 --max_len 256 \
   --pooling eos --normalize True \
