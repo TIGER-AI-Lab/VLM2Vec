@@ -11,20 +11,22 @@ Our model is based on converting an existing well-trained VLM (Phi-3.5-V) into a
 
 ## Release
 Our model is being trained on MMEB-train and evaluated on MMEB-eval with contrastive learning. We only use in-batch negatives for training. Our best results were based on Lora training with batch size of 1024. We also have checkpoint with full training with batch size of 2048. Our results on 36 evaluation datasets are:
-### Data
+### Train/Eval Data
  - Train data: https://huggingface.co/datasets/TIGER-Lab/MMEB-train
  - Eval data: https://huggingface.co/datasets/TIGER-Lab/MMEB-eval
 
-### Checkpoints
+### VLM2Vec Checkpoints
  - [MMEB.lora8.bs1024](https://huggingface.co/TIGER-Lab/MMEB.lora8.bs1024/)
  - [MMEB.fullmodel.bs2048](https://huggingface.co/TIGER-Lab/MMEB.fullmodel.bs2048/)
 
-### Results
+### Experimental Results
 Our model can outperform the existing baselines by a huge margin.
 <img width="900" alt="abs" src="figures/vlm2vec_results.png">
 
+## How to use VLM2Vec
+Please refer to [demo](https://github.com/TIGER-AI-Lab/VLM2Vec/blob/main/demo.py) as the minimum example.
 
-## How to run
+## How to train or evaluate VLM2Vec
 
 ### Training
 
