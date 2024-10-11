@@ -95,7 +95,6 @@ def main():
             num_workers=training_args.dataloader_num_workers,
         )
 
-        """
         encoded_tensor = []
         with torch.no_grad():
             for batch in tqdm(eval_qry_loader, desc="Encode query"):
@@ -106,7 +105,6 @@ def main():
         encoded_tensor = np.concatenate(encoded_tensor)
         with open(encode_qry_path, 'wb') as f:
             pickle.dump((encoded_tensor, eval_qry_dataset.paired_data), f)
-        """
 
         encoded_tensor = []
         with torch.no_grad():
