@@ -7,7 +7,7 @@ This repo contains the code and data for [VLM2Vec: Training Vision-Language Mode
 ## Model
 Our model is based on converting an existing well-trained VLM (Phi-3.5-V) into an embedding model. The basic idea is to add an [EOS] token in the end of the sequence, which will be used as the representation of the multimodal inputs.
 
-<img width="1432" alt="abs" src="figures/vlm2vec_train.jpg">
+<img width="1432" alt="abs" src="figures/train_vlm.png">
 
 ## Release
 Our model is being trained on MMEB-train and evaluated on MMEB-eval with contrastive learning. We only use in-batch negatives for training. Our best results were based on Lora training with batch size of 1024. We also have checkpoint with full training with batch size of 2048. Our results on 36 evaluation datasets are:
