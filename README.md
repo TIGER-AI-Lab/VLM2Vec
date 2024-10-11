@@ -7,7 +7,7 @@ This repo contains the code and data for [VLM2Vec: Training Vision-Language Mode
 ## Model
 Our model is based on converting an existing well-trained VLM (Phi-3.5-V) into an embedding model. The basic idea is to add an [EOS] token in the end of the sequence, which will be used as the representation of the multimodal inputs.
 
-<img width="1432" alt="abs" src="figures/vlm2vec_train.jpg">
+<img width="1432" alt="abs" src="figures/train_vlm.png">
 
 ## Release
 Our model is being trained on MMEB-train and evaluated on MMEB-eval with contrastive learning. We only use in-batch negatives for training. Our best results were based on Lora training with batch size of 1024. We also have checkpoint with full training with batch size of 2048. Our results on 36 evaluation datasets are:
@@ -28,7 +28,14 @@ Our model can outperform the existing baselines by a huge margin.
 
 ### Training
 
-Download the [train dataset](https://huggingface.co/datasets/TIGER-Lab/MMEB-train/tree/main/images_zip), unzip the image set of each dataset. Put these image folders under $TRAIN_DATA_DIR.
+Download the image file zip from huggingface
+```
+git lfs install
+git clone https://huggingface.co/datasets/TIGER-Lab/MMEB-train
+cd MMEB-train
+python unzip_file.py
+cd ../
+```
 
 For GPUs with small memory, use GradCache to reduce memory usage, i.e. setting small values to `--gc_q_chunk_size` and `--gc_p_chunk_size`.
 
@@ -39,7 +46,7 @@ torchrun --nproc_per_node=2 --master_port=22447 --max_restarts=0 train.py \
  --dataset_name TIGER-Lab/MMEB-train \
  --subset_name ImageNet_1K N24News HatefulMemes InfographicsVQA ChartQA Visual7W VisDial CIRR NIGHTS WebQA MSCOCO \
  --num_sample_per_subset 50000 \
- --image_dir $TRAIN_DATA_DIR \
+ --image_dir MMEB-train \
  --max_len 256 --num_crops 4 --output_dir $OUTPUT_DIR --logging_steps 1 \
  --lr_scheduler_type linear --learning_rate 2e-5 --max_steps 2000 \
  --warmup_steps 200 --save_steps 1000 --normalize True \
