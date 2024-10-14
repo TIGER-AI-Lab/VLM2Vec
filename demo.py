@@ -7,7 +7,7 @@ import numpy as np
 
 model_args = ModelArguments(
     model_name='microsoft/Phi-3.5-vision-instruct', 
-    pooling='eos',
+    pooling='last',
     normalize=True,
     lora=True,
     checkpoint_path='TIGER-Lab/VLM2Vec-LoRA')

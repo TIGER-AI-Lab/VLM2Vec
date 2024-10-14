@@ -15,7 +15,7 @@ class ModelArguments:
         default=None, metadata={"help": "a local model path"}
     )
     pooling: str = field(
-        default='eos',
+        default='last',
         metadata={"help": "pooling method for encoder"}
     )
     normalize: bool = field(
