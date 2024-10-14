@@ -37,7 +37,7 @@ class MMEBModel(nn.Module):
         return pooled_output
 
     def _pooling(self, last_hidden_state, attention_mask):
-        if self.pooling == 'eos':
+        if self.pooling == 'last':
             sequence_lengths = attention_mask.sum(dim=1) - 1
             batch_size = last_hidden_state.shape[0]
             reps = last_hidden_state[
