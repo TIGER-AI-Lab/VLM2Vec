@@ -42,7 +42,7 @@ For GPUs with small memory, use GradCache to reduce memory usage, i.e. setting s
 Use `--lora --lora_r 16` to enable LoRA tuning.
 ```bash
 torchrun --nproc_per_node=2 --master_port=22447 --max_restarts=0 train.py \
- --model_name microsoft/Phi-3.5-vision-instruct --bf16 --pooling eos \
+ --model_name microsoft/Phi-3.5-vision-instruct --bf16 --pooling last \
  --dataset_name TIGER-Lab/MMEB-train \
  --subset_name ImageNet_1K N24News HatefulMemes InfographicsVQA ChartQA Visual7W VisDial CIRR NIGHTS WebQA MSCOCO \
  --num_sample_per_subset 50000 \
