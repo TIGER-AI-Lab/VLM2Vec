@@ -22,33 +22,30 @@ processor = AutoProcessor.from_pretrained(
     num_crops=4,
 )
 
-inputs = processor(
-    '<|image_1|> Represent the given image with the following question: What is in the image',
-    [Image.open('figures/example.jpg')])
+# Image + Text -> Text
+inputs = processor('<|image_1|> Represent the given image with the following question: What is in the image', [Image.open('figures/example.jpg')])
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 qry_output = model(qry=inputs)["qry_reps"]
 
-# Compute the similarity;
+## Compute the similarity;
 string = 'A cat and a dog'
-inputs = processor(string, None, return_tensors="pt")
+inputs = processor(string)
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 tgt_output = model(tgt=inputs)["tgt_reps"]
 print(string, '=', model.compute_similarity(qry_output, tgt_output))
 
-string = 'A cat and a tiger'
-inputs = processor(string, None, return_tensors="pt")
+inputs = processor(string)
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 tgt_output = model(tgt=inputs)["tgt_reps"]
 print(string, '=', model.compute_similarity(qry_output, tgt_output))
 
-string = 'A pig'
-inputs = processor(string, None, return_tensors="pt")
+# Text -> Image
+inputs = processor('Find me an everyday image that matches the given caption: A cat and a dog.',)
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
-tgt_output = model(tgt=inputs)["tgt_reps"]
-print(string, '=', model.compute_similarity(qry_output, tgt_output))
+qry_output = model(qry=inputs)["qry_reps"]
 
-string = 'a flight'
-inputs = processor(string, None, return_tensors="pt")
+string = '<|image_1|> Represent the given image.'
+inputs = processor(string, [Image.open('figures/example.jpg')]])
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 tgt_output = model(tgt=inputs)["tgt_reps"]
 print(string, '=', model.compute_similarity(qry_output, tgt_output))
