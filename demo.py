@@ -6,7 +6,7 @@ from PIL import Image
 import numpy as np
 
 model_args = ModelArguments(
-    model_name='microsoft/Phi-3.5-vision-instruct', 
+    model_name='microsoft/Phi-3.5-vision-instruct',
     pooling='last',
     normalize=True,
     lora=True,
@@ -32,11 +32,14 @@ inputs = processor(string)
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 tgt_output = model(tgt=inputs)["tgt_reps"]
 print(string, '=', model.compute_similarity(qry_output, tgt_output))
+## A cat and a dog = tensor([[0.2969]], device='cuda:0', dtype=torch.bfloat16)
 
+string = 'A cat and a tiger'
 inputs = processor(string)
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 tgt_output = model(tgt=inputs)["tgt_reps"]
 print(string, '=', model.compute_similarity(qry_output, tgt_output))
+## A cat and a tiger = tensor([[0.2080]], device='cuda:0', dtype=torch.bfloat16)
 
 # Text -> Image
 inputs = processor('Find me an everyday image that matches the given caption: A cat and a dog.',)
@@ -48,3 +51,4 @@ inputs = processor(string, [Image.open('figures/example.jpg')])
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 tgt_output = model(tgt=inputs)["tgt_reps"]
 print(string, '=', model.compute_similarity(qry_output, tgt_output))
+## <|image_1|> Represent the given image. = tensor([[0.3105]], device='cuda:0', dtype=torch.bfloat16)
