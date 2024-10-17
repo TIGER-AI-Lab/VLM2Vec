@@ -27,7 +27,6 @@ inputs = processor('<|image_1|> Represent the given image with the following que
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 qry_output = model(qry=inputs)["qry_reps"]
 
-## Compute the similarity;
 string = 'A cat and a dog'
 inputs = processor(string)
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
