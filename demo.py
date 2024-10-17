@@ -44,7 +44,7 @@ inputs = {key: value.to('cuda') for key, value in inputs.items()}
 qry_output = model(qry=inputs)["qry_reps"]
 
 string = '<|image_1|> Represent the given image.'
-inputs = processor(string, [Image.open('figures/example.jpg'])
+inputs = processor(string, [Image.open('figures/example.jpg')])
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 tgt_output = model(tgt=inputs)["tgt_reps"]
 print(string, '=', model.compute_similarity(qry_output, tgt_output))
