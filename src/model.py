@@ -18,8 +18,7 @@ class MMEBModel(nn.Module):
                  ):
         super().__init__()
         self.config = encoder.config
-        self.config.hidden_size = 4096
-        self.hidden_size = 4096
+        self.hidden_size = self.config.hidden_size
         self.encoder = encoder
         self.pooling = pooling
         self.normalize = normalize
@@ -106,9 +105,10 @@ class MMEBModel(nn.Module):
         if model_args.lora:
             lora_config = LoraConfig.from_pretrained(checkpoint_path)
             lora_model = PeftModel.from_pretrained(base_model, checkpoint_path, config=lora_config)
-            lora_model = lora_model.merge_and_unload()
+            
+            merged_model = lora_model.merge_and_unload()
             model = cls(
-                encoder=lora_model,
+                encoder=merged_model,
                 pooling=model_args.pooling,
                 normalize=model_args.normalize
             )
