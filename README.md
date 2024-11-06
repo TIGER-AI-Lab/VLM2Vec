@@ -5,7 +5,7 @@ This repo contains the code and data for [VLM2Vec: Training Vision-Language Mode
 <img width="1432" alt="abs" src="figures/teaser.png">
 
 ## Model
-Our model is based on converting an existing well-trained VLM (Phi-3.5-V) into an embedding model. The basic idea is to add an [EOS] token in the end of the sequence, which will be used as the representation of the multimodal inputs.
+Our model is based on converting an existing well-trained VLM (Phi-3.5-V) into an embedding model. The basic idea is to take the last token in the end of the sequence as the representation of the multimodal inputs.
 
 <img width="1432" alt="abs" src="figures/train_vlm.png">
 
