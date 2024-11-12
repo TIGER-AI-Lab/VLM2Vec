@@ -19,6 +19,11 @@ This repo contains the code and data for [VLM2Vec: Training Vision-Language Mode
 
 ---
 
+## 🔥News
+- [2024-10] VLM2Vec has been integrated into [vLLM](https://github.com/vllm-project/vllm/blob/main/examples/offline_inference_vision_language_embedding.py).
+- [2024-10] The technical report, code, data, and model for VLM2Vec are all available online.
+
+
 ## Model
 Our model is based on converting an existing well-trained VLM (Phi-3.5-V) into an embedding model. The basic idea is to take the last token in the end of the sequence as the representation of the multimodal inputs.
 
@@ -102,6 +107,9 @@ python eval.py --lora --model_name microsoft/Phi-3.5-vision-instruct --checkpoin
   --dataset_split test --per_device_eval_batch_size 16 \
   --image_dir eval_images/
 ```
+
+## Acknowledgement
+- We have adapted code from [Tevatron](https://github.com/texttron/tevatron), a flexible and efficient toolkit that supports training and inference for neural retrieval models.
 
 
 ## Citation
