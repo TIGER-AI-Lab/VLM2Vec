@@ -3,7 +3,6 @@
 This repo contains the code and data for [VLM2Vec: Training Vision-Language Models for Massive Multimodal Embedding Tasks](https://arxiv.org/abs/2410.05160). In this paper, we aimed at building a unified multimodal embedding model for any tasks.  
 
 <img width="1432" alt="abs" src="figures/teaser.png">
-<img width="1432" alt="abs" src="figures/teaser.png">
 <a target="_blank" href="https://arxiv.org/abs/2410.05160">
 <img style="height:22pt" src="https://img.shields.io/badge/-Paper-black?style=flat&logo=arxiv"></a>
 <a target="_blank" href="https://github.com/TIGER-AI-Lab/VLM2Vec">
