@@ -8,8 +8,10 @@ from PIL import Image
 import os
 
 
+Phi_Image_token = "<|image_1|>"
+Llava_Image_token = "<image>"
 class TrainDataset(Dataset):
-    def __init__(self, data_args):
+    def __init__(self, data_args, model_args):
         self.data_args = data_args
         train_data = []
         print(f"Loading {len(data_args.subset_name)} datasets: {data_args.subset_name}")
@@ -25,10 +27,13 @@ class TrainDataset(Dataset):
     def __len__(self):
         return len(self.train_data)
 
-    def _process_image(self, image):
+    def _process_image(self, image, resolution):
         if image is None:
             return None
-        image = image.resize((1344, 1344))
+        if resolution == "high":
+            image = image.resize((1344, 1344))
+        else:
+            image = image.resize((336, 336))
         return image
 
     def _get_image(self, img_path):
@@ -36,14 +41,21 @@ class TrainDataset(Dataset):
             return None
         full_img_path = os.path.join(self.data_args.image_dir, img_path)
         image = Image.open(full_img_path)
-        return image
+        if self.model_args.model_backbone == "llava":
+            return self._process_image(image, "low")
+        else:
+            return image
 
     def __getitem__(self, item) -> Tuple[str, List[str]]:
-        qry, qry_image_path, pos_text, pos_image_path = (
+        qry_text, qry_image_path, pos_text, pos_image_path = (
             self.train_data[item]["qry"], self.train_data[item]["qry_image_path"],
             self.train_data[item]["pos_text"], self.train_data[item]["pos_image_path"],
         )
-        return (qry, self._get_image(qry_image_path),
+        if self.model_args.model_backbone == "llava":
+            # Update image token
+            qry_text = qry_text.replace(Phi_Image_token, Llava_Image_token)
+            pos_text = pos_text.replace(Phi_Image_token, Llava_Image_token)
+        return (qry_text, self._get_image(qry_image_path),
                 pos_text, self._get_image(pos_image_path))
 
 
