@@ -5,6 +5,7 @@ from torch import nn, Tensor
 from transformers import PreTrainedModel, AutoModelForCausalLM, AutoConfig
 from peft import LoraConfig, get_peft_model, PeftModel
 from src.arguments import ModelArguments
+from transformers import LlavaNextForConditionalGeneration
 
 
 class MMEBModel(nn.Module):
@@ -50,15 +51,26 @@ class MMEBModel(nn.Module):
     @classmethod
     def build(cls, model_args: ModelArguments, **hf_kwargs):
         # Loading the base model
-        config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
-        config.use_cache = False
-        config.padding_side = "right"
-        base_model = cls.TRANSFORMER_CLS.from_pretrained(
-            model_args.model_name, **hf_kwargs, config=config, 
-            attn_implementation="flash_attention_2", 
-            torch_dtype=torch.bfloat16, 
-            trust_remote_code=True)
-        base_model.padding_side = "right"
+        if model_args.model_backbone == "llava":
+            config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
+            config.use_cache = False
+            base_model = LlavaNextForConditionalGeneration.from_pretrained(
+                model_args.model_name,
+                torch_dtype=torch.bfloat16,
+                low_cpu_mem_usage=True,
+                attn_implementation="flash_attention_2"
+            )
+            base_model.padding_side = "left"
+        else:
+            config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
+            config.use_cache = False
+            config.padding_side = "right"
+            base_model = cls.TRANSFORMER_CLS.from_pretrained(
+                model_args.model_name, **hf_kwargs, config=config,
+                attn_implementation="flash_attention_2",
+                torch_dtype=torch.bfloat16,
+                trust_remote_code=True)
+            base_model.padding_side = "right"
 
         if model_args.lora:
             lora_config = LoraConfig(

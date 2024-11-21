@@ -3,6 +3,7 @@ import logging
 import sys
 
 from transformers import AutoTokenizer, AutoProcessor
+from transformers import LlavaNextProcessor
 from transformers import (
     HfArgumentParser,
 )
@@ -38,13 +39,19 @@ def main():
     if (dist.is_initialized() and torch.distributed.get_rank() == 0) or (not dist.is_initialized()):
         wandb.init(project=training_args.project_name, name=training_args.run_name)
 
-    processor = AutoProcessor.from_pretrained(
-        model_args.model_name,
-        trust_remote_code=True,
-        num_crops=model_args.num_crops
-    )
 
-    processor.tokenizer.padding_side = "right"
+    if model_args.model_backbone == "llava":
+        processor = LlavaNextProcessor.from_pretrained(
+            model_args.processor_name if model_args.processor_name else model_args.model_name,
+            trust_remote_code=True)
+        processor.tokenizer.padding_side = "left"
+    else:
+        processor = AutoProcessor.from_pretrained(
+            model_args.processor_name if model_args.processor_name else model_args.model_name,
+            trust_remote_code=True,
+            num_crops=model_args.num_crops
+        )
+        processor.tokenizer.padding_side = "right"
 
     train_dataset = TrainDataset(data_args)
     collator = TrainCollator(data_args, processor)
