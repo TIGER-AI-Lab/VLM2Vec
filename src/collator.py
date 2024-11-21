@@ -28,12 +28,18 @@ class TrainCollator:
         for example in examples:
             text, image = example[text_idx], example[image_idx]
             if image is None:
-                inputs = self.processor(text, None, return_tensors="pt", max_length=self.data_args.max_len,
-                                        truncation=True)
+                if self.model_args.model_backbone == "llava":
+                    inputs = self.processor(images=None, text=text, return_tensors="pt")
+                else:
+                    inputs = self.processor(text, None, return_tensors="pt", max_length=self.data_args.max_len,
+                                            truncation=True)
                 input_ids.append(inputs["input_ids"].squeeze(0).unsqueeze(1))
             else:
-                inputs = self.processor(text, [image], return_tensors="pt", max_length=self.data_args.max_len, truncation=True)
                 image_exist = True
+                if self.model_args.model_backbone == "llava":
+                    inputs = self.processor(images=image, text=text, return_tensors="pt")
+                else:
+                    inputs = self.processor(text, [image], return_tensors="pt", max_length=self.data_args.max_len, truncation=True)
                 input_ids.append(inputs["input_ids"].squeeze(0).unsqueeze(1))
                 pixel_values.append(inputs['pixel_values'])
                 image_sizes.append(inputs['image_sizes'])
