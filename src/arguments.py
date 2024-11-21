@@ -11,6 +11,9 @@ class ModelArguments:
     model_type: str = field(
         default=None, metadata={"help": "lavis model type"}
     )
+    model_backbone: str = field(
+        default=None, metadata={"help": "vlm backbone"}
+    )
     checkpoint_path: str = field(
         default=None, metadata={"help": "a local model path"}
     )
