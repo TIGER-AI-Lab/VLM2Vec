@@ -13,6 +13,7 @@ Llava_Image_token = "<image>"
 class TrainDataset(Dataset):
     def __init__(self, data_args, model_args):
         self.data_args = data_args
+        self.model_args = model_args
         train_data = []
         print(f"Loading {len(data_args.subset_name)} datasets: {data_args.subset_name}")
         for subset in data_args.subset_name:
