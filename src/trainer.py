@@ -17,7 +17,7 @@ class MMEBTrainer(Trainer):
         self.is_ddp = dist.is_initialized()
         self._dist_loss_scale_factor = dist.get_world_size() if self.is_ddp else 1
 
-    def compute_loss(self, model, inputs):
+    def compute_loss(self, model, inputs, *args, **kwargs):
         qry_inputs, tgt_inputs = inputs
         return model(qry=qry_inputs, tgt=tgt_inputs)
 
@@ -63,17 +63,24 @@ def split_vlm_inputs(model_input: dict, chunk_size: int):
     # for pixel_values and image_sizes, need to split based on the position of images
     input_ids = arg_val["input_ids"]
     positions = torch.nonzero(((input_ids < 0) & (input_ids > -MAX_INPUT_ID)) | input_ids == LLAVE_IMAGE_TOKEN_ID, as_tuple=True)
-    num_chunks = len(chunked_tensors[0])
-    row_contain_image = torch.unique(positions[0])  # indicates which row in input_ids contain images
-    chunk_image_count = []
-    for chunk_idx in range(num_chunks):
-        chunk_image_count.append(torch.sum(
-            (row_contain_image >= chunk_idx * chunk_size) & (row_contain_image < (chunk_idx + 1) * chunk_size)).item())
+    # pixel_values/image_sizes is padded to be the same shape as input_ids
     if "pixel_values" in keys:
         pixel_values = arg_val["pixel_values"]
         image_sizes = arg_val["image_sizes"]
-        chunked_tensors.append(torch.split(pixel_values, chunk_image_count))
-        chunked_tensors.append(torch.split(image_sizes, chunk_image_count))
+        chunked_tensors.append(torch.split(pixel_values, chunk_size))
+        chunked_tensors.append(torch.split(image_sizes, chunk_size))
+    # deprecated,  pixel_values/image_sizes can be in different size from input_ids
+    # row_contain_image = torch.unique(positions[0])  # indicates which row in input_ids contain images
+    # num_chunks = len(chunked_tensors[0])
+    # chunk_image_count = []
+    # for chunk_idx in range(num_chunks):
+    #     chunk_image_count.append(torch.sum(
+    #         (row_contain_image >= chunk_idx * chunk_size) & (row_contain_image < (chunk_idx + 1) * chunk_size)).item())
+    # if "pixel_values" in keys:
+    #     pixel_values = arg_val["pixel_values"]
+    #     image_sizes = arg_val["image_sizes"]
+    #     chunked_tensors.append(torch.split(pixel_values, chunk_image_count))
+    #     chunked_tensors.append(torch.split(image_sizes, chunk_image_count))
 
     chunked_arg_val = []
     for kk, tt in zip(repeat(keys), zip(*chunked_tensors)):
@@ -116,7 +123,7 @@ class GradCacheTrainer(Trainer):
             scaler=self.scaler if self.args.fp16 else None
         )
 
-    def training_step(self, model, inputs) -> torch.Tensor:
+    def training_step(self, model, inputs, *args, **kwargs) -> torch.Tensor:
         model.train()
         queries, passages = inputs
         queries, passages = {'qry': queries}, {'tgt': passages}

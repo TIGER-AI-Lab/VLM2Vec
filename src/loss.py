@@ -5,6 +5,8 @@ import torch.nn.functional as F
 
 
 class SimpleContrastiveLoss:
+    def __init__(self, temperature: float = 0.02):
+        self.temperature = temperature
 
     def __call__(self, x: Tensor, y: Tensor, target: Tensor = None, reduction: str = 'mean') -> Tensor:
         if target is None:

@@ -41,20 +41,15 @@ def main():
 
 
     if model_args.model_backbone == "llava":
-        processor = LlavaNextProcessor.from_pretrained(
-            model_args.processor_name if model_args.processor_name else model_args.model_name,
-            trust_remote_code=True)
+        processor = LlavaNextProcessor.from_pretrained(model_args.model_name, trust_remote_code=True)
         processor.tokenizer.padding_side = "left"
     else:
-        processor = AutoProcessor.from_pretrained(
-            model_args.processor_name if model_args.processor_name else model_args.model_name,
-            trust_remote_code=True,
-            num_crops=model_args.num_crops
+        processor = AutoProcessor.from_pretrained(model_args.model_name, trust_remote_code=True, num_crops=model_args.num_crops
         )
         processor.tokenizer.padding_side = "right"
 
-    train_dataset = TrainDataset(data_args)
-    collator = TrainCollator(data_args, processor)
+    train_dataset = TrainDataset(data_args, model_args)
+    collator = TrainCollator(data_args, model_args, processor)
 
     model = MMEBModel.build(model_args)
 

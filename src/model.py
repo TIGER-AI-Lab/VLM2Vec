@@ -19,7 +19,6 @@ class MMEBModel(nn.Module):
                  ):
         super().__init__()
         self.config = encoder.config
-        self.hidden_size = self.config.hidden_size
         self.encoder = encoder
         self.pooling = pooling
         self.normalize = normalize
@@ -37,7 +36,7 @@ class MMEBModel(nn.Module):
         return pooled_output
 
     def _pooling(self, last_hidden_state, attention_mask):
-        if self.pooling == 'last':
+        if self.pooling == 'last' or self.pooling == 'eos':
             sequence_lengths = attention_mask.sum(dim=1) - 1
             batch_size = last_hidden_state.shape[0]
             reps = last_hidden_state[
