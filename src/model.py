@@ -5,7 +5,7 @@ from torch import nn, Tensor
 from transformers import PreTrainedModel, AutoModelForCausalLM, AutoConfig
 from peft import LoraConfig, get_peft_model, PeftModel
 from src.arguments import ModelArguments
-from transformers import LlavaNextForConditionalGeneration
+from vlm_backbone.llava_next import LlavaNextForConditionalGeneration
 
 
 class MMEBModel(nn.Module):
