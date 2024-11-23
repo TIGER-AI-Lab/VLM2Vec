@@ -132,3 +132,36 @@ class EvalDataset(Dataset):
 
         paired_data = [{"text": text, "img_path": img_path} for text, img_path in unique_pair]
         return paired_data
+
+
+class FlickrDataset(Dataset):
+    def __init__(self, modality):
+        self.raw_data = load_dataset("nlphuji/flickr_1k_test_image_text_retrieval", split="test")
+        if modality == "image":
+            self.eval_data, self.image_names = self.get_image_data()
+        else:
+            self.eval_data, self.image_names = self.get_text_data()
+
+    def __len__(self):
+        return len(self.eval_data)
+
+    def __getitem__(self, idx):
+        return self.eval_data[idx]
+
+    def get_image_data(self):
+        eval_data, image_names = [], []
+        # inst = "<|image_1|> Find an image caption describing the given image."
+        inst = "<|image_1|> Represent the given image for image caption retrieval."
+        for row in self.raw_data:
+            eval_data.append((inst, row["image"]))
+            image_names.append(row["filename"])
+        return eval_data, image_names
+
+    def get_text_data(self):
+        eval_data, image_names = [], []
+        inst = "Retrieve an image that matches the given caption: "
+        for row in self.raw_data:
+            for caption in row["caption"]:
+                eval_data.append((caption, None))
+                image_names.append(row["filename"])
+        return eval_data, image_names
