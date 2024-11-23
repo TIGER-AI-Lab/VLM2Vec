@@ -44,6 +44,7 @@ def main():
 
     eval_collator = EvalCollator(
         data_args=data_args,
+        model_args=model_args,
         processor=processor,
     )
 
@@ -67,12 +68,14 @@ def main():
 
         eval_qry_dataset = EvalDataset(
             data_args=data_args,
+            model_args=model_args,
             subset=subset,
             text_field="qry_text",
             img_path_field="qry_img_path",
         )
         eval_tgt_dataset = EvalDataset(
             data_args=data_args,
+            model_args=model_args,
             subset=subset,
             text_field="tgt_text",
             img_path_field="tgt_img_path",

@@ -5,6 +5,9 @@ from typing import List
 
 @dataclass
 class ModelArguments:
+    processor_name: str = field(
+        default=None, metadata={"help": "processor_name, huggingface model name or path"}
+    )
     model_name: str = field(
         default=None, metadata={"help": "huggingface model name or path"}
     )
