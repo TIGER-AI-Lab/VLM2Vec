@@ -90,24 +90,35 @@ def main():
         txt_tensor = torch.from_numpy(txt_tensor)
 
     # I -> T
-    acc = 0
     similarity_matrix = torch.matmul(img_tensor, txt_tensor.T)
-    most_similar_indices = torch.argmax(similarity_matrix, dim=1)
+    recall_at_k = {1: 0, 5: 0, 10: 0}
+    sorted_indices = torch.argsort(similarity_matrix, dim=1, descending=True)
     for idx, file_name in enumerate(i2t_name):
-        pred_file_name = t2i_name[most_similar_indices[idx].item()]
-        if file_name == pred_file_name:
-            acc += 1
-    print(f"\033[91m accuracy: {acc/len(i2t_name)}\033[0m")
+        top_k_indices = sorted_indices[idx, :10]  # Get top-10 indices
+        top_k_file_names = [t2i_name[i.item()] for i in top_k_indices]
+        for k in [1, 5, 10]:
+            if file_name in top_k_file_names[:k]:
+                recall_at_k[k] += 1
+
+    for k in [1, 5, 10]:
+        recall_at_k[k] = recall_at_k[k] / len(i2t_name)
+        print(f"\033[91m Recall@{k}: {recall_at_k[k]:.4f}\033[0m")
+
 
     # T -> I
-    acc = 0
     similarity_matrix = torch.matmul(txt_tensor, img_tensor.T)
-    most_similar_indices = torch.argmax(similarity_matrix, dim=1)
+    recall_at_k = {1: 0, 5: 0, 10: 0}
+    sorted_indices = torch.argsort(similarity_matrix, dim=1, descending=True)
     for idx, file_name in enumerate(t2i_name):
-        pred_file_name = i2t_name[most_similar_indices[idx].item()]
-        if file_name == pred_file_name:
-            acc += 1
-    print(f"\033[91m accuracy: {acc/len(t2i_name)}\033[0m")
+        top_k_indices = sorted_indices[idx, :10]
+        top_k_file_names = [i2t_name[i.item()] for i in top_k_indices]
+        for k in [1, 5, 10]:
+            if file_name in top_k_file_names[:k]:
+                recall_at_k[k] += 1
+
+    for k in [1, 5, 10]:
+        recall_at_k[k] = recall_at_k[k] / len(t2i_name)
+        print(f"\033[91m Recall@{k}: {recall_at_k[k]:.4f}\033[0m")
 
 
 if __name__ == "__main__":
