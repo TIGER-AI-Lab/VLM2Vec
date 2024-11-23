@@ -41,10 +41,15 @@ def main():
 
 
     if model_args.model_backbone == "llava":
-        processor = LlavaNextProcessor.from_pretrained(model_args.model_name, trust_remote_code=True)
+        processor = LlavaNextProcessor.from_pretrained(
+            model_args.processor_name if model_args.processor_name else model_args.model_name,
+            trust_remote_code=True)
         processor.tokenizer.padding_side = "left"
     else:
-        processor = AutoProcessor.from_pretrained(model_args.model_name, trust_remote_code=True, num_crops=model_args.num_crops
+        processor = AutoProcessor.from_pretrained(
+            model_args.processor_name if model_args.processor_name else model_args.model_name,
+            trust_remote_code=True,
+            num_crops=model_args.num_crops
         )
         processor.tokenizer.padding_side = "right"
 
