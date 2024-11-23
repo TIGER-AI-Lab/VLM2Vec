@@ -5,7 +5,8 @@ from torch import nn, Tensor
 from transformers import PreTrainedModel, AutoModelForCausalLM, AutoConfig
 from peft import LoraConfig, get_peft_model, PeftModel
 from src.arguments import ModelArguments
-from vlm_backbone.llava_next import LlavaNextForConditionalGeneration
+from src.vlm_backbone.phi3_v.modeling_phi3_v import Phi3VForCausalLM
+from src.vlm_backbone.llava_next import LlavaNextForConditionalGeneration
 
 
 class MMEBModel(nn.Module):
@@ -53,13 +54,25 @@ class MMEBModel(nn.Module):
         if model_args.model_backbone == "llava":
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config.use_cache = False
+            config.padding_side = "left"
             base_model = LlavaNextForConditionalGeneration.from_pretrained(
                 model_args.model_name,
+                config=config,
                 torch_dtype=torch.bfloat16,
                 low_cpu_mem_usage=True,
-                # attn_implementation="flash_attention_2"
             )
-            base_model.padding_side = "left"
+        # Loading the base model
+        elif model_args.model_backbone == "phi35v":
+            config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
+            config._attn_implementation = "eager"
+            config.padding_side = "right"
+            config.use_cache = False
+            base_model = Phi3VForCausalLM.from_pretrained(
+                model_args.model_name,
+                config=config,
+                torch_dtype=torch.bfloat16,
+                low_cpu_mem_usage=True,
+            )
         else:
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config.use_cache = False
@@ -111,6 +124,18 @@ class MMEBModel(nn.Module):
                 # attn_implementation="flash_attention_2"
             )
             base_model.padding_side = "left"
+        elif model_args.model_backbone == "phi35v":
+            # Loading the base model
+            config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
+            config.use_cache = False
+            config.padding_side = "right"
+
+            base_model = LlavaNextForConditionalGeneration.from_pretrained(
+                checkpoint_path, **hf_kwargs, config=config,
+                attn_implementation="flash_attention_2",
+                torch_dtype=torch.bfloat16,
+                trust_remote_code=True)
+            base_model.padding_side = "right"
         else:
             # Loading the base model
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
