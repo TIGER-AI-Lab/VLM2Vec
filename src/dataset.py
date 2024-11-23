@@ -61,11 +61,12 @@ class TrainDataset(Dataset):
 
 
 class EvalDataset(Dataset):
-    def __init__(self, data_args, subset, text_field, img_path_field):
+    def __init__(self, data_args, model_args, subset, text_field, img_path_field):
         """
         (text_field, image_field) -> ("qry_text", "qry_img_path") or ("tgt_text", "tgt_img_path")
         """
         self.data_args = data_args
+        self.model_args = model_args
 
         self.eval_data = load_dataset(
             self.data_args.dataset_name,
@@ -83,13 +84,30 @@ class EvalDataset(Dataset):
 
     def __getitem__(self, item):
         text, img_path = self.paired_dataset[item]["text"], self.paired_dataset[item]["img_path"]
+        if self.model_args.model_backbone == "llava":
+            # Update llava image token
+            text = text.replace(Phi_Image_token, Llava_Image_token)
         return text, self._get_image(img_path),
+
+    def _process_image(self, image, resolution):
+        if image is None:
+            return None
+        if resolution == "high":
+            image = image.resize((1344, 1344))
+        else:
+            image = image.resize((336, 336))
+        return image
 
     def _get_image(self, img_path):
         if img_path == "":
             return None
         full_img_path = os.path.join(self.data_args.image_dir, img_path)
         image = Image.open(full_img_path)
+        if self.model_args.model_backbone == "llava":
+            return self._process_image(image, "low")
+        else:
+            return image
+
         return image
 
     def get_paired_data(self, text_field, img_path_field):

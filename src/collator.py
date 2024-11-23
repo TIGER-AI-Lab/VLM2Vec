@@ -54,7 +54,7 @@ class TrainCollator:
 
         if not image_exist:
             dummy_pixel_values = torch.zeros(input_ids.shape[0], 1)
-            dummy_image_sizes = torch.zeros(input_ids.shape[0], 1)
+            dummy_image_sizes = torch.ones(input_ids.shape[0], 1)
             inputs = {
                 'input_ids': input_ids,
                 'attention_mask': attention_mask,
@@ -66,7 +66,7 @@ class TrainCollator:
             pixel_values = [v if v is not None else torch.zeros(pixel_values_shape) for v in pixel_values]
             pixel_values = torch.cat(pixel_values, dim=0)
             image_sizes_shape = list(set(v.shape for v in image_sizes if v is not None))[0]
-            image_sizes = [v if v is not None else torch.zeros(image_sizes_shape) for v in image_sizes]
+            image_sizes = [v if v is not None else torch.ones(image_sizes_shape) for v in image_sizes]
             image_sizes = torch.cat(image_sizes, dim=0)
             inputs = {
                 'input_ids': input_ids,
@@ -80,6 +80,7 @@ class TrainCollator:
 @dataclass
 class EvalCollator:
     data_args: DataArguments
+    model_args: DataArguments
     processor: ProcessorMixin
 
     def __call__(self, examples):
@@ -95,12 +96,20 @@ class EvalCollator:
         for example in examples:
             text, image = example
             if image is None:
-                inputs = self.processor(text, None, return_tensors="pt", max_length=self.data_args.max_len,
-                                        truncation=True)
+                if self.model_args.model_backbone == "llava":
+                    inputs = self.processor(images=None, text=text, return_tensors="pt")
+                else:
+                    inputs = self.processor(text, None, return_tensors="pt", max_length=self.data_args.max_len,
+                                            truncation=True)
                 input_ids.append(inputs["input_ids"].squeeze(0).unsqueeze(1))
+                pixel_values.append(None)
+                image_sizes.append(None)
             else:
-                inputs = self.processor(text, [image], return_tensors="pt", max_length=self.data_args.max_len, truncation=True)
                 image_exist = True
+                if self.model_args.model_backbone == "llava":
+                    inputs = self.processor(images=image, text=text, return_tensors="pt")
+                else:
+                    inputs = self.processor(text, [image], return_tensors="pt", max_length=self.data_args.max_len, truncation=True)
                 input_ids.append(inputs["input_ids"].squeeze(0).unsqueeze(1))
                 pixel_values.append(inputs['pixel_values'])
                 image_sizes.append(inputs['image_sizes'])
@@ -111,12 +120,20 @@ class EvalCollator:
         attention_mask = input_ids.ne(self.processor.tokenizer.pad_token_id)
 
         if not image_exist:
+            dummy_pixel_values = torch.zeros(input_ids.shape[0], 1)
+            dummy_image_sizes = torch.ones(input_ids.shape[0], 1)
             inputs = {
                 'input_ids': input_ids,
                 'attention_mask': attention_mask,
+                'pixel_values': dummy_pixel_values,
+                'image_sizes': dummy_image_sizes,
             }
         else:
+            pixel_values_shape = list(set(v.shape for v in pixel_values if v is not None))[0]
+            pixel_values = [v if v is not None else torch.zeros(pixel_values_shape) for v in pixel_values]
             pixel_values = torch.cat(pixel_values, dim=0)
+            image_sizes_shape = list(set(v.shape for v in image_sizes if v is not None))[0]
+            image_sizes = [v if v is not None else torch.ones(image_sizes_shape) for v in image_sizes]
             image_sizes = torch.cat(image_sizes, dim=0)
             inputs = {
                 'input_ids': input_ids,

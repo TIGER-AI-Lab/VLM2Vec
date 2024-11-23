@@ -795,6 +795,7 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel, GenerationMixi
             )
 
         legacy_processing = False
+        has_image_input = pixel_values is not None and pixel_values.size(0) > 0 and pixel_values.norm() != 0
         if inputs_embeds is None:
             inputs_embeds = self.get_input_embeddings()(input_ids)
 
@@ -805,7 +806,7 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel, GenerationMixi
                 (input_ids == self.config.image_token_index).sum(1).max() < self.config.image_seq_length
             ) or (input_ids.shape[-1] == 1 and pixel_values is not None)
 
-        if pixel_values is not None and pixel_values.size(0) > 0:
+        if has_image_input:
             # ! infer image_num_patches from image_sizes
             image_num_patches = [
                 image_size_to_num_patches(
@@ -942,7 +943,7 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel, GenerationMixi
             past_key_values=outputs.past_key_values,
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
-            image_hidden_states=image_features if pixel_values is not None else None,
+            image_hidden_states=image_features if has_image_input else None,
         )
 
     def prepare_inputs_for_generation(
