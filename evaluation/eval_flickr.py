@@ -21,7 +21,7 @@ def main():
     training_args: TrainingArguments
 
     processor = AutoProcessor.from_pretrained(
-        model_args.model_name,
+        model_args.processor_name if model_args.processor_name else model_args.model_name,
         trust_remote_code=True,
         num_crops=model_args.num_crops,
     )
@@ -35,6 +35,7 @@ def main():
 
     eval_collator = EvalCollator(
         data_args=data_args,
+        model_args=model_args,
         processor=processor,
     )
     model = MMEBModel.load(model_args)
@@ -58,8 +59,8 @@ def main():
         num_workers=training_args.dataloader_num_workers,
     )
 
-    encode_img_path = os.path.join(data_args.encode_output_path, f"flickr_image_1K")
-    encode_txt_path = os.path.join(data_args.encode_output_path, f"flickr_text_1K")
+    encode_img_path = os.path.join(data_args.encode_output_path, f"flickr_image_1K-crop{model_args.num_crops}")
+    encode_txt_path = os.path.join(data_args.encode_output_path, f"flickr_text_1K-crop{model_args.num_crops}")
 
     encoded_tensor = []
     with torch.no_grad():
@@ -99,14 +100,14 @@ def main():
     print(f"\033[91m accuracy: {acc/len(i2t_name)}\033[0m")
 
     # T -> I
-    # acc = 0
-    # similarity_matrix = torch.matmul(txt_tensor, img_tensor.T)
-    # most_similar_indices = torch.argmax(similarity_matrix, dim=1)
-    # for idx, file_name in enumerate(t2i_name):
-    #     pred_file_name = i2t_name[most_similar_indices[idx].item()]
-    #     if file_name == pred_file_name:
-    #         acc += 1
-    # print(f"\033[91m accuracy: {acc/len(t2i_name)}\033[0m")
+    acc = 0
+    similarity_matrix = torch.matmul(txt_tensor, img_tensor.T)
+    most_similar_indices = torch.argmax(similarity_matrix, dim=1)
+    for idx, file_name in enumerate(t2i_name):
+        pred_file_name = i2t_name[most_similar_indices[idx].item()]
+        if file_name == pred_file_name:
+            acc += 1
+    print(f"\033[91m accuracy: {acc/len(t2i_name)}\033[0m")
 
 
 if __name__ == "__main__":
