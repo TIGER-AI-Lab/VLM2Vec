@@ -13,13 +13,23 @@ datasets = [
 # Define the root directory containing the experiment directories
 checkpoint_paths = [
      # llava-next
+    "/fsx/home/ruimeng/runs/mmeb/mmeb005-llava16_mistral-3.lora8.mmeb20_sub100k-1344.bs1024pergpu128.GCq1p1.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-1000/",
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb005-llava16_mistral-3.lora8.mmeb20_sub100k-1344.bs1024pergpu128.GCq1p1.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-1400/",
      # "/fsx/home/ruimeng/runs/mmeb/mmeb005-llava16_mistral-1.lora8.mmeb20_sub50k.bs256pergpu32.GCq2p2.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-2000/",
-     # "/fsx/home/ruimeng/runs/mmeb/mmeb005-llava16_mistral-2.lora8.mmeb20_sub50k.bs1024pergpu128.GCq2p2.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-1000/",
-     "/fsx/home/ruimeng/runs/mmeb/mmeb005-llava16_mistral-2.lora8.mmeb20_sub50k.bs1024pergpu128.GCq2p2.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-1500/",
+     # "/fsx/home/ruimeng/runs/mmeb/mmeb005-llava16_mistral-2.lora8.mmeb20_sub50k.bs1024pergpu128.GCq2p2.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-2000/",
+     # "/fsx/home/ruimeng/runs/mmeb/mmeb005-e5v-1.lora8.mmeb20_sub50k.bs1024pergpu128.GCq2p2.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-2000/",
 
     # "/fsx/home/ruimeng/runs/mmeb/mmeb005-llava16_vicuna-1.lora8.mmeb20_sub50k.bs256pergpu32.GCq2p2.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-2000/",
-    # "/fsx/home/ruimeng/runs/mmeb/mmeb005-llava16_vicuna-2.lora8.mmeb20_sub50k.bs1024pergpu128.GCq2p2.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-1000/",
-    # "/fsx/home/ruimeng/runs/mmeb/mmeb005-llava16_vicuna-2.lora8.mmeb20_sub50k.bs1024pergpu128.GCq2p2.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-1500/",
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb005-llava16_vicuna-2.lora8.mmeb20_sub50k.bs1024pergpu128.GCq2p2.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-2000/",
+
+    # scale-up
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb005-scale002.lora8.mmeb17_sub100k_NoMSCOCO.bs1024pergpu128.GCq2p2.phi35.NormTemp002.len256crop9.lr5e5.step5kwarm200.8H100/checkpoint-1500/",
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb005-scale001.lora8.mmeb20_sub100k.bs1024pergpu128.GCq2p2.phi35.NormTemp002.len256crop9.lr2e5.step5kwarm200.8H100/checkpoint-1500/",
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb005-scale001.lora8.mmeb20_sub100k.bs1024pergpu128.GCq2p2.phi35.NormTemp002.len256crop9.lr2e5.step5kwarm200.8H100/checkpoint-2500/",
+
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb005-scale002-1.lora8.mmeb17_sub100k_NoMSCOCO.bs1024pergpu128.GCq2p2.phi35.NormTemp002.len256crop9.lr2e5.step2kwarm100.8H100/checkpoint-1000/",
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb005-scale002-1.lora8.mmeb17_sub100k_NoMSCOCO.bs1024pergpu128.GCq2p2.phi35.NormTemp002.len256crop9.lr2e5.step2kwarm100.8H100/checkpoint-1500/",
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb005-scale002-1.lora8.mmeb17_sub100k_NoMSCOCO.bs1024pergpu128.GCq2p2.phi35.NormTemp002.len256crop9.lr2e5.step2kwarm100.8H100/checkpoint-2000/",
 
     # batch size
     # "/fsx/home/ruimeng/runs/mmeb/mmeb004-bs1024.fullmodel.mmeb20_sub50k.bs1024pergpu128.GCq4p4.phi35.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-2000/",
