@@ -129,12 +129,8 @@ class MMEBModel(nn.Module):
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config.use_cache = False
             config.padding_side = "right"
-
-            base_model = LlavaNextForConditionalGeneration.from_pretrained(
-                checkpoint_path, **hf_kwargs, config=config,
-                attn_implementation="flash_attention_2",
-                torch_dtype=torch.bfloat16,
-                trust_remote_code=True)
+            base_model = Phi3VForCausalLM.from_pretrained(model_args.model_name, **hf_kwargs, config=config,
+                                                          torch_dtype=torch.bfloat16, trust_remote_code=True)
             base_model.padding_side = "right"
         else:
             # Loading the base model
