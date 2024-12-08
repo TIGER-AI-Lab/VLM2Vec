@@ -43,7 +43,8 @@ class TrainDataset(Dataset):
         full_img_path = os.path.join(self.data_args.image_dir, img_path)
         image = Image.open(full_img_path)
         if self.model_args.model_backbone == "llava":
-            return self._process_image(image, "low")
+            # TODO: make it configurable
+            return self._process_image(image, "high")
         else:
             return image
 
@@ -104,10 +105,9 @@ class EvalDataset(Dataset):
         full_img_path = os.path.join(self.data_args.image_dir, img_path)
         image = Image.open(full_img_path)
         if self.model_args.model_backbone == "llava":
-            return self._process_image(image, "low")
+            return self._process_image(image, "high")
         else:
             return image
-
         return image
 
     def get_paired_data(self, text_field, img_path_field):
@@ -135,7 +135,9 @@ class EvalDataset(Dataset):
 
 
 class FlickrDataset(Dataset):
-    def __init__(self, modality):
+    def __init__(self, modality, model_backbone):
+        self.model_backbone = model_backbone
+        self.modality = modality
         self.raw_data = load_dataset("nlphuji/flickr_1k_test_image_text_retrieval", split="test")
         if modality == "image":
             self.eval_data, self.image_names = self.get_image_data()
@@ -148,10 +150,42 @@ class FlickrDataset(Dataset):
     def __getitem__(self, idx):
         return self.eval_data[idx]
 
+    def __getitem__(self, idx):
+        text, image = self.eval_data[idx]
+        if self.model_backbone == "llava":
+            # Update llava image token
+            text = text.replace(Phi_Image_token, Llava_Image_token)
+            image = self._process_image(image, "high")
+        return text, image
+
+    def _process_image(self, image, resolution):
+        if image is None:
+            return None
+        if resolution == "high":
+            image = image.resize((1344, 1344))
+        else:
+            image = image.resize((336, 336))
+        return image
+
+    def _get_image(self, img_path):
+        if img_path == "":
+            return None
+        full_img_path = os.path.join(self.data_args.image_dir, img_path)
+        image = Image.open(full_img_path)
+        if self.model_backbone == "llava":
+            return self._process_image(image, "high")
+        else:
+            return image
+        return image
+
     def get_image_data(self):
         eval_data, image_names = [], []
-        # inst = "<|image_1|> Find an image caption describing the given image."
-        inst = "<|image_1|> Represent the given image for image caption retrieval."
+        # i2t
+        inst = "<|image_1|> Find an image caption describing the given image."  # llava-1344-step1k4, i2t=94.0, t2i=80.26
+        # inst = "<|image_1|> Represent the given image for image caption retrieval."  # llava-1344-step1k4, i2t=94.6, t2i=78.98
+        # t2i
+        # inst = "<|image_1|> Represent the given image."  # MSCOCO t2i
+
         for row in self.raw_data:
             eval_data.append((inst, row["image"]))
             image_names.append(row["filename"])
@@ -159,9 +193,14 @@ class FlickrDataset(Dataset):
 
     def get_text_data(self):
         eval_data, image_names = [], []
-        inst = "Retrieve an image that matches the given caption: "
+        # i2t
+        inst = ""
+        # t2i
+        # inst = "Retrieve an image that matches the given caption: "
+        # inst = "Find me an everyday image that matches the given caption."  # MSCOCO t2i
         for row in self.raw_data:
             for caption in row["caption"]:
-                eval_data.append((caption, None))
+                # eval_data.append((caption, None))
+                eval_data.append((inst + caption, None))
                 image_names.append(row["filename"])
         return eval_data, image_names

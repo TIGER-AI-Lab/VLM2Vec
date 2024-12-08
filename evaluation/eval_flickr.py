@@ -27,10 +27,10 @@ def main():
     )
     processor.tokenizer.padding_side = "right"
     eval_img_dataset = FlickrDataset(
-        modality="image",
+        modality="image", model_backbone=model_args.model_backbone
     )
     eval_txt_dataset = FlickrDataset(
-        modality="text",
+        modality="text", model_backbone=model_args.model_backbone
     )
 
     eval_collator = EvalCollator(
