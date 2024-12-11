@@ -2,7 +2,7 @@ import logging
 from typing import List, Tuple
 from dataclasses import dataclass
 from transformers import ProcessorMixin, AutoProcessor, AutoTokenizer
-from src.arguments import DataArguments
+from src.arguments import DataArguments, ModelArguments
 import torch
 
 
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TrainCollator:
     data_args: DataArguments
-    model_args: DataArguments
+    model_args: ModelArguments
     processor: ProcessorMixin
 
     def __call__(self, examples):

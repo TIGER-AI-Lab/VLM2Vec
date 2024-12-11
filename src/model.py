@@ -162,6 +162,7 @@ class MMEBModel(nn.Module):
                 pooling=model_args.pooling,
                 normalize=model_args.normalize
             )
+        model.save_pretrained("/home/ziyan/exp/vlm2vec_llava_next")
         return model
 
     def save(self, output_dir: str):
