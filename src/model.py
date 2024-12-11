@@ -162,8 +162,7 @@ class MMEBModel(nn.Module):
                 pooling=model_args.pooling,
                 normalize=model_args.normalize
             )
-        # model.encoder._hf_peft_config_loaded = False
-        # model.encoder.save_pretrained("/home/ziyan/exp/vlm2vec_llava_next", safe_serialization=False)
+
         return model
 
     def save(self, output_dir: str):
