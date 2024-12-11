@@ -38,8 +38,9 @@ Our model is being trained on MMEB-train and evaluated on MMEB-eval with contras
  - Eval data: https://huggingface.co/datasets/TIGER-Lab/MMEB-eval
 
 ### VLM2Vec Checkpoints
- - [MMEB.lora8.bs1024](https://huggingface.co/TIGER-Lab/MMEB.lora8.bs1024/)
- - [MMEB.fullmodel.bs2048](https://huggingface.co/TIGER-Lab/MMEB.fullmodel.bs2048/)
+ - Phi-3.5 backbone VLM2Vec: https://huggingface.co/TIGER-Lab/VLM2Vec-Full
+ - LLaVa-Next backbone VLM2Vec: https://huggingface.co/TIGER-Lab/VLM2Vec-LLaVa-Next
+ - More to come!
 
 ### Experimental Results
 Our model can outperform the existing baselines by a huge margin.
