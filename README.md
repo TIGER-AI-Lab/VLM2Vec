@@ -123,3 +123,8 @@ python eval.py --lora --model_name microsoft/Phi-3.5-vision-instruct --checkpoin
   year={2024}
 }
 ```
+
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=TIGER-AI-Lab/VLM2Vec&type=Date)](https://star-history.com/#TIGER-AI-Lab/VLM2Vec&Date)
