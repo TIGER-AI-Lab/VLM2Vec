@@ -31,8 +31,8 @@ Our model is based on converting an existing well-trained VLM into an embedding 
 
 <img width="1432" alt="abs" src="figures/train_vlm.png">
 
- - Phi-3.5 backbone VLM2Vec: https://huggingface.co/TIGER-Lab/VLM2Vec-Full
- - LLaVa-Next backbone VLM2Vec: https://huggingface.co/TIGER-Lab/VLM2Vec-LLaVa-Next
+ - [VLM2Vec-Phi3.5V](https://huggingface.co/TIGER-Lab/VLM2Vec-Full)
+ - [VLM2Vec-LLaVa-Next](https://huggingface.co/TIGER-Lab/VLM2Vec-LLaVa-Next) (**Current best version VLM2Vec**)
  - More to come!
 
 
