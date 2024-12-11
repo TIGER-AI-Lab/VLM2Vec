@@ -31,27 +31,26 @@ Our model is based on converting an existing well-trained VLM into an embedding 
 
 <img width="1432" alt="abs" src="figures/train_vlm.png">
 
-## Release
-Our model is being trained on MMEB-train and evaluated on MMEB-eval with contrastive learning. We only use in-batch negatives for training. Our best results were based on Lora training with batch size of 1024. We also have checkpoint with full training with batch size of 2048. Our results on 36 evaluation datasets are:
-### Train/Eval Data
- - Train data: https://huggingface.co/datasets/TIGER-Lab/MMEB-train
- - Eval data: https://huggingface.co/datasets/TIGER-Lab/MMEB-eval
-
-### VLM2Vec Checkpoints
  - Phi-3.5 backbone VLM2Vec: https://huggingface.co/TIGER-Lab/VLM2Vec-Full
  - LLaVa-Next backbone VLM2Vec: https://huggingface.co/TIGER-Lab/VLM2Vec-LLaVa-Next
  - More to come!
 
-### Experimental Results
+
+## Data
+Our model is being trained on MMEB-train (20 tasks) and evaluated on MMEB-eval (20 IND tasks and 16 OOD tasks).
+ - Train data: https://huggingface.co/datasets/TIGER-Lab/MMEB-train
+ - Eval data: https://huggingface.co/datasets/TIGER-Lab/MMEB-eval
+
+
+## Experimental Results
 Our model can outperform the existing baselines by a huge margin.
 <img width="900" alt="abs" src="figures/vlm2vec_results.png">
 
-## How to use VLM2Vec
+## Quick Start
 Please refer to [demo](https://github.com/TIGER-AI-Lab/VLM2Vec/blob/main/demo.py) as the minimum example.
 
-## How to train or evaluate VLM2Vec
 
-### Training
+## Training
 
 Download the image file zip from huggingface
 ```
@@ -79,7 +78,7 @@ torchrun --nproc_per_node=2 --master_port=22447 --max_restarts=0 train.py \
  --grad_cache True --gc_q_chunk_size 2 --gc_p_chunk_size 2 
 ```
 
-### Evaluation
+## Inference & Evaluation
 
 Download the image file zip from huggingface
 ```bash
