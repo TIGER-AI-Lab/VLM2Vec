@@ -27,7 +27,7 @@ This repo contains the code and data for [VLM2Vec: Training Vision-Language Mode
 
 
 ## Model
-Our model is based on converting an existing well-trained VLM into an embedding model. The basic idea is to take the last token in the end of the sequence as the representation of the multimodal inputs.
+Our model is based on converting an existing well-trained VLM into an embedding model. The basic idea is to take the last token in the end of the sequence as the representation of the multimodal inputs. Our VLM2Vec framework is compatible with any SOTA open-source VLMs. By leveraging diverse training data—encompassing a variety of modality combinations, tasks, and instructions—it generates a robust universal multimodal embedding model.
 
 <img width="1432" alt="abs" src="figures/train_vlm.png">
 
@@ -38,8 +38,8 @@ Our model is based on converting an existing well-trained VLM into an embedding 
 
 ## Data
 Our model is being trained on MMEB-train (20 tasks) and evaluated on MMEB-eval (20 IND tasks and 16 OOD tasks).
- - Train data: https://huggingface.co/datasets/TIGER-Lab/MMEB-train
- - Eval data: https://huggingface.co/datasets/TIGER-Lab/MMEB-eval
+ - [Train data](https://huggingface.co/datasets/TIGER-Lab/MMEB-train)
+ - [Eval data](https://huggingface.co/datasets/TIGER-Lab/MMEB-eval)
 
 
 ## Experimental Results
