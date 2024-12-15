@@ -1,0 +1,1 @@
+./scripts/colqwen2/run_train_qwen2.sh

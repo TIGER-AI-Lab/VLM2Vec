@@ -45,6 +45,9 @@ class TrainDataset(Dataset):
         if self.model_args.model_backbone == "llava":
             # TODO: make it configurable
             return self._process_image(image, "high")
+        elif self.model_args.model_backbone == "llava":
+            # ! Low Res here for testing qwen2, can be changed
+            return self._process_image(image, "low")
         else:
             return image
 
@@ -53,8 +56,8 @@ class TrainDataset(Dataset):
             self.train_data[item]["qry"], self.train_data[item]["qry_image_path"],
             self.train_data[item]["pos_text"], self.train_data[item]["pos_image_path"],
         )
-        if self.model_args.model_backbone == "llava":
-            # Update image token
+        if self.model_args.model_backbone in ["llava", "colqwen2"]:
+            # Update image token for llava and colqwen2
             qry_text = qry_text.replace(Phi_Image_token, Llava_Image_token)
             pos_text = pos_text.replace(Phi_Image_token, Llava_Image_token)
         return (qry_text, self._get_image(qry_image_path),
