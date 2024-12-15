@@ -43,7 +43,8 @@ class TrainCollator:
                     inputs = self.processor(text, [image], return_tensors="pt", max_length=self.data_args.max_len, truncation=True)
                 input_ids.append(inputs["input_ids"].squeeze(0).unsqueeze(1))
                 pixel_values.append(inputs['pixel_values'])
-                image_sizes.append(inputs['image_sizes'])
+                if 'image_size' in inputs: # Designed for qwen2, To be updated in the future
+                    image_sizes.append(inputs['image_sizes'])
 
         input_ids = torch._C._nn.pad_sequence(
             input_ids, batch_first=True, padding_value=self.processor.tokenizer.pad_token_id
@@ -57,13 +58,15 @@ class TrainCollator:
             }
         else:
             pixel_values = torch.cat(pixel_values, dim=0)
-            image_sizes = torch.cat(image_sizes, dim=0)
+            
             inputs = {
                 'input_ids': input_ids,
                 'attention_mask': attention_mask,
                 'pixel_values': pixel_values,
-                'image_sizes': image_sizes,
             }
+            if self.model_args.model_backbone != "colqwen2":
+                image_sizes = torch.cat(image_sizes, dim=0)
+                inputs['image_sizes'] = image_sizes
         return inputs
 
 

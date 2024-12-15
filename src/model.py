@@ -7,6 +7,7 @@ from peft import LoraConfig, get_peft_model, PeftModel
 from src.arguments import ModelArguments
 from src.vlm_backbone.phi3_v.modeling_phi3_v import Phi3VForCausalLM
 from src.vlm_backbone.llava_next import LlavaNextForConditionalGeneration
+from src.vlm_backbone.qwen2_vl import Qwen2VLForConditionalGeneration
 
 
 class MMEBModel(nn.Module):
@@ -51,7 +52,14 @@ class MMEBModel(nn.Module):
     @classmethod
     def build(cls, model_args: ModelArguments, **hf_kwargs):
         # Loading the base model
-        if model_args.model_backbone == "llava":
+        if model_args.model_backbone == "colqwen2":
+            base_model = Qwen2VLForConditionalGeneration.from_pretrained(
+                model_args.model_name,
+                torch_dtype=torch.bfloat16,
+                low_cpu_mem_usage=True,
+            )
+            base_model.padding_side = "right"
+        elif model_args.model_backbone == "llava":
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config.use_cache = False
             config.padding_side = "left"
@@ -114,7 +122,16 @@ class MMEBModel(nn.Module):
     def load(cls, model_args: ModelArguments, **hf_kwargs):
         # Loading the base model
         checkpoint_path = model_args.checkpoint_path if model_args.checkpoint_path else model_args.model_name
-        if model_args.model_backbone == "llava":
+        if model_args.model_backbone == "colqwen2":
+            base_model = Qwen2VLForConditionalGeneration.from_pretrained(
+                model_args.model_name,
+                torch_dtype=torch.bfloat16,
+                config=config,
+                low_cpu_mem_usage=True,
+                attn_implementation="flash_attention_2"
+            )
+            base_model.padding_side = "right"
+        elif model_args.model_backbone == "llava":
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config.use_cache = False
             base_model = LlavaNextForConditionalGeneration.from_pretrained(

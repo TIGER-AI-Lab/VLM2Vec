@@ -72,8 +72,10 @@ def split_vlm_inputs(model_input: dict, chunk_size: int):
             (row_contain_image >= chunk_idx * chunk_size) & (row_contain_image < (chunk_idx + 1) * chunk_size)).item())
     if "pixel_values" in keys:
         pixel_values = arg_val["pixel_values"]
-        image_sizes = arg_val["image_sizes"]
         chunked_tensors.append(torch.split(pixel_values, chunk_image_count))
+
+    if "image_sizes" in keys:
+        image_sizes = arg_val["image_sizes"]
         chunked_tensors.append(torch.split(image_sizes, chunk_image_count))
 
     chunked_arg_val = []
