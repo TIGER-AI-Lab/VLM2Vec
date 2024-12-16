@@ -20,35 +20,37 @@ This repo contains the code and data for [VLM2Vec: Training Vision-Language Mode
 ---
 
 ## 🔥News
+- [2024-12] Our team is actively working on VLM2Vec v1.1, which will introduce new features, including hard negatives, additional VLM backbones, multiple-images input and more. Stay tuned!
+- [2024-12] We have released a new variant of VLM2Vec built on the LLaVa-Next backbone, which is currently our best-performing version: https://huggingface.co/TIGER-Lab/VLM2Vec-LLaVa-Next.
 - [2024-10] VLM2Vec has been integrated into [vLLM](https://github.com/vllm-project/vllm/blob/main/examples/offline_inference_vision_language_embedding.py).
 - [2024-10] The technical report, code, data, and model for VLM2Vec are all available online.
 
 
 ## Model
-Our model is based on converting an existing well-trained VLM (Phi-3.5-V) into an embedding model. The basic idea is to take the last token in the end of the sequence as the representation of the multimodal inputs.
+Our model is based on converting an existing well-trained VLM into an embedding model. The basic idea is to take the last token in the end of the sequence as the representation of the multimodal inputs. Our VLM2Vec framework is compatible with any SOTA open-source VLMs. By leveraging diverse training data—encompassing a variety of modality combinations, tasks, and instructions—it generates a robust universal multimodal embedding model.
 
 <img width="1432" alt="abs" src="figures/train_vlm.png">
 
-## Release
-Our model is being trained on MMEB-train and evaluated on MMEB-eval with contrastive learning. We only use in-batch negatives for training. Our best results were based on Lora training with batch size of 1024. We also have checkpoint with full training with batch size of 2048. Our results on 36 evaluation datasets are:
-### Train/Eval Data
- - Train data: https://huggingface.co/datasets/TIGER-Lab/MMEB-train
- - Eval data: https://huggingface.co/datasets/TIGER-Lab/MMEB-eval
+ - [VLM2Vec-Phi3.5V](https://huggingface.co/TIGER-Lab/VLM2Vec-Full)
+ - [VLM2Vec-LLaVa-Next](https://huggingface.co/TIGER-Lab/VLM2Vec-LLaVa-Next) (**Current best version VLM2Vec**)
+ - More to come!
 
-### VLM2Vec Checkpoints
- - [MMEB.lora8.bs1024](https://huggingface.co/TIGER-Lab/MMEB.lora8.bs1024/)
- - [MMEB.fullmodel.bs2048](https://huggingface.co/TIGER-Lab/MMEB.fullmodel.bs2048/)
 
-### Experimental Results
+## Data
+Our model is being trained on MMEB-train (20 tasks) and evaluated on MMEB-eval (20 IND tasks and 16 OOD tasks).
+ - [Train data](https://huggingface.co/datasets/TIGER-Lab/MMEB-train)
+ - [Eval data](https://huggingface.co/datasets/TIGER-Lab/MMEB-eval)
+
+
+## Experimental Results
 Our model can outperform the existing baselines by a huge margin.
 <img width="900" alt="abs" src="figures/vlm2vec_results.png">
 
-## How to use VLM2Vec
+## Quick Start
 Please refer to [demo](https://github.com/TIGER-AI-Lab/VLM2Vec/blob/main/demo.py) as the minimum example.
 
-## How to train or evaluate VLM2Vec
 
-### Training
+## Training
 
 Download the image file zip from huggingface
 ```
@@ -76,7 +78,7 @@ torchrun --nproc_per_node=2 --master_port=22447 --max_restarts=0 train.py \
  --grad_cache True --gc_q_chunk_size 2 --gc_p_chunk_size 2 
 ```
 
-### Evaluation
+## Inference & Evaluation
 
 Download the image file zip from huggingface
 ```bash
@@ -121,3 +123,8 @@ python eval.py --lora --model_name microsoft/Phi-3.5-vision-instruct --checkpoin
   year={2024}
 }
 ```
+
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=TIGER-AI-Lab/VLM2Vec&type=Date)](https://star-history.com/#TIGER-AI-Lab/VLM2Vec&Date)
