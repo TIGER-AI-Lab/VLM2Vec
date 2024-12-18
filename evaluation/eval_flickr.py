@@ -1,8 +1,11 @@
-from src.arguments import ModelArguments, DataArguments, TrainingArguments
 from transformers import HfArgumentParser, AutoProcessor
+
+from src.arguments import ModelArguments, DataArguments, TrainingArguments
 from src.model import MMEBModel
 from src.dataset import FlickrDataset
 from src.collator import EvalCollator
+from src.utils import load_processor
+
 from torch.utils.data import DataLoader
 import torch
 from tqdm import tqdm
@@ -20,24 +23,20 @@ def main():
     data_args: DataArguments
     training_args: TrainingArguments
 
-    processor = AutoProcessor.from_pretrained(
-        model_args.processor_name if model_args.processor_name else model_args.model_name,
-        trust_remote_code=True,
-        num_crops=model_args.num_crops,
-    )
-    processor.tokenizer.padding_side = "right"
+    processor = load_processor(model_args)
+
     eval_img_dataset = FlickrDataset(
         modality="image", model_backbone=model_args.model_backbone
     )
     eval_txt_dataset = FlickrDataset(
         modality="text", model_backbone=model_args.model_backbone
     )
-
     eval_collator = EvalCollator(
         data_args=data_args,
         model_args=model_args,
         processor=processor,
     )
+
     model = MMEBModel.load(model_args)
     model.eval()
     model = model.to(training_args.device, dtype=torch.bfloat16)
