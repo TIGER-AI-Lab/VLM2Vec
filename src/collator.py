@@ -2,7 +2,7 @@ import logging
 from typing import List, Tuple
 from dataclasses import dataclass
 from transformers import ProcessorMixin, AutoProcessor, AutoTokenizer
-from src.arguments import DataArguments
+from src.arguments import DataArguments, ModelArguments
 import torch
 
 
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TrainCollator:
     data_args: DataArguments
-    model_args: DataArguments
+    model_args: ModelArguments
     processor: ProcessorMixin
 
     def __call__(self, examples):
@@ -29,7 +29,7 @@ class TrainCollator:
         for example in examples:
             text, image = example[text_idx], example[image_idx]
             if image is None:
-                if self.model_args.model_backbone == "llava":
+                if self.model_args.model_backbone == "llava_next":
                     inputs = self.processor(images=None, text=text, return_tensors="pt")
                 else:
                     inputs = self.processor(text, None, return_tensors="pt", max_length=self.data_args.max_len,
@@ -70,7 +70,7 @@ class TrainCollator:
 @dataclass
 class EvalCollator:
     data_args: DataArguments
-    model_args: DataArguments
+    model_args: ModelArguments
     processor: ProcessorMixin
 
     def __call__(self, examples):

@@ -5,17 +5,17 @@ from typing import List
 
 @dataclass
 class ModelArguments:
+    model_name: str = field(
+        metadata={"help": "huggingface model name or path"}
+    )
+    model_backbone: str = field(
+        metadata={"help": "vlm backbone"}
+    )
     processor_name: str = field(
         default=None, metadata={"help": "processor_name, huggingface model name or path"}
     )
-    model_name: str = field(
-        default=None, metadata={"help": "huggingface model name or path"}
-    )
     model_type: str = field(
         default=None, metadata={"help": "lavis model type"}
-    )
-    model_backbone: str = field(
-        default=None, metadata={"help": "vlm backbone"}
     )
     checkpoint_path: str = field(
         default=None, metadata={"help": "a local model path"}
