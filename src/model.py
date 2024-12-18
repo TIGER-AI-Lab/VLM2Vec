@@ -126,7 +126,6 @@ class MMEBModel(nn.Module):
             base_model = Qwen2VLForConditionalGeneration.from_pretrained(
                 model_args.model_name,
                 torch_dtype=torch.bfloat16,
-                config=config,
                 low_cpu_mem_usage=True,
                 attn_implementation="flash_attention_2"
             )

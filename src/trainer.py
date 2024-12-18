@@ -74,9 +74,13 @@ def split_vlm_inputs(model_input: dict, chunk_size: int):
         pixel_values = arg_val["pixel_values"]
         chunked_tensors.append(torch.split(pixel_values, chunk_image_count))
 
-    if "image_sizes" in keys:
+    if "image_sizes" in keys: # qwen2 may not use image_sizes
         image_sizes = arg_val["image_sizes"]
         chunked_tensors.append(torch.split(image_sizes, chunk_image_count))
+
+    if "image_grid_thw" in keys:
+        image_grid_thw = arg_val["image_grid_thw"]
+        chunked_tensors.append(torch.split(image_grid_thw, chunk_image_count))
 
     chunked_arg_val = []
     for kk, tt in zip(repeat(keys), zip(*chunked_tensors)):

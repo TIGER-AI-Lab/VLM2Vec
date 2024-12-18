@@ -24,12 +24,13 @@ class TrainCollator:
         return qry_inputs, pos_inputs
 
     def _get_batch_inputs(self, examples, text_idx, image_idx):
-        input_ids, pixel_values, image_sizes = [], [], []
+        input_ids, pixel_values, image_sizes, image_grid_thw = [], [], [], []
         image_exist = False
+        backbone = self.model_args.model_backbone
         for example in examples:
             text, image = example[text_idx], example[image_idx]
             if image is None:
-                if self.model_args.model_backbone == "llava":
+                if backbone == "llava":
                     inputs = self.processor(images=None, text=text, return_tensors="pt")
                 else:
                     inputs = self.processor(text, None, return_tensors="pt", max_length=self.data_args.max_len,
@@ -37,36 +38,38 @@ class TrainCollator:
                 input_ids.append(inputs["input_ids"].squeeze(0).unsqueeze(1))
             else:
                 image_exist = True
-                if self.model_args.model_backbone == "llava":
+                if backbone == "llava":
                     inputs = self.processor(images=image, text=text, return_tensors="pt")
+                elif backbone == "colqwen2":
+                    inputs = self.processor([text], [image], return_tensors="pt", max_length=self.data_args.max_len, truncation=True)
                 else:
                     inputs = self.processor(text, [image], return_tensors="pt", max_length=self.data_args.max_len, truncation=True)
                 input_ids.append(inputs["input_ids"].squeeze(0).unsqueeze(1))
                 pixel_values.append(inputs['pixel_values'])
-                if 'image_size' in inputs: # Designed for qwen2, To be updated in the future
+                if 'image_sizes' in inputs: # Fixed for qwen2, now qwen2 can return image_sizes as well
                     image_sizes.append(inputs['image_sizes'])
+                if 'image_grid_thw' in inputs:
+                    image_grid_thw.append(inputs['image_grid_thw'])
 
         input_ids = torch._C._nn.pad_sequence(
             input_ids, batch_first=True, padding_value=self.processor.tokenizer.pad_token_id
         ).squeeze(2)
         attention_mask = input_ids.ne(self.processor.tokenizer.pad_token_id)
 
-        if not image_exist:
-            inputs = {
-                'input_ids': input_ids,
-                'attention_mask': attention_mask,
-            }
-        else:
+        # assume text is always given
+        inputs = {
+            'input_ids': input_ids,
+            'attention_mask': attention_mask,
+        }
+        if image_exist: # if image is given
             pixel_values = torch.cat(pixel_values, dim=0)
-            
-            inputs = {
-                'input_ids': input_ids,
-                'attention_mask': attention_mask,
-                'pixel_values': pixel_values,
-            }
-            if self.model_args.model_backbone != "colqwen2":
+            inputs['pixel_values'] = pixel_values
+            if image_sizes: # only if the processed result includes image_sizes
                 image_sizes = torch.cat(image_sizes, dim=0)
                 inputs['image_sizes'] = image_sizes
+            if image_grid_thw: # for qwen2 which the model processes image patches
+                image_grid_thw = torch.cat(image_grid_thw, dim=0)
+                inputs['image_grid_thw'] = image_grid_thw
         return inputs
 
 
