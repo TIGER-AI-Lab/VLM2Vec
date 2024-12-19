@@ -114,7 +114,7 @@ class MMEBModel(nn.Module):
     def load(cls, model_args: ModelArguments, **hf_kwargs):
         # Loading the base model
         checkpoint_path = model_args.checkpoint_path if model_args.checkpoint_path else model_args.model_name
-        if model_args.model_backbone == "llava":
+        if model_args.model_backbone == "llava_next":
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config.use_cache = False
             base_model = LlavaNextForConditionalGeneration.from_pretrained(

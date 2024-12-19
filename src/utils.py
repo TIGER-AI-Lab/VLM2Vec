@@ -1,6 +1,6 @@
 def load_processor(model_args):
     if model_args.model_backbone == "llava_next":
-        from vlm_backbone.llava_next.processing_llava_next import LlavaNextProcessor
+        from src.vlm_backbone.llava_next.processing_llava_next import LlavaNextProcessor
         processor = LlavaNextProcessor.from_pretrained(
             model_args.processor_name if model_args.processor_name else model_args.model_name,
             trust_remote_code=True)
