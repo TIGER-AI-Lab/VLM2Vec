@@ -51,7 +51,7 @@ class MMEBModel(nn.Module):
     @classmethod
     def build(cls, model_args: ModelArguments, **hf_kwargs):
         # Loading the base model
-        if model_args.model_backbone == "llava":
+        if model_args.model_backbone == "llava_next":
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config.use_cache = False
             config.padding_side = "left"
