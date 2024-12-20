@@ -48,7 +48,7 @@ class TrainCollator:
                 pixel_values.append(inputs['pixel_values'])
                 if 'image_sizes' in inputs: # Fixed for qwen2, now qwen2 can return image_sizes as well
                     image_sizes.append(inputs['image_sizes'])
-                if 'image_grid_thw' in inputs:
+                elif 'image_grid_thw' in inputs:
                     image_grid_thw.append(inputs['image_grid_thw'])
 
         input_ids = torch._C._nn.pad_sequence(
@@ -67,7 +67,7 @@ class TrainCollator:
             if image_sizes: # only if the processed result includes image_sizes
                 image_sizes = torch.cat(image_sizes, dim=0)
                 inputs['image_sizes'] = image_sizes
-            if image_grid_thw: # for qwen2 which the model processes image patches
+            elif image_grid_thw: # for qwen2 which the model processes image patches
                 image_grid_thw = torch.cat(image_grid_thw, dim=0)
                 inputs['image_grid_thw'] = image_grid_thw
         return inputs

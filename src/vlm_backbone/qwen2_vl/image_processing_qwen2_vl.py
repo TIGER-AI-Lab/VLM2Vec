@@ -312,7 +312,7 @@ class Qwen2VLImageProcessor(BaseImageProcessor):
             grid_t * grid_h * grid_w, channel * self.temporal_patch_size * self.patch_size * self.patch_size
         )
 
-        return flatten_patches, (grid_t, grid_h, grid_w), (resized_height, resized_width)
+        return flatten_patches, (grid_t, grid_h, grid_w)
 
     def preprocess(
         self,
@@ -414,7 +414,7 @@ class Qwen2VLImageProcessor(BaseImageProcessor):
         if images is not None:
             pixel_values, vision_grid_thws, image_sizes = [], [], []
             for image in images:
-                patches, image_grid_thw, image_size = self._preprocess(
+                patches, image_grid_thw = self._preprocess(
                     image,
                     do_resize=do_resize,
                     resample=resample,
@@ -429,10 +429,9 @@ class Qwen2VLImageProcessor(BaseImageProcessor):
                 )
                 pixel_values.extend(patches)
                 vision_grid_thws.append(image_grid_thw)
-                image_sizes.append(image_size)
             pixel_values = np.array(pixel_values)
             vision_grid_thws = np.array(vision_grid_thws)
-            data = {"pixel_values": pixel_values, "image_grid_thw": vision_grid_thws, "image_sizes": image_sizes}
+            data = {"pixel_values": pixel_values, "image_grid_thw": vision_grid_thws}
 
         if videos is not None:
             pixel_values, vision_grid_thws = [], []
