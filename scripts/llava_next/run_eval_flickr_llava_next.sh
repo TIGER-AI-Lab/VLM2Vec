@@ -1,7 +1,7 @@
 export PYTHONPATH=../VLM2Vec/:$PYTHONPATH
 
 
-CUDA_VISIBLE_DEVICES=1 python evaluation/eval_flickr.py \
+CUDA_VISIBLE_DEVICES=0 python evaluation/eval_flickr.py \
   --model_name TIGER-Lab/VLM2Vec-LLaVa-Next \
   --model_backbone llava_next \
   --max_len 256 \
