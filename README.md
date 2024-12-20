@@ -47,7 +47,7 @@ Our model can outperform the existing baselines by a huge margin.
 <img alt="abs" src="figures/vlm2vec_results.png">
 
 ## Quick Start
-Please refer to [demo](https://github.com/TIGER-AI-Lab/VLM2Vec/blob/main/demo.py) as the minimum example.
+We have provided several samples, including demonstration and evaluation code, located in the `scripts/` directory.
 
 
 ## Training
