@@ -21,7 +21,8 @@ processor = AutoProcessor.from_pretrained(
 )
 
 # Image + Text -> Text
-inputs = processor('<|image_1|> Represent the given image with the following question: What is in the image', [Image.open('figures/example.jpg')])
+inputs = processor('<|image_1|> Represent the given image with the following question: What is in the image', [Image.open(
+    '../../figures/example.jpg')])
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 qry_output = model(qry=inputs)["qry_reps"]
 
@@ -45,7 +46,7 @@ inputs = {key: value.to('cuda') for key, value in inputs.items()}
 qry_output = model(qry=inputs)["qry_reps"]
 
 string = '<|image_1|> Represent the given image.'
-inputs = processor(string, [Image.open('figures/example.jpg')])
+inputs = processor(string, [Image.open('../../figures/example.jpg')])
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 tgt_output = model(tgt=inputs)["tgt_reps"]
 print(string, '=', model.compute_similarity(qry_output, tgt_output))
@@ -56,7 +57,7 @@ inputs = {key: value.to('cuda') for key, value in inputs.items()}
 qry_output = model(qry=inputs)["qry_reps"]
 
 string = '<|image_1|> Represent the given image.'
-inputs = processor(string, [Image.open('figures/example.jpg')])
+inputs = processor(string, [Image.open('../../figures/example.jpg')])
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 tgt_output = model(tgt=inputs)["tgt_reps"]
 print(string, '=', model.compute_similarity(qry_output, tgt_output))
