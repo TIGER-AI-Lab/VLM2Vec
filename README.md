@@ -44,7 +44,7 @@ Our model is being trained on MMEB-train (20 tasks) and evaluated on MMEB-eval (
 
 ## Experimental Results
 Our model can outperform the existing baselines by a huge margin.
-<img width="900" alt="abs" src="figures/vlm2vec_results.png">
+<img alt="abs" src="figures/vlm2vec_results.png">
 
 ## Quick Start
 Please refer to [demo](https://github.com/TIGER-AI-Lab/VLM2Vec/blob/main/demo.py) as the minimum example.
