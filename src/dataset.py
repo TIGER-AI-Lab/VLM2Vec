@@ -35,7 +35,7 @@ class TrainDataset(Dataset):
         if resolution == "high":
             image = image.resize((1344, 1344))
         else:
-            image = image.resize((336, 336))
+            image = image.resize((448, 448)) # Designed for qwen2 vl
         return image
 
     def _get_image(self, img_path):

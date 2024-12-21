@@ -32,6 +32,8 @@ class TrainCollator:
             if image is None:
                 if backbone == "llava":
                     inputs = self.processor(images=None, text=text, return_tensors="pt")
+                elif backbone == "colqwen2":
+                    inputs = self.processor(text=[text], images=None, return_tensors="pt", max_length=self.data_args.max_len, truncation=True)
                 else:
                     inputs = self.processor(text, None, return_tensors="pt", max_length=self.data_args.max_len,
                                             truncation=True)
@@ -41,12 +43,12 @@ class TrainCollator:
                 if backbone == "llava":
                     inputs = self.processor(images=image, text=text, return_tensors="pt")
                 elif backbone == "colqwen2":
-                    inputs = self.processor([text], [image], return_tensors="pt", max_length=self.data_args.max_len, truncation=True)
+                    inputs = self.processor(images=[image], text=[text], return_tensors="pt", max_length=self.data_args.max_len, truncation=True)
                 else:
-                    inputs = self.processor(text, [image], return_tensors="pt", max_length=self.data_args.max_len, truncation=True)
+                    inputs = self.processor(text=text, images=[image], return_tensors="pt", max_length=self.data_args.max_len, truncation=True)
                 input_ids.append(inputs["input_ids"].squeeze(0).unsqueeze(1))
                 pixel_values.append(inputs['pixel_values'])
-                if 'image_sizes' in inputs: # Fixed for qwen2, now qwen2 can return image_sizes as well
+                if 'image_sizes' in inputs:
                     image_sizes.append(inputs['image_sizes'])
                 elif 'image_grid_thw' in inputs:
                     image_grid_thw.append(inputs['image_grid_thw'])
