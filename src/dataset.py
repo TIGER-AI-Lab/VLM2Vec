@@ -35,7 +35,7 @@ class TrainDataset(Dataset):
         if resolution == "high":
             image = image.resize((1344, 1344))
         else:
-            image = image.resize((448, 448)) # Designed for qwen2 vl
+            image = image.resize((128, 128)) # Designed for qwen2, the max token length is 1024, so limit the image size to 308
         return image
 
     def _get_image(self, img_path):
