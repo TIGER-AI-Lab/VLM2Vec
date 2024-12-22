@@ -18,12 +18,13 @@ Processor class for Phi3-V.
 """
 import re
 from typing import List, Optional, Union
+import numpy as np
 
 import torch
 
 import transformers
 from transformers.feature_extraction_utils import BatchFeature
-from transformers.image_utils import ImageInput
+from transformers.image_utils import ImageInput, is_valid_image
 from transformers.processing_utils import ProcessorMixin
 from transformers.tokenization_utils_base import PaddingStrategy, TextInput, TruncationStrategy
 from transformers.utils import TensorType
@@ -31,6 +32,13 @@ from .image_processing_phi3_v import Phi3VImageProcessor
 
 transformers.Phi3VImageProcessor = Phi3VImageProcessor
 
+MultiFrameImageInput = Union[List[List["Image.Image"]], List[List[np.ndarray]], List[List["torch.Tensor"]]]
+
+def is_multi_frames(images):
+    if isinstance(images, (list, tuple)) and isinstance(images[0], (list, tuple)):
+        return is_valid_image(images[0][0])
+    else:
+        return False
 
 class Phi3VProcessor(ProcessorMixin):
     r"""
@@ -60,7 +68,7 @@ class Phi3VProcessor(ProcessorMixin):
     def __call__(
             self,
             text: Union[TextInput, List[TextInput]],
-            images: ImageInput = None,
+            images: Union[ImageInput, MultiFrameImageInput] = None,
             padding: Union[bool, str, PaddingStrategy] = False,
             truncation: Union[bool, str, TruncationStrategy] = None,
             max_length=None,
@@ -112,6 +120,8 @@ class Phi3VProcessor(ProcessorMixin):
             - **pixel_values** -- Pixel values to be fed to a model. Returned when `images` is not `None`.
         """
         if images is not None:
+            if is_multi_frames(images):
+                images = [image for sample_images in images for image in sample_images]
             image_inputs = self.image_processor(images, return_tensors=return_tensors)
         else:
             image_inputs = {}
@@ -154,7 +164,14 @@ class Phi3VProcessor(ProcessorMixin):
             return BatchFeature(data={**model_inputs})
 
         pattern = r"<\|image_\d+\|>"
-        prompt_chunks = [self.tokenizer(chunk).input_ids for chunk in re.split(pattern, texts)]
+        if isinstance(texts, str):
+           texts = [texts]
+        
+        prompt_chunks = []
+        image_tags = []
+        for text in texts:
+            prompt_chunks.append([self.tokenizer(chunk, truncation=truncation, max_length=max_length).input_ids for chunk in re.split(pattern, text)])
+            image_tags.append(re.findall(pattern, text))
 
         if 'num_img_tokens' in images:
             num_img_tokens = images['num_img_tokens']
@@ -166,11 +183,12 @@ class Phi3VProcessor(ProcessorMixin):
         images, image_sizes = images['pixel_values'], images['image_sizes']
 
         # image_tags needs to start from 1 to n
-        image_tags = re.findall(pattern, texts)
-        # image_ids = [int(s.split("|")[1].split("_")[-1]) * -1 for s in image_tags]
-        # image_ids_pad = [[iid]*num_img_tokens[i] for i, iid in enumerate(image_ids)]
-        image_ids = [int(s.split("|")[1].split("_")[-1]) for s in image_tags]
-        unique_image_ids = sorted(list(set(image_ids)))
+        image_ids_counter = 0
+        image_ids = []
+        for tags in image_tags:
+            image_ids.append([int(s.split("|")[1].split("_")[-1]) + image_ids_counter for s in tags])
+            image_ids_counter += len(tags)
+        unique_image_ids = sorted(list(set([iid for ids in image_ids for iid in ids])))
         # image_ids must start from 1, and must be continuous int, e.g. [1, 2, 3], cannot be [1, 4, 5]
         # check the condition
         assert unique_image_ids == list(range(1,
@@ -179,7 +197,7 @@ class Phi3VProcessor(ProcessorMixin):
         assert len(unique_image_ids) == len(
             images), f"total images must be the same as the number of image tags, got {len(unique_image_ids)} image tags and {len(images)} images"
 
-        image_ids_pad = [[-iid] * num_img_tokens[iid - 1] for iid in image_ids]
+        image_ids_pad = [[[-iid]*num_img_tokens[iid-1] for iid in ids] for ids in image_ids]
 
         def insert_separator(X, sep_list):
             if len(X) > len(sep_list):
@@ -187,12 +205,15 @@ class Phi3VProcessor(ProcessorMixin):
             return [ele for sublist in zip(X, sep_list) for ele in sublist]
 
         input_ids = []
-        offset = 0
-        for x in insert_separator(prompt_chunks, image_ids_pad):
-            input_ids.extend(x[offset:])
+        for sub_prompt_chunks, sub_image_ids_pad in zip(prompt_chunks, image_ids_pad):
+            input_ids.append([])
+            offset = 0
+            for x in insert_separator(sub_prompt_chunks, sub_image_ids_pad):
+                input_ids[-1].extend(x[offset:])
 
-        input_ids = torch.tensor(input_ids, dtype=torch.long).unsqueeze(0)
+        input_ids = torch.tensor(input_ids, dtype=torch.long)
         attention_mask = (input_ids > -1000000).to(torch.long)
+        attention_mask[input_ids == self.tokenizer.pad_token_id] = 0
 
         return BatchFeature(data={"input_ids": input_ids,
                                   "attention_mask": attention_mask,
