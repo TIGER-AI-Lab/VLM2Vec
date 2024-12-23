@@ -43,8 +43,9 @@ class TrainDataset(Dataset):
             return None
         full_img_path = os.path.join(self.data_args.image_dir, img_path)
         image = Image.open(full_img_path)
+        if self.model_args.model_backbone == "llava_next":
         backbone = self.model_args.model_backbone
-        if backbone == "llava":
+        if backbone == "llava_next":
             # TODO: make it configurable
             return self._process_image(image, "high")
         elif backbone == "colqwen2":
@@ -94,7 +95,7 @@ class EvalDataset(Dataset):
 
     def __getitem__(self, item):
         text, img_path = self.paired_dataset[item]["text"], self.paired_dataset[item]["img_path"]
-        if self.model_args.model_backbone == "llava":
+        if self.model_args.model_backbone == "llava_next":
             # Update llava image token
             text = text.replace(Phi_Image_token, Llava_Image_token)
         return text, self._get_image(img_path),
@@ -113,7 +114,7 @@ class EvalDataset(Dataset):
             return None
         full_img_path = os.path.join(self.data_args.image_dir, img_path)
         image = Image.open(full_img_path)
-        if self.model_args.model_backbone == "llava":
+        if self.model_args.model_backbone == "llava_next":
             return self._process_image(image, "high")
         else:
             return image
@@ -161,7 +162,7 @@ class FlickrDataset(Dataset):
 
     def __getitem__(self, idx):
         text, image = self.eval_data[idx]
-        if self.model_backbone == "llava":
+        if self.model_backbone == "llava_next":
             # Update llava image token
             text = text.replace(Phi_Image_token, Llava_Image_token)
             image = self._process_image(image, "high")
@@ -181,7 +182,7 @@ class FlickrDataset(Dataset):
             return None
         full_img_path = os.path.join(self.data_args.image_dir, img_path)
         image = Image.open(full_img_path)
-        if self.model_backbone == "llava":
+        if self.model_backbone == "llava_next":
             return self._process_image(image, "high")
         else:
             return image

@@ -59,7 +59,7 @@ class MMEBModel(nn.Module):
                 low_cpu_mem_usage=True,
             )
             base_model.padding_side = "right"
-        elif model_args.model_backbone == "llava":
+        elif model_args.model_backbone == "llava_next":
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config.use_cache = False
             config.padding_side = "left"
@@ -130,7 +130,7 @@ class MMEBModel(nn.Module):
                 attn_implementation="flash_attention_2"
             )
             base_model.padding_side = "right"
-        elif model_args.model_backbone == "llava":
+        elif model_args.model_backbone == "llava_next":
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config.use_cache = False
             base_model = LlavaNextForConditionalGeneration.from_pretrained(

@@ -1,19 +1,15 @@
 def load_processor(model_args):
-    """
-    Load processor based on VLM backbone.
-    """
-    if model_args.model_backbone == "phi":
+    if model_args.model_backbone == "llava_next":
+        from src.vlm_backbone.llava_next.processing_llava_next import LlavaNextProcessor
+        processor = LlavaNextProcessor.from_pretrained(
+            model_args.processor_name if model_args.processor_name else model_args.model_name,
+            trust_remote_code=True)
+    elif model_args.model_backbone == "phi3_v":
         from src.vlm_backbone.phi3_v.processing_phi3_v import Phi3VProcessor
         processor = Phi3VProcessor.from_pretrained(
             model_args.processor_name if model_args.processor_name else model_args.model_name,
             trust_remote_code=True,
-            num_crops=model_args.num_crops
-        )
-    elif model_args.model_backbone == "llava":
-        from transformers import LlavaNextProcessor
-        processor = LlavaNextProcessor.from_pretrained(
-            "llava-hf/llava-v1.6-mistral-7b-hf",
-            trust_remote_code=True
+            num_crops=model_args.num_crops,
         )
     elif model_args.model_backbone == "colqwen2":
         from src.vlm_backbone.qwen2_vl.processing_qwen2_vl import Qwen2VLProcessor

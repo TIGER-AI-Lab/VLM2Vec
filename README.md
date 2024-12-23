@@ -20,7 +20,7 @@ This repo contains the code and data for [VLM2Vec: Training Vision-Language Mode
 ---
 
 ## 🔥News
-- [2024-12] Our team is actively working on VLM2Vec v1.1, which will introduce new features, including hard negatives, additional VLM backbones, and more. Stay tuned!
+- [2024-12] Our team is actively working on VLM2Vec v1.1, which will introduce new features, including hard negatives, additional VLM backbones, multiple-images input and more. Stay tuned!
 - [2024-12] We have released a new variant of VLM2Vec built on the LLaVa-Next backbone, which is currently our best-performing version: https://huggingface.co/TIGER-Lab/VLM2Vec-LLaVa-Next.
 - [2024-10] VLM2Vec has been integrated into [vLLM](https://github.com/vllm-project/vllm/blob/main/examples/offline_inference_vision_language_embedding.py).
 - [2024-10] The technical report, code, data, and model for VLM2Vec are all available online.
@@ -44,10 +44,10 @@ Our model is being trained on MMEB-train (20 tasks) and evaluated on MMEB-eval (
 
 ## Experimental Results
 Our model can outperform the existing baselines by a huge margin.
-<img width="900" alt="abs" src="figures/vlm2vec_results.png">
+<img alt="abs" src="figures/vlm2vec_results.png">
 
 ## Quick Start
-Please refer to [demo](https://github.com/TIGER-AI-Lab/VLM2Vec/blob/main/demo.py) as the minimum example.
+We have provided several samples, including demonstration and evaluation code, located in the `scripts/` directory.
 
 
 ## Training
