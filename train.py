@@ -2,6 +2,8 @@
 import logging
 import sys
 
+from transformers import AutoTokenizer, AutoProcessor
+from transformers import LlavaNextProcessor
 from transformers import (
     HfArgumentParser,
 )
@@ -11,11 +13,11 @@ from src.collator import TrainCollator
 from src.arguments import ModelArguments, DataArguments, TrainingArguments
 from src.model import MMEBModel
 from src.trainer import MMEBTrainer, GradCacheTrainer
-from src.utils import load_processor
 import wandb
 import torch
 import torch.distributed as dist
 
+from src.vlm_backbone.phi3_v.processing_phi3_v import Phi3VProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +40,23 @@ def main():
     if (dist.is_initialized() and torch.distributed.get_rank() == 0) or (not dist.is_initialized()):
         wandb.init(project=training_args.project_name, name=training_args.run_name)
 
-    processor = load_processor(model_args)
+    if model_args.model_backbone == "llava":
+        processor = LlavaNextProcessor.from_pretrained(
+            model_args.processor_name if model_args.processor_name else model_args.model_name,
+            trust_remote_code=True)
+        processor.tokenizer.padding_side = "left"
+    elif model_args.model_backbone == "phi35v":
+        processor = Phi3VProcessor.from_pretrained(
+            model_args.processor_name if model_args.processor_name else model_args.model_name,
+            trust_remote_code=True)
+        processor.tokenizer.padding_side = "right"
+    else:
+        processor = AutoProcessor.from_pretrained(
+            model_args.processor_name if model_args.processor_name else model_args.model_name,
+            trust_remote_code=True,
+            num_crops=model_args.num_crops
+        )
+        processor.tokenizer.padding_side = "right"
 
     train_dataset = TrainDataset(data_args, model_args)
     collator = TrainCollator(data_args, model_args, processor)

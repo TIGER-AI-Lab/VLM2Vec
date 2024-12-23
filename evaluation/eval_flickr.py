@@ -1,5 +1,6 @@
-from src.arguments import ModelArguments, DataArguments, TrainingArguments
 from transformers import HfArgumentParser, AutoProcessor
+
+from src.arguments import ModelArguments, DataArguments, TrainingArguments
 from src.model import MMEBModel
 from src.dataset import FlickrDataset
 from src.collator import EvalCollator

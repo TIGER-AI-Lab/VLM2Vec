@@ -29,7 +29,7 @@ class TrainCollator:
         for example in examples:
             text, image = example[text_idx], example[image_idx]
             if image is None:
-                if self.model_args.model_backbone == "llava":
+                if self.model_args.model_backbone == "llava_next":
                     inputs = self.processor(images=None, text=text, return_tensors="pt")
                 else:
                     inputs = self.processor(text, None, return_tensors="pt", max_length=self.data_args.max_len,
@@ -37,7 +37,7 @@ class TrainCollator:
                 input_ids.append(inputs["input_ids"].squeeze(0).unsqueeze(1))
             else:
                 image_exist = True
-                if self.model_args.model_backbone == "llava":
+                if self.model_args.model_backbone == "llava_next":
                     inputs = self.processor(images=image, text=text, return_tensors="pt")
                 else:
                     inputs = self.processor(text, [image], return_tensors="pt", max_length=self.data_args.max_len, truncation=True)
@@ -70,7 +70,7 @@ class TrainCollator:
 @dataclass
 class EvalCollator:
     data_args: DataArguments
-    model_args: DataArguments
+    model_args: ModelArguments
     processor: ProcessorMixin
 
     def __call__(self, examples):
@@ -86,7 +86,7 @@ class EvalCollator:
         for example in examples:
             text, image = example
             if image is None:
-                if self.model_args.model_backbone == "llava":
+                if self.model_args.model_backbone == "llava_next":
                     inputs = self.processor(images=None, text=text, return_tensors="pt")
                 else:
                     inputs = self.processor(text, None, return_tensors="pt", max_length=self.data_args.max_len,
@@ -96,7 +96,7 @@ class EvalCollator:
                 image_sizes.append(None)
             else:
                 image_exist = True
-                if self.model_args.model_backbone == "llava":
+                if self.model_args.model_backbone == "llava_next":
                     inputs = self.processor(images=image, text=text, return_tensors="pt")
                 else:
                     inputs = self.processor(text, [image], return_tensors="pt", max_length=self.data_args.max_len, truncation=True)
@@ -223,4 +223,3 @@ class OpenCLIPCollator:
         }
 
         return inputs
-
