@@ -43,7 +43,6 @@ class TrainDataset(Dataset):
             return None
         full_img_path = os.path.join(self.data_args.image_dir, img_path)
         image = Image.open(full_img_path)
-        if self.model_args.model_backbone == "llava_next":
         backbone = self.model_args.model_backbone
         if backbone == "llava_next":
             # TODO: make it configurable
