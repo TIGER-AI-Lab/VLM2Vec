@@ -133,7 +133,7 @@ class Qwen2VLProcessor(ProcessorMixin):
             index = 0
             for i in range(len(text)):
                 while "<|image_pad|>" in text[i]:
-                    num_pad = image_grid_thw[index].prod() // merge_length - 1
+                    num_pad = image_grid_thw[index].prod() // merge_length
                     text[i] = text[i].replace(
                         "<|image_pad|>", "<|placeholder|>" * num_pad, 1
                     )
