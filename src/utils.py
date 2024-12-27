@@ -11,7 +11,7 @@ def load_processor(model_args):
             trust_remote_code=True,
             num_crops=model_args.num_crops,
         )
-    elif model_args.model_backbone == "colqwen2":
+    elif model_args.model_backbone == "qwen2":
         from src.vlm_backbone.qwen2_vl.processing_qwen2_vl import Qwen2VLProcessor
         from src.vlm_backbone.qwen2_vl.image_processing_qwen2_vl import Qwen2VLImageProcessor
         from src.vlm_backbone.qwen2_vl.tokenization_qwen2_fast import Qwen2TokenizerFast

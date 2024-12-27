@@ -2,7 +2,7 @@ OUTPUT_DIR="output/colqwen2"
 python3 train.py \
  --model_name Qwen/Qwen2-VL-7B-Instruct --bf16 --pooling last \
  --local_rank -1 \
- --model_backbone colqwen2 \
+ --model_backbone qwen2 \
  --dataset_name TIGER-Lab/MMEB-train \
  --subset_name ImageNet_1K N24News HatefulMemes InfographicsVQA ChartQA Visual7W VisDial CIRR NIGHTS WebQA MSCOCO \
  --num_sample_per_subset 10000 \

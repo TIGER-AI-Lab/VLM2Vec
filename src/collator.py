@@ -32,7 +32,7 @@ class TrainCollator:
             if image is None:
                 if backbone == "llava_next":
                     inputs = self.processor(images=None, text=text, return_tensors="pt")
-                elif backbone == "colqwen2":
+                elif backbone == "qwen2":
                     inputs = self.processor(text=[text], images=None, return_tensors="pt", max_length=self.data_args.max_len, truncation=True)
                 else:
                     inputs = self.processor(text, None, return_tensors="pt", max_length=self.data_args.max_len,
@@ -42,7 +42,7 @@ class TrainCollator:
                 image_exist = True
                 if backbone == "llava_next":
                     inputs = self.processor(images=image, text=text, return_tensors="pt")
-                elif backbone == "colqwen2":
+                elif backbone == "qwen2":
                     inputs = self.processor(images=[image], text=[text], return_tensors="pt", max_length=self.data_args.max_len, truncation=True)
                 else:
                     inputs = self.processor(text=text, images=[image], return_tensors="pt", max_length=self.data_args.max_len, truncation=True)

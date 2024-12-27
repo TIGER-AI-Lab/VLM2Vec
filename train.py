@@ -18,6 +18,7 @@ import torch
 import torch.distributed as dist
 
 from src.vlm_backbone.phi3_v.processing_phi3_v import Phi3VProcessor
+from src.vlm_backbone.qwen2_vl.processing_qwen2_vl import Qwen2VLProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,18 @@ def main():
     elif model_args.model_backbone == "phi35v":
         processor = Phi3VProcessor.from_pretrained(
             model_args.processor_name if model_args.processor_name else model_args.model_name,
+            trust_remote_code=True)
+        processor.tokenizer.padding_side = "right"
+    elif model_args.model_backbone == "qwen2":
+        from src.vlm_backbone.qwen2_vl.image_processing_qwen2_vl import Qwen2VLImageProcessor
+        from src.vlm_backbone.qwen2_vl.tokenization_qwen2_fast import Qwen2TokenizerFast
+        model_name = model_args.processor_name if model_args.processor_name else model_args.model_name
+        image_processor = Qwen2VLImageProcessor.from_pretrained(model_name)
+        tokenizer = Qwen2TokenizerFast.from_pretrained(model_name)
+        processor = Qwen2VLProcessor.from_pretrained(
+            model_name,
+            image_processor=image_processor,
+            tokenizer=tokenizer,
             trust_remote_code=True)
         processor.tokenizer.padding_side = "right"
     else:

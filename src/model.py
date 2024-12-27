@@ -52,7 +52,7 @@ class MMEBModel(nn.Module):
     @classmethod
     def build(cls, model_args: ModelArguments, **hf_kwargs):
         # Loading the base model
-        if model_args.model_backbone == "colqwen2":
+        if model_args.model_backbone == "qwen2":
             base_model = Qwen2VLForConditionalGeneration.from_pretrained(
                 model_args.model_name,
                 torch_dtype=torch.bfloat16,
@@ -122,7 +122,7 @@ class MMEBModel(nn.Module):
     def load(cls, model_args: ModelArguments, **hf_kwargs):
         # Loading the base model
         checkpoint_path = model_args.checkpoint_path if model_args.checkpoint_path else model_args.model_name
-        if model_args.model_backbone == "colqwen2":
+        if model_args.model_backbone == "qwen2":
             base_model = Qwen2VLForConditionalGeneration.from_pretrained(
                 model_args.model_name,
                 torch_dtype=torch.bfloat16,
