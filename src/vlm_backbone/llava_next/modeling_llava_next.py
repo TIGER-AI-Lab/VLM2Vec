@@ -736,6 +736,7 @@ class LlavaNextForConditionalGeneration(LlavaNextPreTrainedModel, GenerationMixi
         return_dict: Optional[bool] = None,
         cache_position: Optional[torch.LongTensor] = None,
         num_logits_to_keep: int = 0,
+        *args, **kwargs
     ) -> Union[Tuple, LlavaNextCausalLMOutputWithPast]:
         r"""
         Args:

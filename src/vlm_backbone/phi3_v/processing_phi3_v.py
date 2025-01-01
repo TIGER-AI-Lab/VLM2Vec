@@ -56,6 +56,7 @@ class Phi3VProcessor(ProcessorMixin):
         self.tokenizer = tokenizer
         self.num_img_tokens = image_processor.num_img_tokens
         self.img_tokens = [f"<|image_{i + 1}|>" for i in range(1000000)]
+        self.chat_template = None
 
     def __call__(
             self,
