@@ -94,6 +94,7 @@ class MMEBModel(nn.Module):
             base_model.padding_side = "right"
 
         if model_args.lora:
+            print_master(f'Loading lora adapter from {base_model}')
             lora_config = LoraConfig(
                 r=model_args.lora_r,
                 lora_alpha=model_args.lora_alpha,
