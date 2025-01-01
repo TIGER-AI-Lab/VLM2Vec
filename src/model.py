@@ -4,9 +4,11 @@ import torch.distributed as dist
 from torch import nn, Tensor
 from transformers import PreTrainedModel, AutoModelForCausalLM, AutoConfig
 from peft import LoraConfig, get_peft_model, PeftModel
-from src.arguments import ModelArguments
+from src.arguments import ModelArguments, TrainingArguments
+from src.utils import LLAVA_NEXT, QWEN2_VL, PHI3V, get_backbone_name, print_master
 from src.vlm_backbone.phi3_v.modeling_phi3_v import Phi3VForCausalLM
 from src.vlm_backbone.llava_next import LlavaNextForConditionalGeneration
+from src.vlm_backbone.qwen2_vl import Qwen2VLForConditionalGeneration
 
 
 class MMEBModel(nn.Module):
@@ -49,10 +51,19 @@ class MMEBModel(nn.Module):
         return reps
 
     @classmethod
-    def build(cls, model_args: ModelArguments, **hf_kwargs):
+    def build(cls, model_args: ModelArguments, training_args: TrainingArguments, **kwargs):
+        config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
+        model_backbone = get_backbone_name(hf_config=config)
+        print_master(f'Loading backbone [{model_backbone}]: {model_args.model_name}')
         # Loading the base model
-        if model_args.model_backbone == "llava_next":
-            config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
+        if model_backbone == QWEN2_VL:
+            base_model = Qwen2VLForConditionalGeneration.from_pretrained(
+                model_args.model_name,
+                torch_dtype=torch.bfloat16,
+                low_cpu_mem_usage=True,
+            )
+            base_model.padding_side = "right"
+        elif model_backbone == LLAVA_NEXT:
             config.use_cache = False
             config.padding_side = "left"
             base_model = LlavaNextForConditionalGeneration.from_pretrained(
@@ -62,8 +73,7 @@ class MMEBModel(nn.Module):
                 low_cpu_mem_usage=True,
             )
         # Loading the base model
-        elif model_args.model_backbone == "phi35v":
-            config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
+        elif model_backbone == PHI3V:
             config._attn_implementation = "eager"
             config.padding_side = "right"
             config.use_cache = False
@@ -74,11 +84,10 @@ class MMEBModel(nn.Module):
                 low_cpu_mem_usage=True,
             )
         else:
-            config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config.use_cache = False
             config.padding_side = "right"
             base_model = cls.TRANSFORMER_CLS.from_pretrained(
-                model_args.model_name, **hf_kwargs, config=config,
+                model_args.model_name, **kwargs, config=config,
                 attn_implementation="flash_attention_2",
                 torch_dtype=torch.bfloat16,
                 trust_remote_code=True)
@@ -111,10 +120,18 @@ class MMEBModel(nn.Module):
         return model
 
     @classmethod
-    def load(cls, model_args: ModelArguments, **hf_kwargs):
+    def load(cls, model_args: ModelArguments, **kwargs):
         # Loading the base model
         checkpoint_path = model_args.checkpoint_path if model_args.checkpoint_path else model_args.model_name
-        if model_args.model_backbone == "llava_next":
+        if model_args.model_backbone == QWEN2_VL:
+            base_model = Qwen2VLForConditionalGeneration.from_pretrained(
+                model_args.model_name,
+                torch_dtype=torch.bfloat16,
+                low_cpu_mem_usage=True,
+                attn_implementation="flash_attention_2"
+            )
+            base_model.padding_side = "right"
+        elif model_args.model_backbone == LLAVA_NEXT:
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config.use_cache = False
             base_model = LlavaNextForConditionalGeneration.from_pretrained(
@@ -124,12 +141,12 @@ class MMEBModel(nn.Module):
                 # attn_implementation="flash_attention_2"
             )
             base_model.padding_side = "left"
-        elif model_args.model_backbone == "phi35v":
+        elif model_args.model_backbone == PHI3V:
             # Loading the base model
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config.use_cache = False
             config.padding_side = "right"
-            base_model = Phi3VForCausalLM.from_pretrained(model_args.model_name, **hf_kwargs, config=config,
+            base_model = Phi3VForCausalLM.from_pretrained(model_args.model_name, **kwargs, config=config,
                                                           torch_dtype=torch.bfloat16, trust_remote_code=True)
             base_model.padding_side = "right"
         else:
@@ -139,7 +156,7 @@ class MMEBModel(nn.Module):
             config.padding_side = "right"
 
             base_model = cls.TRANSFORMER_CLS.from_pretrained(
-                checkpoint_path, **hf_kwargs, config=config,
+                checkpoint_path, **kwargs, config=config,
                 attn_implementation="flash_attention_2",
                 torch_dtype=torch.bfloat16,
                 trust_remote_code=True)
@@ -149,7 +166,7 @@ class MMEBModel(nn.Module):
         if model_args.lora:
             lora_config = LoraConfig.from_pretrained(checkpoint_path)
             lora_model = PeftModel.from_pretrained(base_model, checkpoint_path, config=lora_config)
-            
+
             merged_model = lora_model.merge_and_unload()
             model = cls(
                 encoder=merged_model,
@@ -162,12 +179,13 @@ class MMEBModel(nn.Module):
                 pooling=model_args.pooling,
                 normalize=model_args.normalize
             )
+
         return model
 
     def save(self, output_dir: str):
         self.encoder.save_pretrained(output_dir)
 
-    def forward(self, qry: Dict[str, Tensor] = None, tgt: Dict[str, Tensor] = None):
+    def forward(self, qry: Dict[str, Tensor] = None, tgt: Dict[str, Tensor] = None, *args, **kwargs):
         qry_reps = self.encode_input(qry) if qry else None  # (bsz_per_device, dim)
         tgt_reps = self.encode_input(tgt) if tgt else None # (bsz_per_device, dim)
 

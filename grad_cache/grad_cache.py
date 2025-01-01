@@ -27,6 +27,7 @@ class GradCache:
             get_rep_fn: Callable[..., Tensor] = None,
             fp16: bool = False,
             scaler: GradScaler = None,
+            process_fn: Callable = None,
     ):
         """
         Initialize the Gradient Cache class instance.
@@ -50,6 +51,7 @@ class GradCache:
             self.chunk_sizes = chunk_sizes
 
         self.split_input_fn = split_input_fn
+        self.process_fn = process_fn
         self.get_rep_fn = get_rep_fn
         self.loss_fn = loss_fn
 
@@ -263,6 +265,18 @@ class GradCache:
                 'proper initializations.'
 
         model_inputs = [self.split_inputs(x, chunk_size) for x, chunk_size in zip(model_inputs, self.chunk_sizes)]
+        if self.process_fn:
+            # each minibatch -> self.process_fn(minibatch)
+            _model_inputs = []
+            for arg_group in model_inputs:
+                _arg_groups = []
+                for key2val_dict in arg_group:
+                    _key2val_dict = {}
+                    for arg_key, arg_val in key2val_dict.items():
+                        _key2val_dict[arg_key] = self.process_fn(arg_val)
+                    _arg_groups.append(_key2val_dict)
+                _model_inputs.append(_arg_groups)
+            model_inputs = _model_inputs
 
         for model, x in zip(self.models, model_inputs):
             model_reps, rnd_states = self.forward_no_grad(model, x)

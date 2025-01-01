@@ -2,22 +2,21 @@
 import logging
 import sys
 
-from transformers import AutoTokenizer, AutoProcessor
-from transformers import LlavaNextProcessor
 from transformers import (
     HfArgumentParser,
 )
 
+from src import utils
 from src.dataset import TrainDataset
-from src.collator import TrainCollator
+from src.collator import DeprecatedTrainCollator, TrainRawInputCollator
 from src.arguments import ModelArguments, DataArguments, TrainingArguments
 from src.model import MMEBModel
-from src.trainer import MMEBTrainer, GradCacheTrainer
+from src.trainer import MMEBTrainer, GradCacheTrainer, GradCacheLateProcessTrainer
+from src.utils import load_processor, print_rank
 import wandb
 import torch
 import torch.distributed as dist
 
-from src.vlm_backbone.phi3_v.processing_phi3_v import Phi3VProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -37,38 +36,31 @@ def main():
     data_args: DataArguments
     training_args: TrainingArguments
 
-    if (dist.is_initialized() and torch.distributed.get_rank() == 0) or (not dist.is_initialized()):
-        wandb.init(project=training_args.project_name, name=training_args.run_name)
+    # if (dist.is_initialized() and torch.distributed.get_rank() == 0) or (not dist.is_initialized()):
+    #     print_rank('init wandb')
+    #     wandb.init(project=training_args.project_name, name=training_args.run_name, mode="disabled")
 
-    if model_args.model_backbone == "llava":
-        processor = LlavaNextProcessor.from_pretrained(
-            model_args.processor_name if model_args.processor_name else model_args.model_name,
-            trust_remote_code=True)
-        processor.tokenizer.padding_side = "left"
-    elif model_args.model_backbone == "phi35v":
-        processor = Phi3VProcessor.from_pretrained(
-            model_args.processor_name if model_args.processor_name else model_args.model_name,
-            trust_remote_code=True)
-        processor.tokenizer.padding_side = "right"
-    else:
-        processor = AutoProcessor.from_pretrained(
-            model_args.processor_name if model_args.processor_name else model_args.model_name,
-            trust_remote_code=True,
-            num_crops=model_args.num_crops
-        )
-        processor.tokenizer.padding_side = "right"
-
+    model = MMEBModel.build(model_args, training_args)
+    model_backbone = utils.get_backbone_name(hf_config=model.config)
+    setattr(model_args, 'model_backbone', model_backbone)
+    setattr(training_args, 'model_backbone', model_backbone)
+    print_rank(f'model_backbone: {model_backbone}')
+    processor = load_processor(model_args)
+    setattr(model, 'processor', processor)
     train_dataset = TrainDataset(data_args, model_args)
-    collator = TrainCollator(data_args, model_args, processor)
 
-    model = MMEBModel.build(model_args)
+    # collator = TrainCollator(data_args, model_args, processor)
+    # trainer_cls = GradCacheTrainer if training_args.grad_cache else MMEBTrainer
 
-    trainer_cls = GradCacheTrainer if training_args.grad_cache else MMEBTrainer
+    collator = TrainRawInputCollator(data_args, model_args, processor)
+    trainer_cls = GradCacheLateProcessTrainer
     trainer = trainer_cls(
         model=model,
+        processing_class=processor,
         args=training_args,
         train_dataset=train_dataset,
         data_collator=collator,
+        max_length=data_args.max_len
     )
     train_dataset.trainer = trainer
 

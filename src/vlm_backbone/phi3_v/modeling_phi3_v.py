@@ -1123,12 +1123,37 @@ class Phi3VModel(Phi3VPreTrainedModel):
         else:
             position_ids = position_ids.view(-1, seq_length).long()
 
+        # @ruimeng split data by whether image inputs are valid, and forward separately
+        idx_w_image = [mid for mid, isize in enumerate(image_sizes) if isize is not None]
+        idx_wo_image = [mid for mid, isize in enumerate(image_sizes) if isize is None]
+        inputs_embeds = []
+        if len(idx_w_image):
+            valid_pixel_values = [pixel_values[i] if isinstance(pixel_values[i], torch.Tensor) else torch.from_numpy(pixel_values[i]) for i in idx_w_image]
+            valid_pixel_values = torch.cat(valid_pixel_values).to(input_ids.device)
+            valid_image_sizes = [image_sizes[i] if isinstance(image_sizes[i], torch.Tensor) else torch.from_numpy(image_sizes[i]) for i in idx_w_image]
+            valid_image_sizes = torch.cat(valid_image_sizes).to(input_ids.device)
+            inputs_embed = self.vision_embed_tokens(input_ids[idx_w_image], pixel_values=valid_pixel_values, image_sizes=valid_image_sizes)
+            inputs_embeds.append(inputs_embed)
+        if len(idx_wo_image):
+            inputs_embed = self.embed_tokens(input_ids[idx_wo_image])
+            inputs_embeds.append(inputs_embed)
+        # merge the two outputs
+        inputs_embeds = torch.cat(inputs_embeds, dim=0)
+        # create a permutation tensor to reorder inputs_embeds
+        original_order = idx_w_image + idx_wo_image
+        permutation = torch.argsort(torch.tensor(original_order))
+        # resort inputs_embeds by original order
+        inputs_embeds = inputs_embeds[permutation]
+
+        '''
+        # original phi3 implementation
         if inputs_embeds is None:
             if pixel_values is not None and image_sizes is not None:
                 assert self.vision_embed_tokens is not None, "Vision embedding layer is not defined"
                 inputs_embeds = self.vision_embed_tokens(input_ids, pixel_values=pixel_values, image_sizes=image_sizes)
             else:
                 inputs_embeds = self.embed_tokens(input_ids)
+        '''
 
         if attention_mask is not None and self._attn_implementation == "flash_attention_2" and use_cache:
             is_padding_right = attention_mask[:, -1].sum().item() != batch_size
@@ -1264,6 +1289,7 @@ class Phi3VForCausalLM(Phi3VPreTrainedModel):
         output_attentions: Optional[bool] = None,
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
+        *args, **kwargs
     ) -> Union[Tuple, CausalLMOutputWithPast]:
         r"""
         Args:

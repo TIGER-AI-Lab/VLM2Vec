@@ -7,15 +7,17 @@ from torch.utils.data import Dataset
 from PIL import Image
 import os
 
+from src.utils import LLAVA_NEXT, QWEN2_VL, PHI3V, print_master, print_rank
 
 Phi_Image_token = "<|image_1|>"
 Llava_Image_token = "<image>"
+Qwen_Image_token = "<|image_pad|>"
 class TrainDataset(Dataset):
     def __init__(self, data_args, model_args):
         self.data_args = data_args
         self.model_args = model_args
         train_data = []
-        print(f"Loading {len(data_args.subset_name)} datasets: {data_args.subset_name}")
+        print_rank(f"Loading {len(data_args.subset_name)} datasets: {data_args.subset_name}")
         for subset in data_args.subset_name:
             subset_data = load_dataset(
                 self.data_args.dataset_name,
@@ -34,17 +36,19 @@ class TrainDataset(Dataset):
         if resolution == "high":
             image = image.resize((1344, 1344))
         else:
-            image = image.resize((336, 336))
+            image = image.resize((128, 128)) # Designed for qwen2, the max token length is 1024, so limit the image size to 308
         return image
 
     def _get_image(self, img_path):
-        if img_path == "":
+        if not img_path:
             return None
         full_img_path = os.path.join(self.data_args.image_dir, img_path)
         image = Image.open(full_img_path)
-        if self.model_args.model_backbone == "llava_next":
-            # TODO: make it configurable
-            return self._process_image(image, "high")
+        backbone = self.model_args.model_backbone
+        if backbone == LLAVA_NEXT:
+            return self._process_image(image, self.data_args.image_resolution)
+        elif backbone == QWEN2_VL:
+            return self._process_image(image, self.data_args.image_resolution)
         else:
             return image
 
@@ -53,10 +57,15 @@ class TrainDataset(Dataset):
             self.train_data[item]["qry"], self.train_data[item]["qry_image_path"],
             self.train_data[item]["pos_text"], self.train_data[item]["pos_image_path"],
         )
-        if self.model_args.model_backbone == "llava_next":
-            # Update image token
+        backbone = self.model_args.model_backbone
+        # instructions were hardcoded with Phi3 image special tokens
+        # Update image token for llava and colqwen2
+        if backbone == LLAVA_NEXT:
             qry_text = qry_text.replace(Phi_Image_token, Llava_Image_token)
             pos_text = pos_text.replace(Phi_Image_token, Llava_Image_token)
+        elif backbone == QWEN2_VL:
+            qry_text = qry_text.replace(Phi_Image_token, Qwen_Image_token)
+            pos_text = pos_text.replace(Phi_Image_token, Qwen_Image_token)
         return (qry_text, self._get_image(qry_image_path),
                 pos_text, self._get_image(pos_image_path))
 
@@ -85,7 +94,7 @@ class EvalDataset(Dataset):
 
     def __getitem__(self, item):
         text, img_path = self.paired_dataset[item]["text"], self.paired_dataset[item]["img_path"]
-        if self.model_args.model_backbone == "llava_next":
+        if self.model_args.model_backbone == LLAVA_NEXT:
             # Update llava image token
             text = text.replace(Phi_Image_token, Llava_Image_token)
         return text, self._get_image(img_path),
@@ -104,8 +113,8 @@ class EvalDataset(Dataset):
             return None
         full_img_path = os.path.join(self.data_args.image_dir, img_path)
         image = Image.open(full_img_path)
-        if self.model_args.model_backbone == "llava_next":
-            return self._process_image(image, "high")
+        if self.model_args.model_backbone == LLAVA_NEXT:
+            return self._process_image(image, self.data_args.image_resolution)
         else:
             return image
         return image
@@ -152,10 +161,10 @@ class FlickrDataset(Dataset):
 
     def __getitem__(self, idx):
         text, image = self.eval_data[idx]
-        if self.model_backbone == "llava_next":
+        if self.model_backbone == LLAVA_NEXT:
             # Update llava image token
             text = text.replace(Phi_Image_token, Llava_Image_token)
-            image = self._process_image(image, "high")
+            image = self._process_image(image, self.data_args.image_resolution)
         return text, image
 
     def _process_image(self, image, resolution):
@@ -172,8 +181,8 @@ class FlickrDataset(Dataset):
             return None
         full_img_path = os.path.join(self.data_args.image_dir, img_path)
         image = Image.open(full_img_path)
-        if self.model_backbone == "llava_next":
-            return self._process_image(image, "high")
+        if self.model_backbone == LLAVA_NEXT:
+            return self._process_image(image, self.data_args.image_resolution)
         else:
             return image
         return image
