@@ -8,7 +8,7 @@ from src.arguments import DataArguments, ModelArguments
 import torch
 
 from src.dataset import Phi_Image_token
-from src.utils import LLAVA_NEXT, QWEN2_VL, PHI3V
+from src.utils import LLAVA_NEXT, QWEN2_VL, PHI3V, print_rank
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,11 @@ def process_vlm_inputs(model_inputs: dict, processor, backbone_name, max_length=
                 inputs = processor(text=[text], images=None, return_tensors="np", max_length=max_length, truncation=True)
             elif backbone_name == PHI3V:
                 inputs = processor(text, None, return_tensors="np", max_length=max_length, truncation=True)
-            input_ids.append(inputs["input_ids"].squeeze().tolist())
+            input_id = inputs["input_ids"].squeeze().tolist()
+            if isinstance(input_id, int):
+                # in case of empty string, only BOS is included
+                input_id = [input_id]
+            input_ids.append(input_id)
             pixel_values.append(None)
             image_sizes.append(None)
         else:
@@ -78,7 +82,12 @@ def process_vlm_inputs(model_inputs: dict, processor, backbone_name, max_length=
         inputs['pixel_values'] = torch.zeros(input_ids.shape[0], 1)
         inputs['image_sizes'] = torch.ones(input_ids.shape[0], 1)
 
+    # print_rank('[text.shape]' + str(input_ids.shape))
+    # if image_exists:
+    #     print_rank('[image.shape]' + str(inputs['pixel_values'].shape))
+
     return inputs
+
 
 def split_dense_inputs(model_input: dict, chunk_size: int):
     assert len(model_input) == 1
