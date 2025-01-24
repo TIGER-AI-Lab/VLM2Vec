@@ -1,4 +1,4 @@
-# VLM2Vec
+# VLM2Vec: Training Vision-Language Models for Massive Multimodal Embedding Tasks (ICLR 2025)
 
 This repo contains the code and data for [VLM2Vec: Training Vision-Language Models for Massive Multimodal Embedding Tasks](https://arxiv.org/abs/2410.05160). In this paper, we aimed at building a unified multimodal embedding model for any tasks.  
 
