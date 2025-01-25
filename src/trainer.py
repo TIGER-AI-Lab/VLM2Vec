@@ -62,8 +62,8 @@ def split_vlm_inputs(model_input: dict, chunk_size: int):
 
     # for pixel_values and image_sizes, need to split based on the position of images
     input_ids = arg_val["input_ids"]
-    # positions = torch.nonzero(((input_ids < 0) & (input_ids > -MAX_INPUT_ID)) | input_ids == LLAVE_IMAGE_TOKEN_ID, as_tuple=True)
-    positions = torch.nonzero((input_ids < 0) & (input_ids > -MAX_INPUT_ID), as_tuple=True)
+    positions = torch.nonzero(((input_ids < 0) & (input_ids > -MAX_INPUT_ID)) | input_ids == LLAVE_IMAGE_TOKEN_ID, as_tuple=True)
+    # positions = torch.nonzero((input_ids < 0) & (input_ids > -MAX_INPUT_ID), as_tuple=True)
     row_contain_image = torch.unique(positions[0])  # indicates which row in input_ids contain images
     num_chunks = len(chunked_tensors[0])
     chunk_image_count = []
