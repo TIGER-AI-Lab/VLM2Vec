@@ -20,6 +20,7 @@ This repo contains the code and data for [VLM2Vec: Training Vision-Language Mode
 ---
 
 ## 🔥News
+- [2025-01] 🎉 VLM2Vec is accepted to ICLR 2025.
 - [2024-12] Our team is actively working on VLM2Vec v1.1, which will introduce new features, including hard negatives, additional VLM backbones, multiple-images input and more. Stay tuned!
 - [2024-12] We have released a new variant of VLM2Vec built on the LLaVa-Next backbone, which is currently our best-performing version: https://huggingface.co/TIGER-Lab/VLM2Vec-LLaVa-Next.
 - [2024-10] VLM2Vec has been integrated into [vLLM](https://github.com/vllm-project/vllm/blob/main/examples/offline_inference_vision_language_embedding.py).
@@ -67,6 +68,7 @@ Use `--lora --lora_r 16` to enable LoRA tuning.
 ```bash
 torchrun --nproc_per_node=2 --master_port=22447 --max_restarts=0 train.py \
  --model_name microsoft/Phi-3.5-vision-instruct --bf16 --pooling last \
+ --model_backbone phi3_v \
  --dataset_name TIGER-Lab/MMEB-train \
  --subset_name ImageNet_1K N24News HatefulMemes InfographicsVQA ChartQA Visual7W VisDial CIRR NIGHTS WebQA MSCOCO \
  --num_sample_per_subset 50000 \
@@ -89,6 +91,7 @@ unzip images.zip -d eval_images/
 1. For full-finetuned models, we use
 ```bash
 python eval.py --model_name TIGER-Lab/VLM2Vec-Full \
+  --model_backbone phi3_v \
   --encode_output_path outputs/ \
   --num_crops 4 --max_len 256 \
   --pooling last --normalize True \
@@ -101,6 +104,7 @@ python eval.py --model_name TIGER-Lab/VLM2Vec-Full \
 2. For LoRA-based models, we use
 ```bash
 python eval.py --lora --model_name microsoft/Phi-3.5-vision-instruct --checkpoint_path TIGER-Lab/VLM2Vec-LoRA \
+  --model_backbone phi3_v \
   --encode_output_path outputs/ \
   --num_crops 4 --max_len 256 \
   --pooling last --normalize True \
