@@ -9,7 +9,7 @@ from grad_cache.grad_cache import GradCache
 
 
 MAX_INPUT_ID = int(1e9)
-LLAVE_IMAGE_TOKEN_ID = 32000
+LLAVA_IMAGE_TOKEN_ID = 32000
 
 class MMEBTrainer(Trainer):
     def __init__(self, *args, **kwargs):
@@ -60,21 +60,24 @@ def split_vlm_inputs(model_input: dict, chunk_size: int):
     # for input_ids and attention_mask, split directly
     chunked_tensors = [arg_val[k].split(chunk_size, dim=0) for k in ["input_ids", "attention_mask"]]
 
-    # for pixel_values and image_sizes, need to split based on the position of images
-    input_ids = arg_val["input_ids"]
-    positions = torch.nonzero(((input_ids < 0) & (input_ids > -MAX_INPUT_ID)) | input_ids == LLAVE_IMAGE_TOKEN_ID, as_tuple=True)
-    # positions = torch.nonzero((input_ids < 0) & (input_ids > -MAX_INPUT_ID), as_tuple=True)
-    row_contain_image = torch.unique(positions[0])  # indicates which row in input_ids contain images
-    num_chunks = len(chunked_tensors[0])
-    chunk_image_count = []
-    for chunk_idx in range(num_chunks):
-        chunk_image_count.append(torch.sum(
-            (row_contain_image >= chunk_idx * chunk_size) & (row_contain_image < (chunk_idx + 1) * chunk_size)).item())
-    if "pixel_values" in keys:
-        pixel_values = arg_val["pixel_values"]
-        image_sizes = arg_val["image_sizes"]
-        chunked_tensors.append(torch.split(pixel_values, chunk_image_count))
-        chunked_tensors.append(torch.split(image_sizes, chunk_image_count))
+    # for pixel_values and image_sizes or any other image-related fields, need to split based on the position of images
+    if "image_mask" in keys:
+        row_contain_image = torch.nonzero(arg_val["image_mask"], as_tuple=False).squeeze()  # indicates which row in input_ids contain images
+        keys.remove("image_mask")
+        num_chunks = len(chunked_tensors[0])
+        chunk_image_count = []
+        for chunk_idx in range(num_chunks):
+            chunk_image_count.append(torch.sum(
+                (row_contain_image >= chunk_idx * chunk_size) & (row_contain_image < (chunk_idx + 1) * chunk_size)).item())
+        if "pixel_values" in keys:
+            pixel_values = arg_val["pixel_values"]
+            chunked_tensors.append(torch.split(pixel_values, chunk_image_count))
+        if "image_sizes" in keys:
+            image_sizes = arg_val["image_sizes"]
+            chunked_tensors.append(torch.split(image_sizes, chunk_image_count))
+        if "image_grid_thw" in keys:
+            image_grid_thw = arg_val["image_grid_thw"]
+            chunked_tensors.append(torch.split(image_grid_thw, chunk_image_count))
 
     chunked_arg_val = []
     for kk, tt in zip(repeat(keys), zip(*chunked_tensors)):

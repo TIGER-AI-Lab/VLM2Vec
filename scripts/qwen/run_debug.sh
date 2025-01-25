@@ -1,6 +1,6 @@
 export PYTHONPATH=/home/ziyan/VLM2Vec:$PYTHONPATH  # Change to your own path
 
-CUDA_VISIBLE_DEVICES=7 python train.py \
+CUDA_VISIBLE_DEVICES=6,7 torchrun --nproc_per_node=2 --master_port=22447 --max_restarts=0 train.py \
   --model_name Qwen/Qwen2-VL-2B-Instruct \
   --model_backbone qwen \
   --output_dir /home/ziyan/exp/vlm2vec_llava_next_test \
@@ -13,4 +13,5 @@ CUDA_VISIBLE_DEVICES=7 python train.py \
   --max_len 32 --logging_steps 1 \
   --lr_scheduler_type linear --learning_rate 2e-5 --max_steps 2000 \
   --warmup_steps 200 --save_steps 1000 --normalize True \
-  --temperature 0.02 --per_device_train_batch_size 4
+  --temperature 0.02 --per_device_train_batch_size 4 \
+  --grad_cache True --gc_q_chunk_size 2 --gc_p_chunk_size 2
