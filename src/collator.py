@@ -36,6 +36,7 @@ def process_vlm_inputs(model_inputs: dict, processor, backbone_name, max_length=
             input_ids.append(input_id)
             pixel_values.append(None)
             image_sizes.append(None)
+            image_grid_thw.append(None)
         else:
             image_exists = True
             if backbone_name == LLAVA_NEXT:
@@ -48,7 +49,7 @@ def process_vlm_inputs(model_inputs: dict, processor, backbone_name, max_length=
             pixel_values.append(inputs['pixel_values'])
             if 'image_sizes' in inputs:
                 image_sizes.append(inputs['image_sizes'])
-            elif 'image_grid_thw' in inputs:
+            if 'image_grid_thw' in inputs:
                 image_grid_thw.append(inputs['image_grid_thw'])
 
     # 2. padding inputs
@@ -71,13 +72,18 @@ def process_vlm_inputs(model_inputs: dict, processor, backbone_name, max_length=
             pixel_values = torch.cat(pixel_values, dim=0)
             image_sizes = [torch.from_numpy(v) if v is not None else image_size_for_padding for v in image_sizes]
             image_sizes = torch.cat(image_sizes, dim=0)
+        if backbone_name == QWEN2_VL:
+            pixel_value_shape_for_padding = list(v.shape for v in pixel_values if v is not None)[0]
+            pixel_values = [torch.from_numpy(v) if v is not None else torch.zeros(pixel_value_shape_for_padding) for v in pixel_values]
+            pixel_values = torch.cat(pixel_values, dim=0)
+            if image_grid_thw:
+                image_grid_thw_for_padding = torch.from_numpy(list(v for v in image_grid_thw if v is not None)[0])
+                image_grid_thw = [torch.from_numpy(v) if v is not None else image_grid_thw_for_padding for v in image_grid_thw]
+                image_grid_thw = torch.cat(image_grid_thw, dim=0)
+                inputs['image_grid_thw'] = image_grid_thw
         # add them to inputs
         inputs['pixel_values'] = pixel_values
         inputs['image_sizes'] = image_sizes
-        # TODO for qwen2 where the model processes image patches
-        if image_grid_thw:
-            image_grid_thw = torch.cat(image_grid_thw, dim=0)
-            inputs['image_grid_thw'] = image_grid_thw
     else:
         inputs['pixel_values'] = torch.zeros(input_ids.shape[0], 1)
         inputs['image_sizes'] = torch.ones(input_ids.shape[0], 1)

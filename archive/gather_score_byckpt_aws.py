@@ -12,8 +12,20 @@ datasets = [
 
 # Define the root directory containing the experiment directories
 checkpoint_paths = [
-     # llava-next
-    "/fsx/home/ruimeng/runs/mmeb/mmeb005-llava16_mistral-3.lora8.mmeb20_sub100k-1344.bs1024pergpu128.GCq1p1.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-1000/",
+    # HF
+    # "/fsx/home/ruimeng/runs/test/hf-VLM2Vec-LLaVa-Next-lateprocess",
+
+    # late-process
+    "/fsx/home/ruimeng/runs/mmeb/mmeb006-llava16_mistral-4-lateprocess-highres.lora8.mmeb20_sub100k.bs1024pergpu128.GCq1p1.NormTemp002.GradClip05.lr2e5.step2kwarm100.8H100/checkpoint-200/",
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb006-llava16_mistral-3-lateprocess-highres.lora8.mmeb20_sub100k.bs1024pergpu128.len2048.GCq1p1.NormTemp002.lr2e5.step1kwarm50.8H100/checkpoint-1000/eval_v1",
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb006-llava16_mistral-3-lateprocess-highres.lora8.mmeb20_sub100k.bs1024pergpu128.len2048.GCq1p1.NormTemp002.lr2e5.step1kwarm50.8H100/checkpoint-500/",
+
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb006-phi35v-1-lateprocess-highres.lora8.mmeb20_sub100k.bs1024pergpu128.GCq1p1.maxlen2k.crop4.NormTemp002.lr2e5.step1kwarm50.8H100/checkpoint-500/",
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb006-phi35v-1-lateprocess-highres.lora8.mmeb20_sub100k.bs1024pergpu128.GCq1p1.maxlen2k.crop4.NormTemp002.lr2e5.step1kwarm50.8H100/checkpoint-500/eval_v1/",
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb006-phi35v-1-lateprocess-highres.lora8.mmeb20_sub100k.bs1024pergpu128.GCq1p1.maxlen2k.crop4.NormTemp002.lr2e5.step1kwarm50.8H100/checkpoint-300/",
+
+    # llava-next
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb005-llava16_mistral-3.lora8.mmeb20_sub100k-1344.bs1024pergpu128.GCq1p1.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-1000/",
     # "/fsx/home/ruimeng/runs/mmeb/mmeb005-llava16_mistral-3.lora8.mmeb20_sub100k-1344.bs1024pergpu128.GCq1p1.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-1400/",
      # "/fsx/home/ruimeng/runs/mmeb/mmeb005-llava16_mistral-1.lora8.mmeb20_sub50k.bs256pergpu32.GCq2p2.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-2000/",
      # "/fsx/home/ruimeng/runs/mmeb/mmeb005-llava16_mistral-2.lora8.mmeb20_sub50k.bs1024pergpu128.GCq2p2.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-2000/",
@@ -79,21 +91,23 @@ for checkpoint_path in checkpoint_paths:
     if str.isdigit(str(step)):
         # Initialize a dictionary to store scores for this checkpoint
         checkpoint_scores = {"experiment": experiment_dir, "checkpoint": str(step)}
+    else:
+        checkpoint_scores = {"experiment": experiment_dir, "checkpoint": "default"}
 
-        # Go through each dataset and check if the corresponding score file exists
-        for dataset in datasets:
-            score_file = os.path.join(checkpoint_path, f"{dataset}_score.json")  # Score file named like DatasetName_score.json
+    # Go through each dataset and check if the corresponding score file exists
+    for dataset in datasets:
+        score_file = os.path.join(checkpoint_path, f"{dataset}_score.json")  # Score file named like DatasetName_score.json
 
-            # Check if the score file exists
-            if os.path.isfile(score_file):
-                with open(score_file, "r") as f:
-                    score_data = json.load(f)  # Load the score JSON
-                    checkpoint_scores[dataset] = score_data.get("acc", "N/A")  # Assuming 'acc' is the key for accuracy
-            else:
-                checkpoint_scores[dataset] = "N/A"  # If no score file, set to 'N/A'
+        # Check if the score file exists
+        if os.path.isfile(score_file):
+            with open(score_file, "r") as f:
+                score_data = json.load(f)  # Load the score JSON
+                checkpoint_scores[dataset] = score_data.get("acc", "N/A")  # Assuming 'acc' is the key for accuracy
+        else:
+            checkpoint_scores[dataset] = "N/A"  # If no score file, set to 'N/A'
 
-        # Append the scores for this checkpoint to the respective experiment group
-        gathered_scores_by_exp[experiment_dir] = checkpoint_scores
+    # Append the scores for this checkpoint to the respective experiment group
+    gathered_scores_by_exp[experiment_dir] = checkpoint_scores
 
 
 
