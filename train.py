@@ -48,13 +48,20 @@ def main():
     elif model_args.model_backbone == "phi35v":
         processor = Phi3VProcessor.from_pretrained(
             model_args.processor_name if model_args.processor_name else model_args.model_name,
-            trust_remote_code=True)
+            trust_remote_code=True,
+            num_crops=model_args.num_crops,
+        )
+        processor.tokenizer.padding_side = "right"
+    elif model_args.model_backbone == "qwen":
+        processor = AutoProcessor.from_pretrained(
+            model_args.processor_name if model_args.processor_name else model_args.model_name,
+            trust_remote_code=True,
+        )
         processor.tokenizer.padding_side = "right"
     else:
         processor = AutoProcessor.from_pretrained(
             model_args.processor_name if model_args.processor_name else model_args.model_name,
             trust_remote_code=True,
-            num_crops=model_args.num_crops
         )
         processor.tokenizer.padding_side = "right"
 

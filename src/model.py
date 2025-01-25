@@ -7,6 +7,7 @@ from peft import LoraConfig, get_peft_model, PeftModel
 from src.arguments import ModelArguments
 from src.vlm_backbone.phi3_v.modeling_phi3_v import Phi3VForCausalLM
 from src.vlm_backbone.llava_next import LlavaNextForConditionalGeneration
+from transformers import Qwen2VLForConditionalGeneration
 
 
 class MMEBModel(nn.Module):
@@ -61,6 +62,13 @@ class MMEBModel(nn.Module):
                 torch_dtype=torch.bfloat16,
                 low_cpu_mem_usage=True,
             )
+        elif model_args.model_backbone == "qwen":
+            base_model = Qwen2VLForConditionalGeneration.from_pretrained(
+                model_args.model_name,
+                torch_dtype=torch.bfloat16,
+                low_cpu_mem_usage=True,
+            )
+            base_model.padding_side = "right"
         # Loading the base model
         elif model_args.model_backbone == "phi35v":
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)

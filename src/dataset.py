@@ -10,6 +10,7 @@ import os
 
 Phi_Image_token = "<|image_1|>"
 Llava_Image_token = "<image>"
+Qwen_Image_token = "<|image_pad|>"
 class TrainDataset(Dataset):
     def __init__(self, data_args, model_args):
         self.data_args = data_args
@@ -33,8 +34,9 @@ class TrainDataset(Dataset):
             return None
         if resolution == "high":
             image = image.resize((1344, 1344))
-        else:
+        elif resolution == "low":
             image = image.resize((336, 336))
+
         return image
 
     def _get_image(self, img_path):
@@ -45,6 +47,8 @@ class TrainDataset(Dataset):
         if self.model_args.model_backbone == "llava_next":
             # TODO: make it configurable
             return self._process_image(image, "high")
+        elif self.model_args.model_backbone == "qwen":
+            return self._process_image(image, "low")
         else:
             return image
 
@@ -57,6 +61,10 @@ class TrainDataset(Dataset):
             # Update image token
             qry_text = qry_text.replace(Phi_Image_token, Llava_Image_token)
             pos_text = pos_text.replace(Phi_Image_token, Llava_Image_token)
+        elif self.model_args.model_backbone == "qwen":
+            qry_text = qry_text.replace(Phi_Image_token, Qwen_Image_token)
+            pos_text = pos_text.replace(Phi_Image_token, Qwen_Image_token)
+
         return (qry_text, self._get_image(qry_image_path),
                 pos_text, self._get_image(pos_image_path))
 
