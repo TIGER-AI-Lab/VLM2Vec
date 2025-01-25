@@ -25,10 +25,12 @@ class TrainCollator:
 
     def _get_batch_inputs(self, examples, text_idx, image_idx):
         input_ids, pixel_values, image_sizes, image_grid_thw = [], [], [], []
+        image_mask = []
         image_exist = False
         for example in examples:
             text, image = example[text_idx], example[image_idx]
             if image is None:
+                image_mask.append(0)
                 if self.model_args.model_backbone == "llava_next":
                     inputs = self.processor(images=None, text=text, return_tensors="pt")
                 elif self.model_args.model_backbone == "qwen":
@@ -39,6 +41,7 @@ class TrainCollator:
                                             max_length=self.data_args.max_len, truncation=True)
                 input_ids.append(inputs["input_ids"].squeeze(0).unsqueeze(1))
             else:
+                image_mask.append(1)
                 image_exist = True
                 if self.model_args.model_backbone == "llava_next":
                     inputs = self.processor(images=image, text=text, return_tensors="pt")
@@ -67,6 +70,7 @@ class TrainCollator:
             'attention_mask': attention_mask,
         }
         if image_exist:
+            inputs['image_mask'] = torch.Tensor(image_mask)
             pixel_values = torch.cat(pixel_values, dim=0)
             inputs['pixel_values'] = pixel_values
             if image_sizes:
