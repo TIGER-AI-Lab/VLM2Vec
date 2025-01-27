@@ -13,7 +13,8 @@ import os
 import torch
 import math
 
-from src.collator import process_vlm_inputs, split_vlm_inputs, get_dense_rep, split_and_process_vlm_inputs
+from src.collator import split_vlm_inputs, get_dense_rep, split_and_process_vlm_inputs
+from src.data_utils import process_vlm_inputs_fns
 from src.loss import SimpleContrastiveLoss, DistributedContrastiveLoss
 from grad_cache.grad_cache import GradCache
 
@@ -626,9 +627,8 @@ class GradCacheLateProcessTrainer(MMEBTrainer):
         self._dist_loss_scale_factor = dist.get_world_size() if self.is_ddp else 1
         loss_fn_cls = DistributedContrastiveLoss if self.is_ddp else SimpleContrastiveLoss
         loss_fn = loss_fn_cls(temperature=self.model.temperature)
-
-        process_fn = functools.partial(process_vlm_inputs, processor=self.processing_class,
-                                       backbone_name=self.args.model_backbone, max_length=self.max_length)
+        process_fn = functools.partial(process_vlm_inputs_fns[self.args.model_backbone], processor=self.processing_class,
+                                       max_length=self.max_length)
 
         self.gc = GradCache(
             models=[self.model, self.model],

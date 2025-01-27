@@ -6,16 +6,13 @@ from transformers import (
     HfArgumentParser,
 )
 
-from src import utils
 from src.dataset import TrainDataset
-from src.collator import DeprecatedTrainCollator, TrainRawInputCollator
+from src.collator import TrainRawInputCollator
 from src.arguments import ModelArguments, DataArguments, TrainingArguments
 from src.model import MMEBModel
-from src.trainer import MMEBTrainer, GradCacheTrainer, GradCacheLateProcessTrainer
-from src.utils import load_processor, print_rank
-import wandb
-import torch
-import torch.distributed as dist
+from src.trainer import GradCacheLateProcessTrainer
+from src.utils import print_rank
+from src.data_utils import load_processor, get_backbone_name
 
 
 logger = logging.getLogger(__name__)
@@ -41,7 +38,7 @@ def main():
     #     wandb.init(project=training_args.project_name, name=training_args.run_name, mode="disabled")
 
     model = MMEBModel.build(model_args, training_args)
-    model_backbone = utils.get_backbone_name(hf_config=model.config)
+    model_backbone = get_backbone_name(hf_config=model.config)
     setattr(model_args, 'model_backbone', model_backbone)
     setattr(training_args, 'model_backbone', model_backbone)
     print_rank(f'model_backbone: {model_backbone}')

@@ -1,0 +1,232 @@
+from itertools import repeat
+
+import logging
+import torch
+
+from src.utils import print_master
+
+logger = logging.getLogger(__name__)
+
+
+PHI_IMAGE_TOKEN_MAX_INPUT_ID = int(1e9)
+LLAVA_IMAGE_TOKEN_ID = 32000
+
+PHI3V = 'phi3_v'
+LLAVA_NEXT = 'llava_next'
+QWEN2_VL = 'qwen2_vl'
+MODEL2BACKBONE = {
+    'phi3_v': PHI3V,
+    'llava_next': LLAVA_NEXT,
+    'qwen2_vl': QWEN2_VL,
+}
+SUPPORTED_MODELS = set(MODEL2BACKBONE.keys())
+
+PHI3V_itoken = "<|image_1|>"
+LLAVA_NEXT_itoken = "<image>"
+QWEN2_VL_itoken = "<|image_pad|>"
+vlm_image_tokens = {
+    PHI3V: PHI3V_itoken,
+    LLAVA_NEXT: LLAVA_NEXT_itoken,
+    QWEN2_VL: QWEN2_VL_itoken,
+}
+
+
+def load_processor(model_args):
+    """
+    Load processor based on VLM backbone.
+    """
+    print_master('Loading processor')
+    if model_args.model_backbone == PHI3V:
+        from src.vlm_backbone.phi3_v.processing_phi3_v import Phi3VProcessor
+        processor = Phi3VProcessor.from_pretrained(
+            model_args.processor_name if model_args.processor_name else model_args.model_name,
+            trust_remote_code=True,
+            num_crops=model_args.num_crops
+        )
+    elif model_args.model_backbone == LLAVA_NEXT:
+        from transformers import LlavaNextProcessor
+        processor = LlavaNextProcessor.from_pretrained(
+            "llava-hf/llava-v1.6-mistral-7b-hf",
+            trust_remote_code=True
+        )
+    elif model_args.model_backbone == QWEN2_VL:
+        from src.vlm_backbone.qwen2_vl.processing_qwen2_vl import Qwen2VLProcessor
+        from src.vlm_backbone.qwen2_vl.image_processing_qwen2_vl import Qwen2VLImageProcessor
+        from src.vlm_backbone.qwen2_vl.tokenization_qwen2_fast import Qwen2TokenizerFast
+
+        model_name = model_args.processor_name if model_args.processor_name else model_args.model_name
+        image_processor = Qwen2VLImageProcessor.from_pretrained(model_name)
+        tokenizer = Qwen2TokenizerFast.from_pretrained(model_name)
+        processor = Qwen2VLProcessor.from_pretrained(
+            model_name,
+            image_processor=image_processor,
+            tokenizer=tokenizer,
+            min_pixels=256 * 28 * 28, max_pixels=1280 * 28 * 28
+        )
+    else:
+        from transformers import AutoProcessor
+        processor = AutoProcessor.from_pretrained(
+            model_args.processor_name if model_args.processor_name else model_args.model_name,
+            trust_remote_code=True,
+        )
+    processor.tokenizer.padding_side = "right"
+    return processor
+
+
+def get_backbone_name(hf_config):
+    assert hf_config.model_type in SUPPORTED_MODELS, f"Supported models are {SUPPORTED_MODELS}"
+    return MODEL2BACKBONE[hf_config.model_type]
+
+
+def LLAVA_NEXT_process_fn(model_inputs: dict, processor, max_length=None):
+    input_ids, pixel_values, image_sizes, image_grid_thw = [], [], [], []
+    texts, images = model_inputs['text'], model_inputs['image']
+    image_exists = False
+    # 1. iterate each pair and process (since processors do not support batch processing)
+    for text, image in zip(texts, images):
+        if image is None:
+            inputs = processor(images=None, text=text, return_tensors="np", max_length=max_length, truncation=True)
+            input_id = inputs["input_ids"].squeeze().tolist()
+            if isinstance(input_id, int):
+                # in case of empty string, only BOS is included
+                input_id = [input_id]
+            input_ids.append(input_id)
+            pixel_values.append(None)
+            image_sizes.append(None)
+            image_grid_thw.append(None)
+        else:
+            image_exists = True
+            inputs = processor(images=image, text=text, return_tensors="np", max_length=max_length, truncation=True)
+            input_ids.append(inputs["input_ids"].squeeze().tolist())
+            pixel_values.append(inputs['pixel_values'])
+            if 'image_sizes' in inputs:
+                image_sizes.append(inputs['image_sizes'])
+
+    # 2. padding inputs
+    batch_encoding = processor.tokenizer.pad({'input_ids': input_ids}, return_tensors="pt")
+    input_ids, attention_mask = batch_encoding['input_ids'], batch_encoding['attention_mask']
+    inputs = {
+        'input_ids': input_ids,
+        'attention_mask': attention_mask,
+        'texts': texts,
+        'images': images,
+    }
+    # 3. special postcare for mixed batch (examples w/ and w/o images in the same batch)
+    if image_exists:
+        # dummy image inputs based on the first valid data point
+        pixel_value_shape_for_padding = list(v.shape for v in pixel_values if v is not None)[0]
+        image_size_for_padding = torch.from_numpy(list(v for v in image_sizes if v is not None)[0])
+        # make the batch full tensors
+        pixel_values = [torch.from_numpy(v) if v is not None else torch.zeros(pixel_value_shape_for_padding) for v in pixel_values]
+        pixel_values = torch.cat(pixel_values, dim=0)
+        image_sizes = [torch.from_numpy(v) if v is not None else image_size_for_padding for v in image_sizes]
+        image_sizes = torch.cat(image_sizes, dim=0)
+        # add them to inputs
+        inputs['pixel_values'] = pixel_values
+        inputs['image_sizes'] = image_sizes
+    else:
+        inputs['pixel_values'] = torch.zeros(input_ids.shape[0], 1)
+        inputs['image_sizes'] = torch.ones(input_ids.shape[0], 1)
+
+    return inputs
+
+
+def PHI3V_process_fn(model_inputs: dict, processor, max_length=None):
+    input_ids, pixel_values, image_sizes, image_grid_thw = [], [], [], []
+    texts, images = model_inputs['text'], model_inputs['image']
+    image_exists = False
+    # 1. iterate each pair and process (since processors do not support batch processing)
+    for text, image in zip(texts, images):
+        if image is None:
+            inputs = processor(text, None, return_tensors="np", max_length=max_length, truncation=True)
+            input_id = inputs["input_ids"].squeeze().tolist()
+            if isinstance(input_id, int):
+                # in case of empty string, only BOS is included
+                input_id = [input_id]
+            input_ids.append(input_id)
+            pixel_values.append(None)
+            image_sizes.append(None)
+            image_grid_thw.append(None)
+        else:
+            image_exists = True
+            inputs = processor(text=text, images=[image], return_tensors="np", max_length=max_length, truncation=True)
+            input_ids.append(inputs["input_ids"].squeeze().tolist())
+            pixel_values.append(inputs['pixel_values'])
+            if 'image_sizes' in inputs:
+                image_sizes.append(inputs['image_sizes'])
+            if 'image_grid_thw' in inputs:
+                image_grid_thw.append(inputs['image_grid_thw'])
+
+    # 2. padding inputs
+    batch_encoding = processor.tokenizer.pad({'input_ids': input_ids}, return_tensors="pt")
+    input_ids, attention_mask = batch_encoding['input_ids'], batch_encoding['attention_mask']
+    inputs = {
+        'input_ids': input_ids,
+        'attention_mask': attention_mask,
+        'texts': texts,
+        'images': images,
+    }
+    # 3. special postcare for mixed batch (examples w/ and w/o images in the same batch)
+    if image_exists:
+        # add them to inputs
+        inputs['pixel_values'] = pixel_values
+        inputs['image_sizes'] = image_sizes
+    else:
+        inputs['pixel_values'] = torch.zeros(input_ids.shape[0], 1)
+        inputs['image_sizes'] = torch.ones(input_ids.shape[0], 1)
+
+    return inputs
+
+
+def QWEN2_VL_process_fn(model_inputs: dict, processor, max_length=None):
+    input_ids, pixel_values, image_sizes, image_grid_thw = [], [], [], []
+    texts, images = model_inputs['text'], model_inputs['image']
+    image_exists = False
+    # 1. iterate each pair and process (since processors do not support batch processing)
+    for text, image in zip(texts, images):
+        if image is None:
+            inputs = processor(text=[text], images=None, return_tensors="np", max_length=max_length, truncation=True)
+            input_id = inputs["input_ids"].squeeze().tolist()
+            if isinstance(input_id, int):
+                # in case of empty string, only BOS is included
+                input_id = [input_id]
+            input_ids.append(input_id)
+            pixel_values.append(None)
+            image_sizes.append(None)
+            image_grid_thw.append(None)
+        else:
+            image_exists = True
+            inputs = processor(images=[image], text=[text], return_tensors="np", max_length=max_length, truncation=True)
+            input_ids.append(inputs["input_ids"].squeeze().tolist())
+            pixel_values.append(inputs['pixel_values'])
+            image_grid_thw.append(inputs['image_grid_thw'])
+
+    # 2. padding inputs
+    batch_encoding = processor.tokenizer.pad({'input_ids': input_ids}, return_tensors="pt")
+    input_ids, attention_mask = batch_encoding['input_ids'], batch_encoding['attention_mask']
+    inputs = {
+        'input_ids': input_ids,
+        'attention_mask': attention_mask,
+        'texts': texts,
+        'images': images,
+    }
+    # 3. special postcare for mixed batch (examples w/ and w/o images in the same batch)
+    if image_exists:
+        pixel_value_shape_for_padding = list(v.shape for v in pixel_values if v is not None)[0]
+        pixel_values = [torch.from_numpy(v) if v is not None else torch.zeros(pixel_value_shape_for_padding) for v in pixel_values]
+        pixel_values = torch.cat(pixel_values, dim=0)
+        # add them to inputs
+        inputs['pixel_values'] = pixel_values
+        inputs['image_grid_thw'] = image_grid_thw
+    else:
+        inputs['pixel_values'] = torch.zeros(input_ids.shape[0], 1)
+        inputs['image_grid_thw'] = [None] * input_ids.shape[0]
+
+    return inputs
+
+
+process_vlm_inputs_fns = {
+    PHI3V: PHI3V_process_fn,
+    LLAVA_NEXT: LLAVA_NEXT_process_fn,
+    QWEN2_VL: QWEN2_VL_process_fn,
+}
