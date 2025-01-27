@@ -23,6 +23,7 @@ This repo contains the code and data for [VLM2Vec: Training Vision-Language Mode
 
 ## 🔥News
 - [2025-01] 🎉 VLM2Vec is accepted to ICLR 2025.
+- [2025-01] We have updated our [training data](https://huggingface.co/datasets/TIGER-Lab/MMEB-train). Each subset now contains two splits: ```original``` and ```diverse_instruction```. The ```original``` split is provided to support the reproduction of our paper results. The ```diverse_instruction``` split includes paraphrased instructions, designed to improve the model's robustness to unseen instructions and tasks. Moving forward, our future releases will primarily use the diverse_instruction split.
 - [2024-12] We have released the [MMEB leaderboard](https://huggingface.co/spaces/TIGER-Lab/MMEB). Feel free to contact us if you want to include your model.
 - [2024-12] Our team is actively working on VLM2Vec v1.1, which will introduce new features, including hard negatives, additional VLM backbones, multiple-images input and more. Stay tuned!
 - [2024-12] We have released a new variant of VLM2Vec built on the LLaVa-Next backbone, which is currently our best-performing version: https://huggingface.co/TIGER-Lab/VLM2Vec-LLaVa-Next.
