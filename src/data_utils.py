@@ -4,6 +4,7 @@ import logging
 import torch
 
 from src.utils import print_master
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -214,7 +215,8 @@ def QWEN2_VL_process_fn(model_inputs: dict, processor, max_length=None):
     if image_exists:
         pixel_value_shape_for_padding = list(v.shape for v in pixel_values if v is not None)[0]
         pixel_values = [torch.from_numpy(v) if v is not None else torch.zeros(pixel_value_shape_for_padding) for v in pixel_values]
-        pixel_values = torch.cat(pixel_values, dim=0)
+        pixel_values = torch.stack(pixel_values, dim=0)
+        # image_grid_thw = np.concatenate(image_grid_thw, axis=0)
         # add them to inputs
         inputs['pixel_values'] = pixel_values
         inputs['image_grid_thw'] = image_grid_thw
