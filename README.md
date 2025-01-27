@@ -13,6 +13,8 @@ This repo contains the code and data for [VLM2Vec: Training Vision-Language Mode
 <img style="height:22pt" src="https://img.shields.io/badge/-🤗%20Dataset-red?style=flat"></a>
 <a target="_blank" href="https://huggingface.co/collections/TIGER-Lab/vlm2vec-6705f418271d085836e0cdd5">
 <img style="height:22pt" src="https://img.shields.io/badge/-🤗%20Models-red?style=flat"></a>
+<a target="_blank" href="https://huggingface.co/spaces/TIGER-Lab/MMEB">
+<img style="height:22pt" src="https://img.shields.io/badge/-🤗%20Leaderboard-red?style=flat"></a>
 <a target="_blank" href="https://x.com/WenhuChen/status/1844577017930694984">
 <img style="height:22pt" src="https://img.shields.io/badge/-Tweet-blue?style=flat&logo=twitter"></a>
 <br>
@@ -21,6 +23,7 @@ This repo contains the code and data for [VLM2Vec: Training Vision-Language Mode
 
 ## 🔥News
 - [2025-01] 🎉 VLM2Vec is accepted to ICLR 2025.
+- [2024-12] We have released the [MMEB leaderboard](https://huggingface.co/spaces/TIGER-Lab/MMEB). Feel free to contact us if you want to include your model.
 - [2024-12] Our team is actively working on VLM2Vec v1.1, which will introduce new features, including hard negatives, additional VLM backbones, multiple-images input and more. Stay tuned!
 - [2024-12] We have released a new variant of VLM2Vec built on the LLaVa-Next backbone, which is currently our best-performing version: https://huggingface.co/TIGER-Lab/VLM2Vec-LLaVa-Next.
 - [2024-10] VLM2Vec has been integrated into [vLLM](https://github.com/vllm-project/vllm/blob/main/examples/offline_inference_vision_language_embedding.py).
