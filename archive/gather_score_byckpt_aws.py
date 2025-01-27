@@ -16,9 +16,9 @@ checkpoint_paths = [
     # "/fsx/home/ruimeng/runs/test/hf-VLM2Vec-LLaVa-Next-lateprocess",
 
     # late-process
-    "/fsx/home/ruimeng/runs/mmeb/mmeb006-llava16_mistral-4-lateprocess-highres.lora8.mmeb20_sub100k.bs1024pergpu128.GCq1p1.NormTemp002.GradClip05.lr2e5.step2kwarm100.8H100/checkpoint-200/",
-    # "/fsx/home/ruimeng/runs/mmeb/mmeb006-llava16_mistral-3-lateprocess-highres.lora8.mmeb20_sub100k.bs1024pergpu128.len2048.GCq1p1.NormTemp002.lr2e5.step1kwarm50.8H100/checkpoint-1000/eval_v1",
-    # "/fsx/home/ruimeng/runs/mmeb/mmeb006-llava16_mistral-3-lateprocess-highres.lora8.mmeb20_sub100k.bs1024pergpu128.len2048.GCq1p1.NormTemp002.lr2e5.step1kwarm50.8H100/checkpoint-500/",
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb006-llava16_mistral-4-lateprocess-highres.lora8.mmeb20_sub100k.bs1024pergpu128.GCq1p1.NormTemp002.GradClip05.lr2e5.step2kwarm100.8H100/checkpoint-500/",
+    # this didn't converge
+    "/fsx/home/ruimeng/runs/mmeb/mmeb006-llava16_mistral-3-lateprocess-highres.lora8.mmeb20_sub100k.bs1024pergpu128.len2048.GCq1p1.NormTemp002.lr2e5.step1kwarm50.8H100/checkpoint-50/",
 
     # "/fsx/home/ruimeng/runs/mmeb/mmeb006-phi35v-1-lateprocess-highres.lora8.mmeb20_sub100k.bs1024pergpu128.GCq1p1.maxlen2k.crop4.NormTemp002.lr2e5.step1kwarm50.8H100/checkpoint-500/",
     # "/fsx/home/ruimeng/runs/mmeb/mmeb006-phi35v-1-lateprocess-highres.lora8.mmeb20_sub100k.bs1024pergpu128.GCq1p1.maxlen2k.crop4.NormTemp002.lr2e5.step1kwarm50.8H100/checkpoint-500/eval_v1/",

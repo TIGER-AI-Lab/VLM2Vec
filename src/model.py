@@ -5,7 +5,7 @@ from torch import nn, Tensor
 from transformers import PreTrainedModel, AutoModelForCausalLM, AutoConfig
 from peft import LoraConfig, get_peft_model, PeftModel
 from src.arguments import ModelArguments, TrainingArguments
-from src.utils import LLAVA_NEXT, QWEN2_VL, PHI3V, get_backbone_name, print_master
+from src.data_utils import LLAVA_NEXT, QWEN2_VL, PHI3V, get_backbone_name, print_master
 from src.vlm_backbone.phi3_v.modeling_phi3_v import Phi3VForCausalLM
 from src.vlm_backbone.llava_next import LlavaNextForConditionalGeneration
 from src.vlm_backbone.qwen2_vl import Qwen2VLForConditionalGeneration

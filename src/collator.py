@@ -1,20 +1,19 @@
 from itertools import repeat
 
 import logging
-from typing import List, Tuple
 from dataclasses import dataclass
 from transformers import ProcessorMixin, AutoProcessor, AutoTokenizer
 from src.arguments import DataArguments, ModelArguments
 import torch
 
-from src.dataset import Phi_Image_token
-from src.utils import LLAVA_NEXT, QWEN2_VL, PHI3V, print_rank
+from src.data_utils import LLAVA_NEXT, QWEN2_VL, PHI3V, process_vlm_inputs_fns
 
 logger = logging.getLogger(__name__)
 
 
 PHI_IMAGE_TOKEN_MAX_INPUT_ID = int(1e9)
-LLAVE_IMAGE_TOKEN_ID = 32000
+LLAVA_IMAGE_TOKEN_ID = 32000
+
 
 def process_vlm_inputs(model_inputs: dict, processor, backbone_name, max_length=None):
     input_ids, pixel_values, image_sizes, image_grid_thw = [], [], [], []
@@ -206,10 +205,9 @@ class EvalCollator:
         :param examples: qry, qry_image, pos_text, pos_image
         """
         examples = {'text': [e[0] for e in examples], 'image': [e[1] for e in examples]}
-        inputs = process_vlm_inputs(examples,
-                                    processor = self.processor,
-                                    backbone_name = self.model_args.model_backbone,
-                                    max_length = self.data_args.max_len)
+        inputs = process_vlm_inputs_fns[self.model_args.model_backbone](examples,
+                                        processor = self.processor,
+                                        max_length = self.data_args.max_len)
         return inputs
 
 
