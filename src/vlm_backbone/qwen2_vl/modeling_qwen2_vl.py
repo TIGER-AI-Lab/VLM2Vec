@@ -288,13 +288,9 @@ class PatchEmbed(nn.Module):
 
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
         target_dtype = self.proj.weight.dtype
-        print(hidden_states.shape)
-        try:
-            hidden_states = hidden_states.view(
-                -1, self.in_channels, self.temporal_patch_size, self.patch_size, self.patch_size
-            )
-        except:
-            print(hidden_states.shape)
+        hidden_states = hidden_states.view(
+            -1, self.in_channels, self.temporal_patch_size, self.patch_size, self.patch_size
+        )
         hidden_states = self.proj(hidden_states.to(dtype=target_dtype)).view(-1, self.embed_dim)
         return hidden_states
 
@@ -454,7 +450,11 @@ class Qwen2RMSNorm(nn.Module):
         hidden_states = hidden_states.to(torch.float32)
         variance = hidden_states.pow(2).mean(-1, keepdim=True)
         hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
-        return self.weight * hidden_states.to(input_dtype)
+        try:
+            result = self.weight * hidden_states.to(input_dtype)
+        except RuntimeError as e:
+            print(e)
+        return result
 
     def extra_repr(self):
         return f"{tuple(self.weight.shape)}, eps={self.variance_epsilon}"
@@ -1677,7 +1677,6 @@ class Qwen2VLForConditionalGeneration(Qwen2VLPreTrainedModel, GenerationMixin):
         >>> tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
         "The image shows a street scene with a red stop sign in the foreground. In the background, there is a large red gate with Chinese characters ..."
         ```"""
-
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -1685,45 +1684,50 @@ class Qwen2VLForConditionalGeneration(Qwen2VLPreTrainedModel, GenerationMixin):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         if inputs_embeds is None:
-            if pixel_values is not None:
-                # @ruimeng split data by whether image inputs are valid, and forward separately
-                idx_w_image = [mid for mid, isize in enumerate(image_grid_thw) if isize is not None]
-                idx_wo_image = [mid for mid, isize in enumerate(image_grid_thw) if isize is None]
-                inputs_embeds = []
+            inputs_embeds = self.model.embed_tokens(input_ids)
+            # @ruimeng split data by whether image inputs are valid, and forward separately
+            idx_w_image = [mid for mid, isize in enumerate(image_grid_thw) if isize is not None]
+            idx_wo_image = [mid for mid, isize in enumerate(image_grid_thw) if isize is None]
+            if len(idx_w_image) > 0:
+                merged_inputs_embeds = []
                 if len(idx_w_image):
+                    input_ids_w_image = torch.stack([input_ids[i] for i in idx_w_image])
+                    inputs_embeds_w_image = torch.stack([inputs_embeds[i] for i in idx_w_image])
                     valid_pixel_values = [pixel_values[i] if isinstance(pixel_values[i], torch.Tensor) else torch.from_numpy(pixel_values[i]) for i in idx_w_image]
-                    valid_pixel_values = torch.stack(valid_pixel_values).to(input_ids.device)
+                    valid_pixel_values = torch.cat(valid_pixel_values).to(input_ids.device)  # shape=[BS*n_patch,C*H*W]
                     valid_image_sizes = [image_grid_thw[i] if isinstance(image_grid_thw[i], torch.Tensor) else torch.from_numpy(image_grid_thw[i]) for i in idx_w_image]
-                    valid_image_sizes = torch.cat(valid_image_sizes).to(input_ids.device)
+                    valid_image_sizes = torch.cat(valid_image_sizes).to(input_ids.device)  # shape=[BS,H,W]
 
                     valid_pixel_values = valid_pixel_values.type(self.visual.get_dtype())
                     image_embeds = self.visual(valid_pixel_values, grid_thw=valid_image_sizes)
                     n_image_tokens = (input_ids == self.config.image_token_id).sum().item()
                     n_image_features = image_embeds.shape[0]
                     if n_image_tokens != n_image_features:
-                        image_embeds = self.visual(pixel_values, grid_thw=image_grid_thw)
                         raise ValueError(
                             f"Image features and image tokens do not match: tokens: {n_image_tokens}, features {n_image_features}"
                         )
                     image_mask = (
-                        (input_ids == self.config.image_token_id)
+                        (input_ids_w_image == self.config.image_token_id)
                         .unsqueeze(-1)
-                        .expand_as(inputs_embeds)
-                        .to(inputs_embeds.device)
+                        .expand_as(inputs_embeds_w_image)
+                        .to(inputs_embeds_w_image.device)
                     )
                     image_embeds = image_embeds.to(inputs_embeds.device, inputs_embeds.dtype)
-                    inputs_embeds = inputs_embeds.masked_scatter(image_mask, image_embeds)
+                    inputs_embeds_w_image = inputs_embeds_w_image.masked_scatter(image_mask, image_embeds)
+                    merged_inputs_embeds.append(inputs_embeds_w_image)
                 if len(idx_wo_image):
-                    inputs_embed = self.model.embed_tokens(input_ids[idx_wo_image])
-                    inputs_embeds.append(inputs_embed)
+                    inputs_embeds_wo_image = torch.stack([input_ids[i] for i in idx_wo_image])
+                    merged_inputs_embeds.append(inputs_embeds_wo_image)
                 # merge the two outputs
-                inputs_embeds = torch.cat(inputs_embeds, dim=0)
+                merged_inputs_embeds = torch.cat(merged_inputs_embeds, dim=0)
                 # create a permutation tensor to reorder inputs_embeds
                 original_order = idx_w_image + idx_wo_image
                 permutation = torch.argsort(torch.tensor(original_order))
                 # resort inputs_embeds by original order
-                inputs_embeds = inputs_embeds[permutation]
+                inputs_embeds = merged_inputs_embeds[permutation]
+
                 '''
+                # original implementation
                 pixel_values = pixel_values.type(self.visual.get_dtype())
                 image_embeds = self.visual(pixel_values, grid_thw=image_grid_thw)
                 n_image_tokens = (input_ids == self.config.image_token_id).sum().item()
@@ -1742,7 +1746,6 @@ class Qwen2VLForConditionalGeneration(Qwen2VLPreTrainedModel, GenerationMixin):
                 image_embeds = image_embeds.to(inputs_embeds.device, inputs_embeds.dtype)
                 inputs_embeds = inputs_embeds.masked_scatter(image_mask, image_embeds)
                 '''
-
 
             if pixel_values_videos is not None:
                 pixel_values_videos = pixel_values_videos.type(self.visual.get_dtype())
@@ -1764,7 +1767,6 @@ class Qwen2VLForConditionalGeneration(Qwen2VLPreTrainedModel, GenerationMixin):
 
             if attention_mask is not None:
                 attention_mask = attention_mask.to(inputs_embeds.device)
-
         outputs = self.model(
             input_ids=None,
             position_ids=position_ids,
