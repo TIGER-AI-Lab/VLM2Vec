@@ -19,6 +19,7 @@ MODEL2BACKBONE = {
     'phi3_v': PHI3V,
     'llava_next': LLAVA_NEXT,
     'qwen2_vl': QWEN2_VL,
+    'qwen2_5_vl': QWEN2_VL,
 }
 SUPPORTED_MODELS = set(MODEL2BACKBONE.keys())
 
@@ -75,7 +76,7 @@ def load_processor(model_args):
 
 
 def get_backbone_name(hf_config):
-    assert hf_config.model_type in SUPPORTED_MODELS, f"Supported models are {SUPPORTED_MODELS}"
+    assert hf_config.model_type in SUPPORTED_MODELS, f"Unknown backbone name {hf_config.model_type}.Supported models are {SUPPORTED_MODELS}"
     return MODEL2BACKBONE[hf_config.model_type]
 
 
@@ -205,9 +206,14 @@ def QWEN2_VL_process_fn(model_inputs: dict, processor, max_length=None):
     # 2. padding inputs
     batch_encoding = processor.tokenizer.pad({'input_ids': input_ids}, return_tensors="pt")
     input_ids, attention_mask = batch_encoding['input_ids'], batch_encoding['attention_mask']
+    # manually enforce long type due to:
+    # (1) [rank7]: RuntimeError: Expected tensor for argument #1 'indices' to have one of the following scalar types: Long, Int; but got torch.cuda.FloatTensor instead (while checking arguments for embedding)
+    # (2) [rank7]:   File "/fsx/home/ruimeng/project/VLM2Vec/src/model.py", line 45, in _pooling
+    #     [rank7]:     reps = last_hidden_state[
+    #     [rank7]: IndexError: tensors used as indices must be long, int, byte or bool tensors
     inputs = {
-        'input_ids': input_ids,
-        'attention_mask': attention_mask,
+        'input_ids': input_ids.long(),
+        'attention_mask': attention_mask.long(),
         'texts': texts,
         'images': images,
     }

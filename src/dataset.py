@@ -35,7 +35,9 @@ class TrainDataset(Dataset):
             return None
         if resolution == "high":
             image = image.resize((1344, 1344))
-        else:
+        elif resolution == "mid":
+            image = image.resize((672, 672))
+        elif resolution == "low":
             image = image.resize((128, 128)) # Designed for qwen2, the max token length is 1024, so limit the image size to 308
         return image
 
@@ -45,7 +47,7 @@ class TrainDataset(Dataset):
         full_img_path = os.path.join(self.data_args.image_dir, img_path)
         image = Image.open(full_img_path)
         backbone = self.model_args.model_backbone
-        if backbone != PHI3V:
+        if backbone != PHI3V and self.data_args.image_resolution:
             return self._process_image(image, self.data_args.image_resolution)
         else:
             return image
@@ -109,7 +111,7 @@ class EvalDataset(Dataset):
             return None
         full_img_path = os.path.join(self.data_args.image_dir, img_path)
         image = Image.open(full_img_path)
-        if self.model_args.model_backbone == LLAVA_NEXT:
+        if self.model_args.model_backbone != PHI3V and self.data_args.image_resolution:
             return self._process_image(image, self.data_args.image_resolution)
         else:
             return image
@@ -159,7 +161,8 @@ class FlickrDataset(Dataset):
         text, image = self.eval_data[idx]
         if self.backbone != PHI3V:
             text = text.replace(vlm_image_tokens[PHI3V], vlm_image_tokens[self.backbone])
-            image = self._process_image(image, self.data_args.image_resolution)
+            if self.data_args.image_resolution:
+                image = self._process_image(image, self.data_args.image_resolution)
         return text, image
 
     def _process_image(self, image, resolution):

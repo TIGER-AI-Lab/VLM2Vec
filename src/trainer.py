@@ -473,7 +473,7 @@ class MMEBTrainer(Trainer):
                         self.state.global_step += 1
                         self.state.epoch = epoch + (step + 1 + steps_skipped) / steps_in_epoch
                         self.control = self.callback_handler.on_step_end(args, self.state, self.control)
-                        self._maybe_log_save_evaluate(tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval)
+                        self._maybe_log_save_evaluate(tr_loss, grad_norm, model, trial, epoch, ignore_keys_for_eval, start_time=time.time())
                     else:
                         self.control = self.callback_handler.on_substep_end(args, self.state, self.control)
 
@@ -627,8 +627,7 @@ class GradCacheLateProcessTrainer(MMEBTrainer):
         self._dist_loss_scale_factor = dist.get_world_size() if self.is_ddp else 1
         loss_fn_cls = DistributedContrastiveLoss if self.is_ddp else SimpleContrastiveLoss
         loss_fn = loss_fn_cls(temperature=self.model.temperature)
-        process_fn = functools.partial(process_vlm_inputs_fns[self.args.model_backbone], processor=self.processing_class,
-                                       max_length=self.max_length)
+        process_fn = functools.partial(process_vlm_inputs_fns[self.args.model_backbone], processor=self.processing_class, max_length=self.max_length)
 
         self.gc = GradCache(
             models=[self.model, self.model],
