@@ -57,8 +57,11 @@ class MMEBModel(nn.Module):
         print_master(f'Loading backbone [{model_backbone}]: {model_args.model_name}')
         # Loading the base model
         if model_backbone == QWEN2_VL:
+            config._attn_implementation = "eager"
+            config.padding_side = "right"
             base_model = Qwen2VLForConditionalGeneration.from_pretrained(
                 model_args.model_name,
+                config=config,
                 torch_dtype=torch.bfloat16,
                 low_cpu_mem_usage=True,
             )
@@ -125,13 +128,15 @@ class MMEBModel(nn.Module):
         # Loading the base model
         checkpoint_path = model_args.checkpoint_path if model_args.checkpoint_path else model_args.model_name
         if model_args.model_backbone == QWEN2_VL:
+            config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
+            config.use_cache = False
+            config._attn_implementation="sdpa"
+            config.padding_side = "right"
             base_model = Qwen2VLForConditionalGeneration.from_pretrained(
                 model_args.model_name,
                 torch_dtype=torch.bfloat16,
                 low_cpu_mem_usage=True,
-                attn_implementation="flash_attention_2"
             )
-            base_model.padding_side = "right"
         elif model_args.model_backbone == LLAVA_NEXT:
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config.use_cache = False
@@ -139,7 +144,6 @@ class MMEBModel(nn.Module):
                 model_args.model_name,
                 torch_dtype=torch.bfloat16,
                 low_cpu_mem_usage=True,
-                # attn_implementation="flash_attention_2"
             )
             base_model.padding_side = "left"
         elif model_args.model_backbone == PHI3V:
