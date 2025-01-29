@@ -98,16 +98,16 @@ class EvalCollator:
 
     def _get_batch_inputs(self, examples):
         input_ids, pixel_values, image_sizes = [], [], []
-        image_exist = False
         for example in examples:
             text, image = example
             if image is None:
+                image_exist = False
                 if self.model_args.model_backbone == "llava_next":
                     inputs = self.processor(images=None, text=text, return_tensors="pt")
                 else:
                     inputs = self.processor(text, None, return_tensors="pt", max_length=self.data_args.max_len,
                                             truncation=True)
-                input_ids.append(inputs["input_ids"].squeeze(0).unsqueeze(1))
+                input_ids.append(inputs["input_ids"].squeeze(0))
                 pixel_values.append(None)
                 image_sizes.append(None)
             else:
@@ -115,14 +115,14 @@ class EvalCollator:
                 if self.model_args.model_backbone == "llava_next":
                     inputs = self.processor(images=image, text=text, return_tensors="pt")
                 else:
-                    inputs = self.processor(text, [image], return_tensors="pt", max_length=self.data_args.max_len, truncation=True)
-                input_ids.append(inputs["input_ids"].squeeze(0).unsqueeze(1))
-                pixel_values.append(inputs['pixel_values'])
-                image_sizes.append(inputs['image_sizes'])
+                    inputs = self.processor(text, image, return_tensors="pt", max_length=self.data_args.max_len, truncation=True)
+                input_ids.append(inputs["input_ids"].squeeze(0))
+                pixel_values.extend(torch.unbind(inputs['pixel_values'], dim=0))
+                image_sizes.extend(torch.unbind(inputs['image_sizes'], dim=0))
 
         input_ids = torch._C._nn.pad_sequence(
             input_ids, batch_first=True, padding_value=self.processor.tokenizer.pad_token_id
-        ).squeeze(2)
+        )
         attention_mask = input_ids.ne(self.processor.tokenizer.pad_token_id)
 
         if not image_exist:
@@ -137,10 +137,10 @@ class EvalCollator:
         else:
             pixel_values_shape = list(set(v.shape for v in pixel_values if v is not None))[0]
             pixel_values = [v if v is not None else torch.zeros(pixel_values_shape) for v in pixel_values]
-            pixel_values = torch.cat(pixel_values, dim=0)
+            pixel_values = torch.stack(pixel_values, dim=0)
             image_sizes_shape = list(set(v.shape for v in image_sizes if v is not None))[0]
             image_sizes = [v if v is not None else torch.ones(image_sizes_shape) for v in image_sizes]
-            image_sizes = torch.cat(image_sizes, dim=0)
+            image_sizes = torch.stack(image_sizes, dim=0)
             inputs = {
                 'input_ids': input_ids,
                 'attention_mask': attention_mask,
