@@ -15,11 +15,12 @@ LLAVA_IMAGE_TOKEN_ID = 32000
 PHI3V = 'phi3_v'
 LLAVA_NEXT = 'llava_next'
 QWEN2_VL = 'qwen2_vl'
+QWEN2_5_VL = 'qwen2_5_vl'
 MODEL2BACKBONE = {
     'phi3_v': PHI3V,
     'llava_next': LLAVA_NEXT,
     'qwen2_vl': QWEN2_VL,
-    'qwen2_5_vl': QWEN2_VL,
+    'qwen2_5_vl': QWEN2_5_VL,
 }
 SUPPORTED_MODELS = set(MODEL2BACKBONE.keys())
 
@@ -45,6 +46,7 @@ def load_processor(model_args):
             trust_remote_code=True,
             num_crops=model_args.num_crops
         )
+        processor.tokenizer.padding_side = "right"
     elif model_args.model_backbone == LLAVA_NEXT:
         from transformers import LlavaNextProcessor
         processor = LlavaNextProcessor.from_pretrained(
@@ -61,8 +63,7 @@ def load_processor(model_args):
         tokenizer = Qwen2TokenizerFast.from_pretrained(model_name)
         processor = Qwen2VLProcessor.from_pretrained(
             model_name,
-            image_processor=image_processor,
-            tokenizer=tokenizer,
+            image_processor=image_processor, tokenizer=tokenizer,
             min_pixels=256 * 28 * 28, max_pixels=1280 * 28 * 28
         )
     else:
@@ -71,7 +72,6 @@ def load_processor(model_args):
             model_args.processor_name if model_args.processor_name else model_args.model_name,
             trust_remote_code=True,
         )
-    processor.tokenizer.padding_side = "right"
     return processor
 
 

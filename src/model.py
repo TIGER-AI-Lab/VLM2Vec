@@ -40,10 +40,17 @@ class MMEBModel(nn.Module):
 
     def _pooling(self, last_hidden_state, attention_mask):
         if self.pooling == 'last' or self.pooling == 'eos':
-            sequence_lengths = attention_mask.sum(dim=1) - 1
+            left_padding = (attention_mask[:, -1].sum() == attention_mask.shape[0])
             batch_size = last_hidden_state.shape[0]
-            reps = last_hidden_state[
-                    torch.arange(batch_size, device=last_hidden_state.device), sequence_lengths]
+            if left_padding:
+                # Get the vectors at the last position
+                reps = last_hidden_state[torch.arange(batch_size), -1, :]
+            else:
+                # Calculate last 1 position in the original tensor
+                eos_indices = attention_mask.sum(dim=1) - 1
+                # Get the vectors at the last 1 position of each attention mask
+                reps = last_hidden_state[
+                    torch.arange(batch_size, device=last_hidden_state.device), eos_indices]
         else:
             raise NotImplementedError
         if self.normalize:
@@ -57,15 +64,13 @@ class MMEBModel(nn.Module):
         print_master(f'Loading backbone [{model_backbone}]: {model_args.model_name}')
         # Loading the base model
         if model_backbone == QWEN2_VL:
-            config._attn_implementation = "eager"
-            config.padding_side = "right"
+            config._attn_implementation = "flash_attention_2"
             base_model = Qwen2VLForConditionalGeneration.from_pretrained(
                 model_args.model_name,
                 config=config,
                 torch_dtype=torch.bfloat16,
                 low_cpu_mem_usage=True,
             )
-            base_model.padding_side = "right"
         elif model_backbone == LLAVA_NEXT:
             config.use_cache = False
             config.padding_side = "left"
@@ -88,13 +93,11 @@ class MMEBModel(nn.Module):
             )
         else:
             config.use_cache = False
-            config.padding_side = "right"
             base_model = cls.TRANSFORMER_CLS.from_pretrained(
                 model_args.model_name, **kwargs, config=config,
                 attn_implementation="flash_attention_2",
                 torch_dtype=torch.bfloat16,
                 trust_remote_code=True)
-            base_model.padding_side = "right"
 
         if model_args.lora:
             print_master(f'Loading lora adapter from {base_model}')
@@ -129,23 +132,21 @@ class MMEBModel(nn.Module):
         checkpoint_path = model_args.checkpoint_path if model_args.checkpoint_path else model_args.model_name
         if model_args.model_backbone == QWEN2_VL:
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
-            config.use_cache = False
-            config._attn_implementation="sdpa"
-            config.padding_side = "right"
             base_model = Qwen2VLForConditionalGeneration.from_pretrained(
                 model_args.model_name,
                 torch_dtype=torch.bfloat16,
                 low_cpu_mem_usage=True,
+                config=config
             )
         elif model_args.model_backbone == LLAVA_NEXT:
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config.use_cache = False
+            config._attn_implementation = "flash_attention_2"
             base_model = LlavaNextForConditionalGeneration.from_pretrained(
                 model_args.model_name,
                 torch_dtype=torch.bfloat16,
                 low_cpu_mem_usage=True,
             )
-            base_model.padding_side = "left"
         elif model_args.model_backbone == PHI3V:
             # Loading the base model
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
@@ -158,14 +159,10 @@ class MMEBModel(nn.Module):
             # Loading the base model
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config.use_cache = False
-            config.padding_side = "right"
-
             base_model = cls.TRANSFORMER_CLS.from_pretrained(
                 checkpoint_path, **kwargs, config=config,
-                attn_implementation="flash_attention_2",
                 torch_dtype=torch.bfloat16,
                 trust_remote_code=True)
-            base_model.padding_side = "right"
 
         # Building the model on top of the base
         if model_args.lora:

@@ -16,6 +16,8 @@ checkpoint_paths = [
     # "/fsx/home/ruimeng/runs/test/hf-VLM2Vec-LLaVa-Next-lateprocess",
 
     # qwen
+    "/fsx/home/ruimeng/runs/mmeb/mmeb006-qwen2vl-2B-3-lateprocess-mid_res-flashattn-leftpad.lora8.mmeb20_sub100k.bs256pergpu32.GCq8p8_OOM.NormTemp002.lr2e5.step2kwarm100.8H100/checkpoint-1000",
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb006-qwen2vl-2B-2-lateprocess-mid_res.lora8.mmeb20_sub100k.bs256pergpu32.GCq8p8_OOM.NormTemp002.lr2e5.step2kwarm100.8H100/checkpoint-1000",
     # "/fsx/home/ruimeng/runs/mmeb/mmeb006-qwen2vl-2B-1-lateprocess-low_res.lora8.mmeb20_sub100k.bs1024pergpu128.GCq32p32.NormTemp002.lr2e5.step2kwarm100.8H100/checkpoint-2000/",
     # "/fsx/home/ruimeng/runs/mmeb/mmeb006-qwen2vl-2B-1-lateprocess-low_res.lora8.mmeb20_sub100k.bs1024pergpu128.GCq32p32.NormTemp002.lr2e5.step2kwarm100.8H100/checkpoint-1500/",
 
@@ -70,7 +72,7 @@ checkpoint_paths = [
     # "/fsx/home/ruimeng/runs/mmeb/mmeb004-crop9.fullmodel.mmeb20_sub50k.bs256pergpu32.GCq2p2.phi35.NormTemp002.len256crop9.lr2e5.step2kwarm100.8H100/checkpoint-2000/",
     # "/fsx/home/ruimeng/runs/mmeb/mmeb004-crop16.fullmodel.mmeb20_sub50k.bs256pergpu32.GCq1p1.phi35.NormTemp002.len256crop16.lr2e5.step2kwarm100.8H100/checkpoint-2000/",
     # data size
-    "/fsx/home/ruimeng/runs/mmeb/mmeb004-lora8_bs1k.mmeb20_sub50k.bs1024pergpu128.GCq4p4.phi35.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-1000/",
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb004-lora8_bs1k.mmeb20_sub50k.bs1024pergpu128.GCq4p4.phi35.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-1000/",
     # "/fsx/home/ruimeng/runs/mmeb/mmeb004-lora4.mmeb20_sub50k.bs256pergpu32.GCq4p4.phi35.NormTemp002.len256crop4.lr2e5.step2kwarm100.8H100/checkpoint-2000/",
     # "/fsx/home/ruimeng/runs/mmeb/mmeb004-data25k.fullmodel.mmeb20_sub25k.bs256pergpu32.GCq4p4.phi35.NormTemp002.len256crop4.lr2e5.step4kwarm200.8H100/checkpoint-4000/",
     # "/fsx/home/ruimeng/runs/mmeb/mmeb004-data100k.fullmodel.mmeb20_sub100k.bs256pergpu32.GCq4p4.phi35.NormTemp002.len256crop4.lr2e5.step4kwarm200.8H100/checkpoint-4000/",
