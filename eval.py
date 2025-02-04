@@ -48,7 +48,6 @@ def main():
         num_crops=model_args.num_crops,
     )
 
-    processor.tokenizer.padding_side = "right"
     hf_config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
     model_backbone = get_backbone_name(hf_config=hf_config)
     setattr(model_args, 'model_backbone', model_backbone)

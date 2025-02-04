@@ -5,10 +5,11 @@ from torch import nn, Tensor
 from transformers import PreTrainedModel, AutoModelForCausalLM, AutoConfig
 from peft import LoraConfig, get_peft_model, PeftModel
 from src.arguments import ModelArguments, TrainingArguments
-from src.data_utils import LLAVA_NEXT, QWEN2_VL, PHI3V, get_backbone_name, print_master
+from src.data_utils import LLAVA_NEXT, QWEN2_VL, PHI3V, get_backbone_name, print_master, QWEN2_5_VL
 from src.vlm_backbone.phi3_v.modeling_phi3_v import Phi3VForCausalLM
 from src.vlm_backbone.llava_next import LlavaNextForConditionalGeneration
 from src.vlm_backbone.qwen2_vl import Qwen2VLForConditionalGeneration
+from src.vlm_backbone.qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
 
 
 class MMEBModel(nn.Module):
@@ -66,6 +67,14 @@ class MMEBModel(nn.Module):
         if model_backbone == QWEN2_VL:
             config._attn_implementation = "flash_attention_2"
             base_model = Qwen2VLForConditionalGeneration.from_pretrained(
+                model_args.model_name,
+                config=config,
+                torch_dtype=torch.bfloat16,
+                low_cpu_mem_usage=True,
+            )
+        elif model_backbone == QWEN2_5_VL:
+            config._attn_implementation = "flash_attention_2"
+            base_model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
                 model_args.model_name,
                 config=config,
                 torch_dtype=torch.bfloat16,
@@ -132,6 +141,8 @@ class MMEBModel(nn.Module):
         checkpoint_path = model_args.checkpoint_path if model_args.checkpoint_path else model_args.model_name
         if model_args.model_backbone == QWEN2_VL:
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
+            config._attn_implementation = "flash_attention_2"
+            config.vision_config._attn_implementation = "flash_attention_2"
             base_model = Qwen2VLForConditionalGeneration.from_pretrained(
                 model_args.model_name,
                 torch_dtype=torch.bfloat16,

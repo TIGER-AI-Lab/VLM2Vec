@@ -30,7 +30,7 @@ class TrainDataset(Dataset):
     def __len__(self):
         return len(self.train_data)
 
-    def _process_image(self, image, resolution):
+    def _process_image(self, image, resolution, max_dim=1024):
         if image is None:
             return None
         if resolution == "high":
@@ -38,7 +38,11 @@ class TrainDataset(Dataset):
         elif resolution == "mid":
             image = image.resize((672, 672))
         elif resolution == "low":
-            image = image.resize((128, 128)) # Designed for qwen2, the max token length is 1024, so limit the image size to 308
+            image = image.resize((128, 128))
+        else:
+            cur_max_dim = max(image.size)
+            if cur_max_dim > max_dim:
+                image = image.resize((max_dim, max_dim))
         return image
 
     def _get_image(self, img_path):
