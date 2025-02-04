@@ -52,7 +52,35 @@ class ModelArguments:
         default=16,
         metadata={"help": "number of crops used in image encoder"}
     )
-
+    uigraph_train: bool = field(
+        default=True,
+        metadata={"help": "Enable ui graph during training"}
+    )
+    uigraph_test: bool = field(
+        default=False,
+        metadata={"help": "Enable ui graph during inference"}
+    )
+    uigraph_diff: int = field(
+        default=1,
+        metadata={"help": "Pixel difference used for constructing ui graph"}
+    )
+    uigraph_rand: bool = field(
+        default=False,
+        metadata={"help": "Enable random graph construction"}
+    )
+    uimask_pre: bool = field(
+        default=True,
+        metadata={"help": "Prebuild patch selection mask in the preprocessor (not in model layers) for efficiency"}
+    )
+    uimask_ratio: float = field(
+        default=0.5,
+        metadata={"help": "Specify the percentage of patch tokens to skip per component"}
+    )
+    uimask_rand: bool = field(
+        default=False,
+        metadata={"help": "Enable random token selection instead of uniform selection"}
+    )
+    
 
 @dataclass
 class DataArguments:
