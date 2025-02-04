@@ -16,7 +16,7 @@ PHI3V = 'phi3_v'
 LLAVA_NEXT = 'llava_next'
 QWEN2_VL = 'qwen2_vl'
 QWEN2_5_VL = 'qwen2_5_vl'
-MODEL2BACKBONE = {
+MODEL2BACKBONE = {  # keys are from hf_config.model_type
     'phi3_v': PHI3V,
     'llava_next': LLAVA_NEXT,
     'qwen2_vl': QWEN2_VL,
@@ -24,13 +24,11 @@ MODEL2BACKBONE = {
 }
 SUPPORTED_MODELS = set(MODEL2BACKBONE.keys())
 
-PHI3V_itoken = "<|image_1|>"
-LLAVA_NEXT_itoken = "<image>"
-QWEN2_VL_itoken = "<|image_pad|>"
 vlm_image_tokens = {
-    PHI3V: PHI3V_itoken,
-    LLAVA_NEXT: LLAVA_NEXT_itoken,
-    QWEN2_VL: QWEN2_VL_itoken,
+    PHI3V: "<|image_1|>",
+    LLAVA_NEXT: "<image>",
+    QWEN2_VL: "<|image_pad|>",
+    QWEN2_5_VL: "<|image_pad|>",
 }
 
 
@@ -66,6 +64,14 @@ def load_processor(model_args):
             image_processor=image_processor, tokenizer=tokenizer,
             min_pixels=256 * 28 * 28, max_pixels=1280 * 28 * 28
         )
+    elif model_args.model_backbone == QWEN2_5_VL:
+        from src.vlm_backbone.qwen2_5_vl.processing_qwen2_5_vl import Qwen2_5_VLProcessor
+        from src.vlm_backbone.qwen2_5_vl.image_processing_qwen2_5_vl import Qwen2_5_VLImageProcessor
+        from src.vlm_backbone.qwen2_vl.tokenization_qwen2_fast import Qwen2TokenizerFast
+        model_name = model_args.processor_name if model_args.processor_name else model_args.model_name
+        image_processor = Qwen2_5_VLImageProcessor.from_pretrained(model_name)
+        tokenizer = Qwen2TokenizerFast.from_pretrained(model_name)
+        processor = Qwen2_5_VLProcessor.from_pretrained(model_name, image_processor=image_processor, tokenizer=tokenizer)
     else:
         from transformers import AutoProcessor
         processor = AutoProcessor.from_pretrained(
@@ -237,4 +243,5 @@ process_vlm_inputs_fns = {
     PHI3V: PHI3V_process_fn,
     LLAVA_NEXT: LLAVA_NEXT_process_fn,
     QWEN2_VL: QWEN2_VL_process_fn,
+    QWEN2_5_VL: QWEN2_VL_process_fn,
 }
