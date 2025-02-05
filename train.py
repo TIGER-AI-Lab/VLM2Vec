@@ -1,18 +1,20 @@
 # Adapted from Tevatron code
 import logging
 import sys
+import torch
+import wandb
 
 from transformers import (
     HfArgumentParser,
 )
 
-from src.dataset import TrainDataset
-from src.collator import TrainRawInputCollator
+from src.dataset import TrainTextImageDataset
+from src.collator import TrainTextImageDataCollator
 from src.arguments import ModelArguments, DataArguments, TrainingArguments
 from src.model import MMEBModel
 from src.trainer import GradCacheLateProcessTrainer
 from src.utils import print_rank
-from src.data_utils import load_processor, get_backbone_name
+from src.model_utils import load_processor, get_backbone_name
 
 
 logger = logging.getLogger(__name__)
@@ -33,9 +35,10 @@ def main():
     data_args: DataArguments
     training_args: TrainingArguments
 
-    # if (dist.is_initialized() and torch.distributed.get_rank() == 0) or (not dist.is_initialized()):
-    #     print_rank('init wandb')
-    #     wandb.init(project=training_args.project_name, name=training_args.run_name, mode="disabled")
+    if 'wandb' in training_args.report_to:
+        if (torch.distributed.is_initialized() and torch.distributed.get_rank() == 0) or (not torch.distributed.is_initialized()):
+            print_rank('init wandb')
+            wandb.init(project=training_args.project_name, name=training_args.run_name, mode="online")
 
     model = MMEBModel.build(model_args, training_args)
     model_backbone = get_backbone_name(hf_config=model.config)
@@ -44,12 +47,10 @@ def main():
     print_rank(f'model_backbone: {model_backbone}')
     processor = load_processor(model_args)
     setattr(model, 'processor', processor)
-    train_dataset = TrainDataset(data_args, model_args)
 
-    # collator = TrainCollator(data_args, model_args, processor)
-    # trainer_cls = GradCacheTrainer if training_args.grad_cache else MMEBTrainer
+    train_dataset = TrainTextImageDataset(data_args, model_args)
+    collator = TrainTextImageDataCollator(data_args, model_args, processor)
 
-    collator = TrainRawInputCollator(data_args, model_args, processor)
     trainer_cls = GradCacheLateProcessTrainer
     trainer = trainer_cls(
         model=model,

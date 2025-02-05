@@ -1,4 +1,5 @@
 from itertools import repeat
+from torch.jit import isinstance
 
 import logging
 from dataclasses import dataclass
@@ -6,7 +7,7 @@ from transformers import ProcessorMixin, AutoProcessor, AutoTokenizer
 from src.arguments import DataArguments, ModelArguments
 import torch
 
-from src.data_utils import LLAVA_NEXT, QWEN2_VL, PHI3V, process_vlm_inputs_fns
+from src.model_utils import LLAVA_NEXT, QWEN2_VL, PHI3V, process_vlm_inputs_fns
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +172,7 @@ def get_dense_rep(x):
 
 
 @dataclass
-class TrainRawInputCollator:
+class TrainTextImageDataCollator:
     data_args: DataArguments
     model_args: ModelArguments
     processor: ProcessorMixin
@@ -180,14 +181,24 @@ class TrainRawInputCollator:
         """
         :param examples: qry, qry_image, pos_text, pos_image
         """
-        qry_inputs = self._get_batch_inputs(examples, 0, 1)
-        pos_inputs = self._get_batch_inputs(examples, 2, 3)
+        qry_inputs = self._get_batch_inputs(examples, "query_text", "query_image")
+        pos_inputs = self._get_batch_inputs(examples, "pos_text", "pos_image")
+        neg_inputs = self._get_batch_inputs(examples, "neg_text", "neg_image")
         return qry_inputs, pos_inputs
 
-    def _get_batch_inputs(self, examples, text_idx, image_idx):
+    def _get_batch_inputs(self, examples, text_keyname, image_keyname):
         texts, images = [], []
         for example in examples:
-            text, image = example[text_idx], example[image_idx]
+            # @ruimeng filter invalid data examples here will lead to fail to sync across devices (unequal batch size)
+            # use dummy input for now
+            if example is None or not example:
+                text, image = '  ', None
+            text, image = example[text_keyname], example[image_keyname]
+            if type(text) == list:
+                if len(text) == 0 or len(image) == 0:
+                    text, image = '  ', None
+                else:
+                    text, image = text[0], image[0]
             texts.append(text)
             images.append(image)
         inputs = {'text': texts, 'image': images}

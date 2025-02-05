@@ -5,12 +5,13 @@ from torch import nn, Tensor
 from transformers import PreTrainedModel, AutoModelForCausalLM, AutoConfig
 from peft import LoraConfig, get_peft_model, PeftModel
 from src.arguments import ModelArguments, TrainingArguments
-from src.data_utils import LLAVA_NEXT, QWEN2_VL, PHI3V, get_backbone_name, print_master, QWEN2_5_VL
+from src.model_utils import LLAVA_NEXT, QWEN2_VL, PHI3V, get_backbone_name, print_master, QWEN2_5_VL, INTERN_VL, \
+    backbone2model
 from src.vlm_backbone.phi3_v.modeling_phi3_v import Phi3VForCausalLM
 from src.vlm_backbone.llava_next import LlavaNextForConditionalGeneration
 from src.vlm_backbone.qwen2_vl import Qwen2VLForConditionalGeneration
 from src.vlm_backbone.qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
-
+from src.vlm_backbone.intern_vl import InternLM2ForCausalLM
 
 class MMEBModel(nn.Module):
     TRANSFORMER_CLS = AutoModelForCausalLM
@@ -64,17 +65,11 @@ class MMEBModel(nn.Module):
         model_backbone = get_backbone_name(hf_config=config)
         print_master(f'Loading backbone [{model_backbone}]: {model_args.model_name}')
         # Loading the base model
-        if model_backbone == QWEN2_VL:
-            config._attn_implementation = "flash_attention_2"
-            base_model = Qwen2VLForConditionalGeneration.from_pretrained(
-                model_args.model_name,
-                config=config,
-                torch_dtype=torch.bfloat16,
-                low_cpu_mem_usage=True,
-            )
-        elif model_backbone == QWEN2_5_VL:
-            config._attn_implementation = "flash_attention_2"
-            base_model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+        if model_backbone == PHI3V:
+            config._attn_implementation = "eager"
+            config.padding_side = "right"
+            config.use_cache = False
+            base_model = Phi3VForCausalLM.from_pretrained(
                 model_args.model_name,
                 config=config,
                 torch_dtype=torch.bfloat16,
@@ -89,12 +84,11 @@ class MMEBModel(nn.Module):
                 torch_dtype=torch.bfloat16,
                 low_cpu_mem_usage=True,
             )
-        # Loading the base model
-        elif model_backbone == PHI3V:
-            config._attn_implementation = "eager"
-            config.padding_side = "right"
+        elif model_backbone in [QWEN2_VL, QWEN2_5_VL, INTERN_VL]:
+            config._attn_implementation = "flash_attention_2"
+            config.padding_side = "left"
             config.use_cache = False
-            base_model = Phi3VForCausalLM.from_pretrained(
+            base_model = backbone2model[model_backbone].from_pretrained(
                 model_args.model_name,
                 config=config,
                 torch_dtype=torch.bfloat16,
@@ -139,24 +133,15 @@ class MMEBModel(nn.Module):
     def load(cls, model_args: ModelArguments, **kwargs):
         # Loading the base model
         checkpoint_path = model_args.checkpoint_path if model_args.checkpoint_path else model_args.model_name
-        if model_args.model_backbone == QWEN2_VL:
+        if model_args.model_backbone in {LLAVA_NEXT, QWEN2_VL, QWEN2_5_VL, INTERN_VL}:
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config._attn_implementation = "flash_attention_2"
             config.vision_config._attn_implementation = "flash_attention_2"
-            base_model = Qwen2VLForConditionalGeneration.from_pretrained(
+            base_model = backbone2model[model_args.model_backbone].from_pretrained(
                 model_args.model_name,
                 torch_dtype=torch.bfloat16,
                 low_cpu_mem_usage=True,
                 config=config
-            )
-        elif model_args.model_backbone == LLAVA_NEXT:
-            config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
-            config.use_cache = False
-            config._attn_implementation = "flash_attention_2"
-            base_model = LlavaNextForConditionalGeneration.from_pretrained(
-                model_args.model_name,
-                torch_dtype=torch.bfloat16,
-                low_cpu_mem_usage=True,
             )
         elif model_args.model_backbone == PHI3V:
             # Loading the base model
@@ -167,7 +152,7 @@ class MMEBModel(nn.Module):
                                                           torch_dtype=torch.bfloat16, trust_remote_code=True)
             base_model.padding_side = "right"
         else:
-            # Loading the base model
+            # Loading external base model from HF
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config.use_cache = False
             base_model = cls.TRANSFORMER_CLS.from_pretrained(
