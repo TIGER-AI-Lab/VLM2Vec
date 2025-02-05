@@ -779,15 +779,23 @@ class Qwen2_5_VLFlashAttention2(Qwen2_5_VLAttention):
         cache_position: Optional[torch.LongTensor] = None,
         position_embeddings: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,  # necessary, but kept here for BC
     ):
-        bsz, q_len, _ = hidden_states.size()
+        bsz, q_len, hidden_size = hidden_states.size()
 
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
-
-        query_states = query_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
-        key_states = key_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
-        value_states = value_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+        if len(query_states.size()) == 1:
+            pass
+        try:
+            query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
+            key_states = key_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+            value_states = value_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+        except RuntimeError:
+            print_rank(f"hidden_states.shape={hidden_states.shape}")
+            print_rank(f"query_states.shape={query_states.shape}")
+            print_rank(f"key_states.shape={key_states.shape}")
+            print_rank(f"value_states.shape={value_states.shape}")
+            raise
 
         # Because the input can be padded, the absolute sequence length depends on the max position id.
         cos, sin = position_embeddings
@@ -1199,8 +1207,8 @@ class Qwen2_5_VLModel(Qwen2_5_VLPreTrainedModel):
         output_attentions: bool,
     ):
         if self.config._attn_implementation == "flash_attention_2":
-            if attention_mask is not None and past_key_values is not None:
-                is_padding_right = attention_mask[:, -1].sum().item() != input_tensor.size()[0]
+            # if attention_mask is not None and past_key_values is not None:
+                # is_padding_right = attention_mask[:, -1].sum().item() != input_tensor.size()[0]
                 # if is_padding_right:
                 #     print_rank(f'attention_mask[:, -1].sum().item()={attention_mask[:, -1].sum().item()}')
                 #     print_rank(f'input_tensor.size()[0]={input_tensor.size()[0]}')

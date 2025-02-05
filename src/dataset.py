@@ -1,18 +1,18 @@
-import random
 from typing import List, Tuple
-from itertools import islice
 import datasets
 from datasets import load_dataset, concatenate_datasets
-from torch.utils.data import Dataset
 from PIL import Image
 import os
 
-from src.data_utils import LLAVA_NEXT, QWEN2_VL, PHI3V, vlm_image_tokens
+from torch.jit import isinstance
 
+from src.model_utils import PHI3V, vlm_image_tokens
 from src.utils import print_master, print_rank
 
+# from datasets import Dataset  # @ruimeng, still buggy
+from torch.utils.data import Dataset
 
-class TrainDataset(Dataset):
+class TrainTextImageDataset(Dataset):
     def __init__(self, data_args, model_args):
         self.data_args = data_args
         self.model_args = model_args
@@ -20,8 +20,7 @@ class TrainDataset(Dataset):
         print_rank(f"Loading {len(data_args.subset_name)} datasets: {data_args.subset_name}")
         for subset in data_args.subset_name:
             subset_data = load_dataset(
-                self.data_args.dataset_name,
-                subset,
+                self.data_args.dataset_name, subset,
                 split=f"{self.data_args.dataset_split}[:{data_args.num_sample_per_subset}]",
             )
             train_data.append(subset_data)
@@ -30,7 +29,7 @@ class TrainDataset(Dataset):
     def __len__(self):
         return len(self.train_data)
 
-    def _process_image(self, image, resolution, max_dim=1024):
+    def _process_image(self, image, resolution, max_dim=1344):
         if image is None:
             return None
         if resolution == "high":
@@ -56,19 +55,48 @@ class TrainDataset(Dataset):
         else:
             return image
 
-    def __getitem__(self, item) -> Tuple[str, List[str]]:
-        qry_text, qry_image_path, pos_text, pos_image_path = (
-            self.train_data[item]["qry"], self.train_data[item]["qry_image_path"],
-            self.train_data[item]["pos_text"], self.train_data[item]["pos_image_path"],
+    def __getitem__(self, data_idx) -> Tuple[str, List[str]]:
+        qry_texts, qry_image_paths, pos_texts, pos_image_paths = (
+            self.train_data[data_idx]["qry"], self.train_data[data_idx]["qry_image_path"],
+            self.train_data[data_idx]["pos_text"], self.train_data[data_idx]["pos_image_path"]
         )
+        if 'neg_text' in self.train_data.column_names:
+            neg_texts, neg_image_paths = self.train_data[data_idx]["neg_text"], self.train_data[data_idx]["neg_image_path"]
+        else:
+            neg_texts, neg_image_paths = [''] * len(data_idx), [] * len(data_idx)
+        if isinstance(data_idx, int):
+            qry_texts = [qry_texts]
+            qry_image_paths = [qry_image_paths]
+            pos_texts = [pos_texts]
+            pos_image_paths = [pos_image_paths]
+            neg_texts = [neg_texts]
+            neg_image_paths = [neg_image_paths]
+        _qry_texts, _qry_images, _pos_texts, _pos_images, _neg_texts, _neg_images = [], [], [], [], [], []
         backbone = self.model_args.model_backbone
-        # instructions were hardcoded with Phi3 image special tokens
-        # Update image token for llava and colqwen2
-        if backbone != PHI3V:
-            qry_text = qry_text.replace(vlm_image_tokens[PHI3V], vlm_image_tokens[backbone])
-            pos_text = pos_text.replace(vlm_image_tokens[PHI3V], vlm_image_tokens[backbone])
-        return (qry_text, self._get_image(qry_image_path),
-                pos_text, self._get_image(pos_image_path))
+        for qry_text, qry_image_path, pos_text, pos_image_path, neg_text, neg_image_path \
+            in zip(qry_texts, qry_image_paths, pos_texts, pos_image_paths, neg_texts, neg_image_paths):
+            # instructions were hardcoded with Phi3 image special tokens
+            # Update image token for llava and colqwen2
+            if backbone != PHI3V:
+                qry_text = qry_text.replace(vlm_image_tokens[PHI3V], vlm_image_tokens[backbone])
+                pos_text = pos_text.replace(vlm_image_tokens[PHI3V], vlm_image_tokens[backbone])
+                neg_text = neg_text.replace(vlm_image_tokens[PHI3V], vlm_image_tokens[backbone]) if neg_text else None
+            qry_image = self._get_image(qry_image_path)
+            pos_image = self._get_image(pos_image_path)
+            neg_image = self._get_image(neg_image_path) if neg_image_path else None
+            if (not qry_text and not qry_image) or (not pos_text and not pos_image):
+                print("empty inputs")
+                continue
+            _qry_texts.append(qry_text)
+            _qry_images.append(qry_image)
+            _pos_texts.append(pos_text)
+            _pos_images.append(pos_image)
+            _neg_texts.append(neg_text)
+            _neg_images.append(neg_image)
+
+        return {"query_text": _qry_texts, "query_image": _qry_images,
+                "pos_text": _pos_texts, "pos_image": _pos_images,
+                "neg_text": _neg_texts, "neg_image": _neg_images}
 
 
 class EvalDataset(Dataset):
@@ -183,7 +211,7 @@ class FlickrDataset(Dataset):
             return None
         full_img_path = os.path.join(self.data_args.image_dir, img_path)
         image = Image.open(full_img_path)
-        if self.model_backbone == LLAVA_NEXT:
+        if self.model_backbone != PHI3V:
             return self._process_image(image, self.data_args.image_resolution)
         else:
             return image

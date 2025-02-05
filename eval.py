@@ -16,7 +16,7 @@ import os
 from datasets import load_dataset
 from evaluation.eval_utils import get_pred
 from src.utils import print_rank
-from src.data_utils import get_backbone_name
+from src.model_utils import get_backbone_name
 
 def batch_to_device(batch, device):
     _batch = {}
