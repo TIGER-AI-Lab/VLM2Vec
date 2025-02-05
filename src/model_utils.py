@@ -86,7 +86,11 @@ def load_processor(model_args):
         from src.vlm_backbone.qwen2_vl.tokenization_qwen2_fast import Qwen2TokenizerFast
         image_processor = Qwen2_5_VLImageProcessor.from_pretrained(model_name)
         tokenizer = Qwen2TokenizerFast.from_pretrained(model_name)
-        processor = Qwen2_5_VLProcessor.from_pretrained(model_name, image_processor=image_processor, tokenizer=tokenizer)
+        processor = Qwen2_5_VLProcessor.from_pretrained(model_name, image_processor=image_processor, tokenizer=tokenizer,
+            uigraph_train=model_args.uigraph_train, uigraph_test=model_args.uigraph_test,
+            uigraph_diff=model_args.uigraph_diff,  uigraph_rand=model_args.uigraph_rand,
+            uimask_pre=model_args.uimask_pre, uimask_ratio=model_args.uimask_ratio, uimask_rand=model_args.uimask_rand
+        )
     elif model_args.model_backbone == INTERN_VL:
         from src.vlm_backbone.intern_vl.tokenization_internlm2_fast import InternLM2TokenizerFast
         tokenizer = InternLM2TokenizerFast.from_pretrained(model_name)
