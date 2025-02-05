@@ -14,7 +14,7 @@ import torch
 import math
 
 from src.collator import split_vlm_inputs, get_dense_rep, split_and_process_vlm_inputs
-from src.data_utils import process_vlm_inputs_fns
+from src.model_utils import process_vlm_inputs_fns
 from src.loss import SimpleContrastiveLoss, DistributedContrastiveLoss
 from grad_cache.grad_cache import GradCache
 
@@ -64,6 +64,8 @@ class MMEBTrainer(Trainer):
         self.is_ddp = dist.is_initialized()
         self.processor = self.processing_class
         self._dist_loss_scale_factor = dist.get_world_size() if self.is_ddp else 1
+        # make sure it contains all the keys defined in the output of src.dataset.TrainTextImageDataset
+        self._signature_columns = ['query_text', 'query_image', 'target_text', 'target_image', 'label_ids', 'label']
 
     def compute_loss(self, model, inputs, *args, **kwargs):
         qry_inputs, tgt_inputs = inputs
@@ -266,6 +268,9 @@ class MMEBTrainer(Trainer):
         epochs_trained = 0
         steps_trained_in_current_epoch = 0
         steps_trained_progress_bar = None
+
+        # @ruimeng use steps_trained_in_current_epoch to skip batches for finding buggy data
+        # steps_trained_in_current_epoch = 11
 
         # Check if continuing training from a checkpoint
         if resume_from_checkpoint is not None and os.path.isfile(

@@ -48,6 +48,8 @@ from transformers.utils import (
     logging,
     replace_return_docstrings,
 )
+
+from src.utils import print_rank
 from src.vlm_backbone.qwen2_5_vl.configuration_qwen2_5_vl import Qwen2_5_VLConfig, Qwen2_5_VLVisionConfig
 
 
@@ -777,15 +779,23 @@ class Qwen2_5_VLFlashAttention2(Qwen2_5_VLAttention):
         cache_position: Optional[torch.LongTensor] = None,
         position_embeddings: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,  # necessary, but kept here for BC
     ):
-        bsz, q_len, _ = hidden_states.size()
+        bsz, q_len, hidden_size = hidden_states.size()
 
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
-
-        query_states = query_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
-        key_states = key_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
-        value_states = value_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+        if len(query_states.size()) == 1:
+            pass
+        try:
+            query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
+            key_states = key_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+            value_states = value_states.view(bsz, q_len, -1, self.head_dim).transpose(1, 2)
+        except RuntimeError:
+            print_rank(f"hidden_states.shape={hidden_states.shape}")
+            print_rank(f"query_states.shape={query_states.shape}")
+            print_rank(f"key_states.shape={key_states.shape}")
+            print_rank(f"value_states.shape={value_states.shape}")
+            raise
 
         # Because the input can be padded, the absolute sequence length depends on the max position id.
         cos, sin = position_embeddings
@@ -1082,6 +1092,7 @@ class Qwen2_5_VLModel(Qwen2_5_VLPreTrainedModel):
         output_hidden_states: Optional[bool] = None,
         return_dict: Optional[bool] = None,
         cache_position: Optional[torch.LongTensor] = None,
+        *args, **kwargs
     ) -> Union[Tuple, BaseModelOutputWithPast]:
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
@@ -1196,14 +1207,16 @@ class Qwen2_5_VLModel(Qwen2_5_VLPreTrainedModel):
         output_attentions: bool,
     ):
         if self.config._attn_implementation == "flash_attention_2":
-            if attention_mask is not None and past_key_values is not None:
-                is_padding_right = attention_mask[:, -1].sum().item() != input_tensor.size()[0]
-                if is_padding_right:
-                    raise ValueError(
-                        "You are attempting to perform batched generation with padding_side='right'"
-                        " this may lead to unexpected behaviour for Flash Attention version of Qwen2_5_VL. Make sure to "
-                        " call `tokenizer.padding_side  = 'left'` before tokenizing the input. "
-                    )
+            # if attention_mask is not None and past_key_values is not None:
+                # is_padding_right = attention_mask[:, -1].sum().item() != input_tensor.size()[0]
+                # if is_padding_right:
+                #     print_rank(f'attention_mask[:, -1].sum().item()={attention_mask[:, -1].sum().item()}')
+                #     print_rank(f'input_tensor.size()[0]={input_tensor.size()[0]}')
+                #     raise ValueError(
+                #         "You are attempting to perform batched generation with padding_side='right'"
+                #         " this may lead to unexpected behaviour for Flash Attention version of Qwen2_5_VL. Make sure to "
+                #         " call `tokenizer.padding_side  = 'left'` before tokenizing the input. "
+                #     )
             if attention_mask is not None and 0.0 in attention_mask:
                 return attention_mask
             return None
@@ -1685,6 +1698,7 @@ class Qwen2_5_VLForConditionalGeneration(Qwen2_5_VLPreTrainedModel, GenerationMi
         rope_deltas: Optional[torch.LongTensor] = None,
         cache_position: Optional[torch.LongTensor] = None,
         second_per_grid_ts: Optional[torch.Tensor] = None,
+        *args, **kwargs
     ) -> Union[Tuple, Qwen2_5_VLCausalLMOutputWithPast]:
         r"""
         Args:
@@ -1734,6 +1748,54 @@ class Qwen2_5_VLForConditionalGeneration(Qwen2_5_VLPreTrainedModel, GenerationMi
 
         if inputs_embeds is None:
             inputs_embeds = self.model.embed_tokens(input_ids)
+
+            # encode image inputs
+            # @ruimeng split data by whether image inputs are valid, and forward separately
+            idx_w_image = [mid for mid, isize in enumerate(image_grid_thw) if isize is not None]
+            idx_wo_image = [mid for mid, isize in enumerate(image_grid_thw) if isize is None]
+            if len(idx_w_image) > 0:
+                merged_inputs_embeds = []
+                if len(idx_w_image):
+                    input_ids_w_image = torch.stack([input_ids[i] for i in idx_w_image])
+                    inputs_embeds_w_image = torch.stack([inputs_embeds[i] for i in idx_w_image])
+                    valid_pixel_values = [pixel_values[i] if isinstance(pixel_values[i], torch.Tensor) else torch.from_numpy(pixel_values[i]) for i in idx_w_image]
+                    valid_pixel_values = torch.cat(valid_pixel_values).to(input_ids.device)  # shape=[BS*n_patch,C*H*W]
+                    # print_rank(str(valid_pixel_values.shape))
+                    valid_image_sizes = [image_grid_thw[i] if isinstance(image_grid_thw[i], torch.Tensor) else torch.from_numpy(image_grid_thw[i]) for i in idx_w_image]
+                    valid_image_sizes = torch.cat(valid_image_sizes).to(input_ids.device)  # shape=[BS,H,W]
+
+                    valid_pixel_values = valid_pixel_values.type(self.visual.dtype)
+                    image_embeds = self.visual(valid_pixel_values, grid_thw=valid_image_sizes)
+                    n_image_tokens = (input_ids_w_image == self.config.image_token_id).sum().item()
+                    n_image_features = image_embeds.shape[0]
+                    if n_image_tokens != n_image_features:
+                        print(f'n_image_tokens={n_image_tokens}')
+                        print(f'n_image_features={n_image_features}')
+                        raise ValueError(
+                            f"Image features and image tokens do not match: tokens: {n_image_tokens}, features {n_image_features}"
+                        )
+                    image_mask = (
+                        (input_ids_w_image == self.config.image_token_id)
+                        .unsqueeze(-1)
+                        .expand_as(inputs_embeds_w_image)
+                        .to(inputs_embeds_w_image.device)
+                    )
+                    image_embeds = image_embeds.to(inputs_embeds.device, inputs_embeds.dtype)
+                    inputs_embeds_w_image = inputs_embeds_w_image.masked_scatter(image_mask, image_embeds)
+                    merged_inputs_embeds.append(inputs_embeds_w_image)
+                if len(idx_wo_image):
+                    inputs_embeds_wo_image = torch.stack([inputs_embeds[i] for i in idx_wo_image])
+                    merged_inputs_embeds.append(inputs_embeds_wo_image)
+                # merge the two outputs
+                merged_inputs_embeds = torch.cat(merged_inputs_embeds, dim=0)
+                # create a permutation tensor to reorder inputs_embeds
+                original_order = idx_w_image + idx_wo_image
+                permutation = torch.argsort(torch.tensor(original_order))
+                # resort inputs_embeds by original order
+                inputs_embeds = merged_inputs_embeds[permutation]
+
+            '''
+            # original implementation for images
             if pixel_values is not None:
                 pixel_values = pixel_values.type(self.visual.dtype)
                 image_embeds = self.visual(pixel_values, grid_thw=image_grid_thw)
@@ -1751,6 +1813,7 @@ class Qwen2_5_VLForConditionalGeneration(Qwen2_5_VLPreTrainedModel, GenerationMi
 
                 image_embeds = image_embeds.to(inputs_embeds.device, inputs_embeds.dtype)
                 inputs_embeds = inputs_embeds.masked_scatter(image_mask, image_embeds)
+            '''
 
             if pixel_values_videos is not None:
                 pixel_values_videos = pixel_values_videos.type(self.visual.dtype)
