@@ -12,6 +12,23 @@ from src.utils import print_master, print_rank
 # from datasets import Dataset  # @ruimeng, still buggy
 from torch.utils.data import Dataset
 
+
+def process_image(image, resolution, max_dim=1344):
+    if image is None:
+        return None
+    if resolution == "high":
+        image = image.resize((1344, 1344))
+    elif resolution == "mid":
+        image = image.resize((672, 672))
+    elif resolution == "low":
+        image = image.resize((128, 128))
+    else:
+        cur_max_dim = max(image.size)
+        if cur_max_dim > max_dim:
+            image = image.resize((max_dim, max_dim))
+    return image
+
+
 class TrainTextImageDataset(Dataset):
     def __init__(self, data_args, model_args):
         self.data_args = data_args
@@ -29,21 +46,6 @@ class TrainTextImageDataset(Dataset):
     def __len__(self):
         return len(self.train_data)
 
-    def _process_image(self, image, resolution, max_dim=1344):
-        if image is None:
-            return None
-        if resolution == "high":
-            image = image.resize((1344, 1344))
-        elif resolution == "mid":
-            image = image.resize((672, 672))
-        elif resolution == "low":
-            image = image.resize((128, 128))
-        else:
-            cur_max_dim = max(image.size)
-            if cur_max_dim > max_dim:
-                image = image.resize((max_dim, max_dim))
-        return image
-
     def _get_image(self, img_path):
         if not img_path:
             return None
@@ -51,7 +53,7 @@ class TrainTextImageDataset(Dataset):
         image = Image.open(full_img_path)
         backbone = self.model_args.model_backbone
         if backbone != PHI3V and self.data_args.image_resolution:
-            return self._process_image(image, self.data_args.image_resolution)
+            return process_image(image, self.data_args.image_resolution)
         else:
             return image
 
@@ -144,7 +146,7 @@ class EvalDataset(Dataset):
         full_img_path = os.path.join(self.data_args.image_dir, img_path)
         image = Image.open(full_img_path)
         if self.model_args.model_backbone != PHI3V and self.data_args.image_resolution:
-            return self._process_image(image, self.data_args.image_resolution)
+            return process_image(image, self.data_args.image_resolution)
         else:
             return image
         return image
@@ -164,8 +166,8 @@ class EvalDataset(Dataset):
                             unique_pair.add((row[text_field], img_path))
                     else:
                         unique_pair.add((row[text_field], row[img_path_field]))
-            elif isinstance(row[text_field], List):
-                assert isinstance(row[img_path_field], List) and len(row[img_path_field]) == len(row[text_field])
+            elif type(row[text_field]) == list:
+                assert type(row[img_path_field]) == list and len(row[img_path_field]) == len(row[text_field])
                 for text, img_path in zip(row[text_field], row[img_path_field]):
                     unique_pair.add((text, img_path))
 
@@ -194,7 +196,7 @@ class FlickrDataset(Dataset):
         if self.backbone != PHI3V:
             text = text.replace(vlm_image_tokens[PHI3V], vlm_image_tokens[self.backbone])
             if self.data_args.image_resolution:
-                image = self._process_image(image, self.data_args.image_resolution)
+                image = process_image(image, self.data_args.image_resolution)
         return text, image
 
     def _process_image(self, image, resolution):
@@ -212,7 +214,7 @@ class FlickrDataset(Dataset):
         full_img_path = os.path.join(self.data_args.image_dir, img_path)
         image = Image.open(full_img_path)
         if self.model_backbone != PHI3V:
-            return self._process_image(image, self.data_args.image_resolution)
+            return process_image(image, self.data_args.image_resolution)
         else:
             return image
         return image
