@@ -16,8 +16,11 @@ checkpoint_paths = [
     # "/fsx/home/ruimeng/runs/test/hf-VLM2Vec-LLaVa-Next-lateprocess",
 
     # qwen
-    "/fsx/home/ruimeng/runs/mmeb/mmeb006-qwen2vl-7B-3-lateprocess-high_res.lora8.mmeb20_sub100k.bs1024pergpu128.GCq2p2.NormTemp002.lr2e5.step2kwarm100.8H100/checkpoint-1000/",
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb006-qwen2_5vl-7B-1-high_res.lora8.mmeb20_sub100k.bs512pergpu64.GCq1p1.NormTemp002.lr2e5.step2kwarm100.8H100/checkpoint-1200/eval",
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb006-qwen2vl-7B-3-lateprocess-high_res.lora8.mmeb20_sub100k.bs1024pergpu128.GCq2p2.NormTemp002.lr2e5.step2kwarm100.8H100/checkpoint-1500/eval",
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb006-qwen2vl-7B-3-lateprocess-high_res.lora8.mmeb20_sub100k.bs1024pergpu128.GCq2p2.NormTemp002.lr2e5.step2kwarm100.8H100/checkpoint-1000/",
     # "/fsx/home/ruimeng/runs/mmeb/mmeb006-qwen2vl-7B-2-lateprocess-high_res.lora8.mmeb20_sub100k.bs512pergpu64.GCq2p2.NormTemp002.lr2e5.step2kwarm100.8H100/checkpoint-2000",
+    # "/fsx/home/ruimeng/runs/mmeb/mmeb006-qwen2vl-7B-2-lateprocess-high_res.lora8.mmeb20_sub100k.bs512pergpu64.GCq2p2.NormTemp002.lr2e5.step2kwarm100.8H100/checkpoint-1000/eval",
     # "/fsx/home/ruimeng/runs/mmeb/mmeb006-qwen2vl-2B-4-lateprocess-high_res.lora8.mmeb20_sub100k.bs1024pergpu128.GCq4p4.NormTemp002.lr2e5.step2kwarm100.8H100/checkpoint-2000/",
     # "/fsx/home/ruimeng/runs/mmeb/mmeb006-qwen2vl-7B-1-lateprocess-mid_res.lora8.mmeb20_sub100k.bs512pergpu64.GCq4p4.NormTemp002.lr2e5.step2kwarm100.8H100/checkpoint-2000/",
     # "/fsx/home/ruimeng/runs/mmeb/mmeb006-qwen2vl-2B-3.1-lateprocess-mid_res-flashattn-leftpadforreal.lora8.mmeb20_sub100k.bs1024pergpu128.GCq16p16.NormTemp002.lr2e5.step2kwarm100.8H100/checkpoint-2000/",
