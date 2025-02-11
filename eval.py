@@ -2,7 +2,7 @@ import json
 import sys
 
 from src.arguments import ModelArguments, DataArguments, TrainingArguments
-from transformers import HfArgumentParser, AutoProcessor
+from transformers import HfArgumentParser, AutoProcessor, AutoConfig
 
 from src.model import MMEBModel
 from src.dataset import EvalDataset
@@ -15,6 +15,17 @@ import pickle
 import os
 from datasets import load_dataset
 from evaluation.eval_utils import get_pred
+from src.utils import print_rank
+from src.model_utils import get_backbone_name
+
+def batch_to_device(batch, device):
+    _batch = {}
+    for key, value in batch.items():
+        if isinstance(value, torch.Tensor):
+            _batch[key] = value.to(device)
+        else:
+            _batch[key] = value
+    return _batch
 
 
 def main():
@@ -37,7 +48,11 @@ def main():
         num_crops=model_args.num_crops,
     )
 
-    processor.tokenizer.padding_side = "right"
+    hf_config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
+    model_backbone = get_backbone_name(hf_config=hf_config)
+    setattr(model_args, 'model_backbone', model_backbone)
+    setattr(training_args, 'model_backbone', model_backbone)
+    print_rank(f'model_backbone: {model_backbone}')
     model = MMEBModel.load(model_args)
     model.eval()
     model = model.to(training_args.device, dtype=torch.bfloat16)
@@ -101,7 +116,7 @@ def main():
         encoded_tensor = []
         with torch.no_grad():
             for batch in tqdm(eval_qry_loader, desc="Encode query"):
-                batch = {key: value.to(training_args.device) for key, value in batch.items()}
+                batch = batch_to_device(batch, training_args.device)
                 with torch.autocast(enabled=True, dtype=torch.bfloat16, device_type="cuda"):
                     output = model(qry=batch)
                 encoded_tensor.append(output["qry_reps"].cpu().detach().float().numpy())
@@ -112,7 +127,7 @@ def main():
         encoded_tensor = []
         with torch.no_grad():
             for batch in tqdm(eval_tgt_loader, desc="Encode target"):
-                batch = {key: value.to(training_args.device) for key, value in batch.items()}
+                batch = batch_to_device(batch, training_args.device)
                 output = model(tgt=batch)
                 encoded_tensor.append(output["tgt_reps"].cpu().detach().float().numpy())
         encoded_tensor = np.concatenate(encoded_tensor)

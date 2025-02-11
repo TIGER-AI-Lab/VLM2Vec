@@ -8,9 +8,6 @@ class ModelArguments:
     model_name: str = field(
         metadata={"help": "huggingface model name or path"}
     )
-    model_backbone: str = field(
-        metadata={"help": "vlm backbone"}
-    )
     processor_name: str = field(
         default=None, metadata={"help": "processor_name, huggingface model name or path"}
     )
@@ -78,10 +75,14 @@ class DataArguments:
         default=None, metadata={"help": "encode output path"}
     )
     max_len: int = field(
-        default=128, metadata={"help": "The maximum total input sequence length after tokenization."},
+        default=None, metadata={"help": "The maximum total input sequence length after tokenization. "
+                                        "Use with caution, since it may truncate text prompts due to large image lengths."},
     )
     embedding_type: str = field(
         default="", metadata={"help": "embedding type"}
+    )
+    image_resolution: str = field(
+        default='high', metadata={"help": "for models i.e. LLaVA-next and Qwen, resize images first"}
     )
 
 
