@@ -15,7 +15,7 @@ all_subsets_only_inst = ["NIGHTS", "MSCOCO_i2t", "VisualNews_i2t"]
 
 all_subsets_has_text = ["VisDial", "CIRR", "WebQA", "MSCOCO_t2i", "VisualNews_t2i"]
 
-login(token="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")
+login(token="")
 
 def update_instruction(example, subset_name):
     """
