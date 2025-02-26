@@ -5,8 +5,7 @@ from torch import nn, Tensor
 from transformers import PreTrainedModel, AutoModelForCausalLM, AutoConfig
 from peft import LoraConfig, get_peft_model, PeftModel
 from src.arguments import ModelArguments, TrainingArguments
-from src.model_utils import LLAVA_NEXT, QWEN2_VL, PHI3V, get_backbone_name, print_master, QWEN2_5_VL, INTERN_VL, \
-    backbone2model
+from src.model_utils import LLAVA_NEXT, QWEN2_VL, PHI3V, get_backbone_name, print_master, QWEN2_5_VL, backbone2model
 from src.vlm_backbone.phi3_v.modeling_phi3_v import Phi3VForCausalLM
 from src.vlm_backbone.llava_next import LlavaNextForConditionalGeneration
 from src.vlm_backbone.qwen2_vl import Qwen2VLForConditionalGeneration
@@ -84,7 +83,7 @@ class MMEBModel(nn.Module):
                 torch_dtype=torch.bfloat16,
                 low_cpu_mem_usage=True,
             )
-        elif model_backbone in [QWEN2_VL, QWEN2_5_VL, INTERN_VL]:
+        elif model_backbone in [QWEN2_VL, QWEN2_5_VL]:
             config._attn_implementation = "flash_attention_2"
             config.padding_side = "left"
             config.use_cache = False
@@ -133,7 +132,7 @@ class MMEBModel(nn.Module):
     def load(cls, model_args: ModelArguments, **kwargs):
         # Loading the base model
         checkpoint_path = model_args.checkpoint_path if model_args.checkpoint_path else model_args.model_name
-        if model_args.model_backbone in {LLAVA_NEXT, QWEN2_VL, QWEN2_5_VL, INTERN_VL}:
+        if model_args.model_backbone in {LLAVA_NEXT, QWEN2_VL, QWEN2_5_VL}:
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config._attn_implementation = "flash_attention_2"
             config.vision_config._attn_implementation = "flash_attention_2"

@@ -3,7 +3,6 @@ import torch
 
 from src.utils import print_master
 
-from src.vlm_backbone.intern_vl import InternLM2ForCausalLM
 from src.vlm_backbone.llava_next import LlavaNextForConditionalGeneration
 from src.vlm_backbone.phi3_v.modeling_phi3_v import Phi3VForCausalLM
 from src.vlm_backbone.qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
@@ -20,13 +19,11 @@ PHI3V = 'phi3_v'
 LLAVA_NEXT = 'llava_next'
 QWEN2_VL = 'qwen2_vl'
 QWEN2_5_VL = 'qwen2_5_vl'
-INTERN_VL = 'internvl_chat'
 MODEL2BACKBONE = {  # keys are from hf_config.model_type
     'phi3_v': PHI3V,
     'llava_next': LLAVA_NEXT,
     'qwen2_vl': QWEN2_VL,
     'qwen2_5_vl': QWEN2_5_VL,
-    'internvl_chat': INTERN_VL,
 }
 SUPPORTED_MODELS = set(MODEL2BACKBONE.keys())
 
@@ -35,7 +32,6 @@ vlm_image_tokens = {
     LLAVA_NEXT: "<image>",
     QWEN2_VL: "<|image_pad|>",
     QWEN2_5_VL: "<|image_pad|>",
-    INTERN_VL: "<image>",
 }
 
 backbone2model = {
@@ -43,7 +39,6 @@ backbone2model = {
     LLAVA_NEXT: LlavaNextForConditionalGeneration,
     QWEN2_VL: Qwen2VLForConditionalGeneration,
     QWEN2_5_VL: Qwen2_5_VLForConditionalGeneration,
-    INTERN_VL: InternLM2ForCausalLM
 }
 
 def load_processor(model_args):
@@ -84,10 +79,6 @@ def load_processor(model_args):
         image_processor = Qwen2_5_VLImageProcessor.from_pretrained(model_name)
         tokenizer = Qwen2TokenizerFast.from_pretrained(model_name)
         processor = Qwen2_5_VLProcessor.from_pretrained(model_name, image_processor=image_processor, tokenizer=tokenizer)
-    elif model_args.model_backbone == INTERN_VL:
-        from src.vlm_backbone.intern_vl.tokenization_internlm2_fast import InternLM2TokenizerFast
-        tokenizer = InternLM2TokenizerFast.from_pretrained(model_name)
-        processor = tokenizer
     else:
         from transformers import AutoProcessor
         processor = AutoProcessor.from_pretrained(
@@ -255,57 +246,9 @@ def Qwen2_VL_process_fn(model_inputs: dict, processor, max_length=None):
     return inputs
 
 
-def InternVL_process_fn(model_inputs: dict, processor, max_length=None):
-    input_ids, pixel_values, image_sizes, image_grid_thw = [], [], [], []
-    texts, images = model_inputs['text'], model_inputs['image']
-    image_exists = False
-    # 1. iterate each pair and process (since processors do not support batch processing)
-    for text, image in zip(texts, images):
-        if image is None:
-            inputs = processor(text, None, return_tensors="np", max_length=max_length, truncation=True)
-            input_id = inputs["input_ids"].squeeze().tolist()
-            if isinstance(input_id, int):
-                # in case of empty string, only BOS is included
-                input_id = [input_id]
-            input_ids.append(input_id)
-            pixel_values.append(None)
-            image_sizes.append(None)
-            image_grid_thw.append(None)
-        else:
-            image_exists = True
-            inputs = processor(text=text, images=[image], return_tensors="np", max_length=max_length, truncation=True)
-            input_ids.append(inputs["input_ids"].squeeze().tolist())
-            pixel_values.append(inputs['pixel_values'])
-            if 'image_sizes' in inputs:
-                image_sizes.append(inputs['image_sizes'])
-            if 'image_grid_thw' in inputs:
-                image_grid_thw.append(inputs['image_grid_thw'])
-
-    # 2. padding inputs
-    batch_encoding = processor.tokenizer.pad({'input_ids': input_ids}, return_tensors="pt")
-    input_ids, attention_mask = batch_encoding['input_ids'], batch_encoding['attention_mask']
-    inputs = {
-        'input_ids': input_ids,
-        'attention_mask': attention_mask,
-        'texts': texts,
-        'images': images,
-    }
-    # 3. special postcare for mixed batch (examples w/ and w/o images in the same batch)
-    if image_exists:
-        # add them to inputs
-        inputs['pixel_values'] = pixel_values
-        inputs['image_sizes'] = image_sizes
-    else:
-        inputs['pixel_values'] = torch.zeros(input_ids.shape[0], 1)
-        inputs['image_sizes'] = torch.ones(input_ids.shape[0], 1)
-
-    return inputs
-
-
 process_vlm_inputs_fns = {
     PHI3V: Phi3V_process_fn,
     LLAVA_NEXT: Llava_NEXT_process_fn,
     QWEN2_VL: Qwen2_VL_process_fn,
     QWEN2_5_VL: Qwen2_VL_process_fn,
-    INTERN_VL: InternVL_process_fn,
 }

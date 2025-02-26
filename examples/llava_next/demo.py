@@ -1,6 +1,6 @@
 from src.model import MMEBModel
 from src.arguments import ModelArguments
-from src.utils import load_processor
+from src.model_utils import load_processor
 
 import torch
 from transformers import HfArgumentParser, AutoProcessor
@@ -34,7 +34,7 @@ inputs = processor(text=string,
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 tgt_output = model(tgt=inputs)["tgt_reps"]
 print(string, '=', model.compute_similarity(qry_output, tgt_output))
-## A cat and a dog = tensor([[0.4414]], device='cuda:0', dtype=torch.bfloat16)
+## A cat and a dog = tensor([[0.4375]], device='cuda:0', dtype=torch.bfloat16)
 
 string = 'A cat and a tiger'
 inputs = processor(text=string,
@@ -43,4 +43,4 @@ inputs = processor(text=string,
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 tgt_output = model(tgt=inputs)["tgt_reps"]
 print(string, '=', model.compute_similarity(qry_output, tgt_output))
-## A cat and a tiger = tensor([[0.3555]], device='cuda:0', dtype=torch.bfloat16)
+## A cat and a tiger = tensor([[0.3535]], device='cuda:0', dtype=torch.bfloat16)
