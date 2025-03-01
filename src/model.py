@@ -137,7 +137,6 @@ class MMEBModel(nn.Module):
             base_model = backbone2model[model_args.model_backbone].from_pretrained(
                 model_args.model_name,
                 torch_dtype=torch.bfloat16,
-                low_cpu_mem_usage=True,
                 config=config
             )
         elif model_args.model_backbone == PHI3V:
