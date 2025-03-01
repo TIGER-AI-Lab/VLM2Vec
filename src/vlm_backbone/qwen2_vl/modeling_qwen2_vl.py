@@ -1608,85 +1608,86 @@ class Qwen2VLForConditionalGeneration(Qwen2VLPreTrainedModel, GenerationMixin):
 
         if inputs_embeds is None:
             inputs_embeds = self.model.embed_tokens(input_ids)
-            # @ruimeng split data by whether image inputs are valid, and forward separately
-            idx_w_image = [mid for mid, isize in enumerate(image_grid_thw) if isize is not None]
-            idx_wo_image = [mid for mid, isize in enumerate(image_grid_thw) if isize is None]
-            if len(idx_w_image) > 0:
-                merged_inputs_embeds = []
-                if len(idx_w_image):
-                    input_ids_w_image = torch.stack([input_ids[i] for i in idx_w_image])
-                    inputs_embeds_w_image = torch.stack([inputs_embeds[i] for i in idx_w_image])
-                    valid_pixel_values = [pixel_values[i] if isinstance(pixel_values[i], torch.Tensor) else torch.from_numpy(pixel_values[i]) for i in idx_w_image]
-                    valid_pixel_values = torch.cat(valid_pixel_values).to(input_ids.device)  # shape=[BS*n_patch,C*H*W]
-                    # print_rank(str(valid_pixel_values.shape))
-                    valid_image_sizes = [image_grid_thw[i] if isinstance(image_grid_thw[i], torch.Tensor) else torch.from_numpy(image_grid_thw[i]) for i in idx_w_image]
-                    valid_image_sizes = torch.cat(valid_image_sizes).to(input_ids.device)  # shape=[BS,H,W]
+            if pixel_values is not None:
+                # @ruimeng split data by whether image inputs are valid, and forward separately
+                idx_w_image = [mid for mid, isize in enumerate(image_grid_thw) if isize is not None]
+                idx_wo_image = [mid for mid, isize in enumerate(image_grid_thw) if isize is None]
+                if len(idx_w_image) > 0:
+                    merged_inputs_embeds = []
+                    if len(idx_w_image):
+                        input_ids_w_image = torch.stack([input_ids[i] for i in idx_w_image])
+                        inputs_embeds_w_image = torch.stack([inputs_embeds[i] for i in idx_w_image])
+                        valid_pixel_values = [pixel_values[i] if isinstance(pixel_values[i], torch.Tensor) else torch.from_numpy(pixel_values[i]) for i in idx_w_image]
+                        valid_pixel_values = torch.cat(valid_pixel_values).to(input_ids.device)  # shape=[BS*n_patch,C*H*W]
+                        # print_rank(str(valid_pixel_values.shape))
+                        valid_image_sizes = [image_grid_thw[i] if isinstance(image_grid_thw[i], torch.Tensor) else torch.from_numpy(image_grid_thw[i]) for i in idx_w_image]
+                        valid_image_sizes = torch.cat(valid_image_sizes).to(input_ids.device)  # shape=[BS,H,W]
 
-                    valid_pixel_values = valid_pixel_values.type(self.visual.get_dtype())
-                    image_embeds = self.visual(valid_pixel_values, grid_thw=valid_image_sizes)
-                    n_image_tokens = (input_ids_w_image == self.config.image_token_id).sum().item()
+                        valid_pixel_values = valid_pixel_values.type(self.visual.get_dtype())
+                        image_embeds = self.visual(valid_pixel_values, grid_thw=valid_image_sizes)
+                        n_image_tokens = (input_ids_w_image == self.config.image_token_id).sum().item()
+                        n_image_features = image_embeds.shape[0]
+                        if n_image_tokens != n_image_features:
+                            raise ValueError(
+                                f"Image features and image tokens do not match: tokens: {n_image_tokens}, features {n_image_features}"
+                            )
+                        image_mask = (
+                            (input_ids_w_image == self.config.image_token_id)
+                            .unsqueeze(-1)
+                            .expand_as(inputs_embeds_w_image)
+                            .to(inputs_embeds_w_image.device)
+                        )
+                        image_embeds = image_embeds.to(inputs_embeds.device, inputs_embeds.dtype)
+                        inputs_embeds_w_image = inputs_embeds_w_image.masked_scatter(image_mask, image_embeds)
+                        merged_inputs_embeds.append(inputs_embeds_w_image)
+                    if len(idx_wo_image):
+                        inputs_embeds_wo_image = torch.stack([inputs_embeds[i] for i in idx_wo_image])
+                        merged_inputs_embeds.append(inputs_embeds_wo_image)
+                    # merge the two outputs
+                    merged_inputs_embeds = torch.cat(merged_inputs_embeds, dim=0)
+                    # create a permutation tensor to reorder inputs_embeds
+                    original_order = idx_w_image + idx_wo_image
+                    permutation = torch.argsort(torch.tensor(original_order))
+                    # resort inputs_embeds by original order
+                    inputs_embeds = merged_inputs_embeds[permutation]
+
+                    '''
+                    # original implementation for images
+                    pixel_values = pixel_values.type(self.visual.get_dtype())
+                    image_embeds = self.visual(pixel_values, grid_thw=image_grid_thw)
+                    n_image_tokens = (input_ids == self.config.image_token_id).sum().item()
                     n_image_features = image_embeds.shape[0]
                     if n_image_tokens != n_image_features:
                         raise ValueError(
                             f"Image features and image tokens do not match: tokens: {n_image_tokens}, features {n_image_features}"
                         )
                     image_mask = (
-                        (input_ids_w_image == self.config.image_token_id)
+                        (input_ids == self.config.image_token_id)
                         .unsqueeze(-1)
-                        .expand_as(inputs_embeds_w_image)
-                        .to(inputs_embeds_w_image.device)
+                        .expand_as(inputs_embeds)
+                        .to(inputs_embeds.device)
                     )
                     image_embeds = image_embeds.to(inputs_embeds.device, inputs_embeds.dtype)
-                    inputs_embeds_w_image = inputs_embeds_w_image.masked_scatter(image_mask, image_embeds)
-                    merged_inputs_embeds.append(inputs_embeds_w_image)
-                if len(idx_wo_image):
-                    inputs_embeds_wo_image = torch.stack([inputs_embeds[i] for i in idx_wo_image])
-                    merged_inputs_embeds.append(inputs_embeds_wo_image)
-                # merge the two outputs
-                merged_inputs_embeds = torch.cat(merged_inputs_embeds, dim=0)
-                # create a permutation tensor to reorder inputs_embeds
-                original_order = idx_w_image + idx_wo_image
-                permutation = torch.argsort(torch.tensor(original_order))
-                # resort inputs_embeds by original order
-                inputs_embeds = merged_inputs_embeds[permutation]
+                    inputs_embeds = inputs_embeds.masked_scatter(image_mask, image_embeds)
+                    '''
 
-                '''
-                # original implementation for images
-                pixel_values = pixel_values.type(self.visual.get_dtype())
-                image_embeds = self.visual(pixel_values, grid_thw=image_grid_thw)
-                n_image_tokens = (input_ids == self.config.image_token_id).sum().item()
-                n_image_features = image_embeds.shape[0]
-                if n_image_tokens != n_image_features:
-                    raise ValueError(
-                        f"Image features and image tokens do not match: tokens: {n_image_tokens}, features {n_image_features}"
+                if pixel_values_videos is not None:
+                    pixel_values_videos = pixel_values_videos.type(self.visual.get_dtype())
+                    video_embeds = self.visual(pixel_values_videos, grid_thw=video_grid_thw)
+                    n_video_tokens = (input_ids == self.config.video_token_id).sum().item()
+                    n_video_features = video_embeds.shape[0]
+                    if n_video_tokens != n_video_features:
+                        raise ValueError(
+                            f"Video features and video tokens do not match: tokens: {n_video_tokens}, features {n_video_features}"
+                        )
+                    video_mask = (
+                        (input_ids == self.config.video_token_id)
+                        .unsqueeze(-1)
+                        .expand_as(inputs_embeds)
+                        .to(inputs_embeds.device)
                     )
-                image_mask = (
-                    (input_ids == self.config.image_token_id)
-                    .unsqueeze(-1)
-                    .expand_as(inputs_embeds)
-                    .to(inputs_embeds.device)
-                )
-                image_embeds = image_embeds.to(inputs_embeds.device, inputs_embeds.dtype)
-                inputs_embeds = inputs_embeds.masked_scatter(image_mask, image_embeds)
-                '''
-
-            if pixel_values_videos is not None:
-                pixel_values_videos = pixel_values_videos.type(self.visual.get_dtype())
-                video_embeds = self.visual(pixel_values_videos, grid_thw=video_grid_thw)
-                n_video_tokens = (input_ids == self.config.video_token_id).sum().item()
-                n_video_features = video_embeds.shape[0]
-                if n_video_tokens != n_video_features:
-                    raise ValueError(
-                        f"Video features and video tokens do not match: tokens: {n_video_tokens}, features {n_video_features}"
-                    )
-                video_mask = (
-                    (input_ids == self.config.video_token_id)
-                    .unsqueeze(-1)
-                    .expand_as(inputs_embeds)
-                    .to(inputs_embeds.device)
-                )
-                video_embeds = video_embeds.to(inputs_embeds.device, inputs_embeds.dtype)
-                inputs_embeds = inputs_embeds.masked_scatter(video_mask, video_embeds)
+                    video_embeds = video_embeds.to(inputs_embeds.device, inputs_embeds.dtype)
+                    inputs_embeds = inputs_embeds.masked_scatter(video_mask, video_embeds)
 
             if attention_mask is not None:
                 attention_mask = attention_mask.to(inputs_embeds.device)
