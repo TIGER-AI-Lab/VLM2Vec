@@ -111,5 +111,5 @@ venv/
 .DS_Store
 
 # Custom directory exclusions
-Data Preprocess/
+data_preprocess/
 archive/

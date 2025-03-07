@@ -9,6 +9,7 @@ class ModelArguments:
         metadata={"help": "huggingface model name or path"}
     )
     model_backbone: str = field(
+        default=None,
         metadata={"help": "backbone name"}
     )
     processor_name: str = field(
@@ -61,6 +62,9 @@ class ModelArguments:
 class DataArguments:
     dataset_name: str = field(
         default=None, metadata={"help": "huggingface dataset name"}
+    )
+    split_name: List[str] = field(
+        default='original', metadata={"help": "'original', 'diverse_instruction'"}
     )
     subset_name: List[str] = field(
         default=None, metadata={"help": "Useful for datasets with subsets"}

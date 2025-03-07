@@ -57,10 +57,11 @@ class MMEBModel(nn.Module):
         return reps
 
     @classmethod
-    def build(cls, model_args: ModelArguments, training_args: TrainingArguments, **kwargs):
+    def build(cls, model_args: ModelArguments, training_args: TrainingArguments=None, **kwargs):
         config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
         model_backbone = get_backbone_name(hf_config=config)
-        print_master(f'Loading backbone [{model_backbone}]: {model_args.model_name}')
+        setattr(model_args, 'model_backbone', model_backbone)
+        print_master(f'Loading backbone [{model_backbone}]')
         # Loading the base model
         if model_backbone == PHI3V:
             config._attn_implementation = "eager"
@@ -124,14 +125,19 @@ class MMEBModel(nn.Module):
                 normalize=model_args.normalize,
                 temperature=model_args.temperature
             )
+
         return model
 
     @classmethod
     def load(cls, model_args: ModelArguments, **kwargs):
         # Loading the base model
         checkpoint_path = model_args.checkpoint_path if model_args.checkpoint_path else model_args.model_name
+        config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
+        model_backbone = get_backbone_name(hf_config=config)
+        setattr(model_args, 'model_backbone', model_backbone)
+        print_master(f'Loading backbone [{model_backbone}]')
+
         if model_args.model_backbone in {LLAVA_NEXT, QWEN2_VL, QWEN2_5_VL}:
-            config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config._attn_implementation = "flash_attention_2"
             config.vision_config._attn_implementation = "flash_attention_2"
             base_model = backbone2model[model_args.model_backbone].from_pretrained(
