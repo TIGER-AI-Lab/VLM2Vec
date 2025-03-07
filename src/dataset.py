@@ -36,11 +36,8 @@ class TrainTextImageDataset(Dataset):
         train_data = []
         print_rank(f"Loading {len(data_args.subset_name)} datasets: {data_args.subset_name}")
         for subset in data_args.subset_name:
-            subset_data = load_dataset(
-                self.data_args.dataset_name, subset,
-                split=f"{self.data_args.dataset_split}[:{data_args.num_sample_per_subset}]",
-            )
-            train_data.append(subset_data)
+            subset_data = load_dataset(self.data_args.dataset_name, subset, split=data_args.split_name)
+            train_data.append(subset_data[0])
         self.train_data = concatenate_datasets(train_data)
 
     def __len__(self):

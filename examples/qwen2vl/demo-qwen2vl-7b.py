@@ -2,18 +2,20 @@ from src.model import MMEBModel
 from src.arguments import ModelArguments
 from src.model_utils import load_processor, QWEN2_VL, vlm_image_tokens
 from PIL import Image
-
+import torch
 
 model_args = ModelArguments(
-    model_name='TIGER-Lab/VLM2Vec-Qwen2VL',
+    model_name='Qwen/Qwen2-VL-7B-Instruct',
+    checkpoint_path='TIGER-Lab/VLM2Vec-Qwen2VL-7B',
     pooling='last',
     normalize=True,
-    model_backbone='qwen2_vl')
+    model_backbone='qwen2_vl',
+    lora=True
+)
 
 processor = load_processor(model_args)
 model = MMEBModel.load(model_args)
-# model = model.to('cuda', dtype=torch.bfloat16)
-model = model.to('cuda')
+model = model.to('cuda', dtype=torch.bfloat16)
 model.eval()
 
 # Image + Text -> Text
@@ -32,7 +34,7 @@ inputs = processor(text=string,
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 tgt_output = model(tgt=inputs)["tgt_reps"]
 print(string, '=', model.compute_similarity(qry_output, tgt_output))
-## A cat and a dog = tensor([[0.4414]], device='cuda:0', dtype=torch.bfloat16)
+## A cat and a dog = tensor([[0.3301]], device='cuda:0', dtype=torch.bfloat16)
 
 string = 'A cat and a tiger'
 inputs = processor(text=string,
@@ -41,4 +43,4 @@ inputs = processor(text=string,
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 tgt_output = model(tgt=inputs)["tgt_reps"]
 print(string, '=', model.compute_similarity(qry_output, tgt_output))
-## A cat and a tiger = tensor([[0.3555]], device='cuda:0', dtype=torch.bfloat16)
+## A cat and a tiger = tensor([[0.2891]], device='cuda:0', dtype=torch.bfloat16)
