@@ -38,8 +38,9 @@ Our model is based on converting an existing well-trained VLM into an embedding 
 <img width="1432" alt="abs" src="figures/train_vlm.png">
 
  - [VLM2Vec-Phi3.5V](https://huggingface.co/TIGER-Lab/VLM2Vec-Full)
- - [VLM2Vec-LLaVa-Next](https://huggingface.co/TIGER-Lab/VLM2Vec-LLaVa-Next) (**Current best version VLM2Vec**)
- - More to come!
+ - [VLM2Vec-LLaVa-Next](https://huggingface.co/TIGER-Lab/VLM2Vec-LLaVa-Next)
+ - [VLM2Vec-Qwen2VL-2B](https://huggingface.co/TIGER-Lab/VLM2Vec-Qwen2VL-2B)
+ - [VLM2Vec-Qwen2VL-7B](https://huggingface.co/TIGER-Lab/VLM2Vec-Qwen2VL-7B) (**Current best version VLM2Vec**)
 
 
 ## Data
