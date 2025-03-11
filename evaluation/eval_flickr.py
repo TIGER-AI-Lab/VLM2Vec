@@ -1,10 +1,10 @@
-from transformers import HfArgumentParser, AutoProcessor
+from transformers import HfArgumentParser
 
 from src.arguments import ModelArguments, DataArguments, TrainingArguments
 from src.model import MMEBModel
 from src.dataset import FlickrDataset
 from src.collator import EvalCollator
-from src.utils import load_processor
+from src.model_utils import load_processor
 
 from torch.utils.data import DataLoader
 import torch

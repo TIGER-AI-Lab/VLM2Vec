@@ -186,43 +186,20 @@ class FlickrDataset(Dataset):
         return len(self.eval_data)
 
     def __getitem__(self, idx):
-        return self.eval_data[idx]
-
-    def __getitem__(self, idx):
         text, image = self.eval_data[idx]
-        if self.backbone != PHI3V:
-            text = text.replace(vlm_image_tokens[PHI3V], vlm_image_tokens[self.backbone])
+        if self.model_backbone != PHI3V:
+            text = text.replace(vlm_image_tokens[PHI3V], vlm_image_tokens[self.model_backbone])
             if self.data_args.image_resolution:
                 image = process_image(image, self.data_args.image_resolution)
         return text, image
 
-    def _process_image(self, image, resolution):
-        if image is None:
-            return None
-        if resolution == "high":
-            image = image.resize((1344, 1344))
-        else:
-            image = image.resize((336, 336))
-        return image
-
-    def _get_image(self, img_path):
-        if img_path == "":
-            return None
-        full_img_path = os.path.join(self.data_args.image_dir, img_path)
-        image = Image.open(full_img_path)
-        if self.model_backbone != PHI3V:
-            return process_image(image, self.data_args.image_resolution)
-        else:
-            return image
-        return image
-
     def get_image_data(self):
         eval_data, image_names = [], []
         # i2t
-        inst = "<|image_1|> Find an image caption describing the given image."  # llava-1344-step1k4, i2t=94.0, t2i=80.26
-        # inst = "<|image_1|> Represent the given image for image caption retrieval."  # llava-1344-step1k4, i2t=94.6, t2i=78.98
+        inst = "<|image_1|> Find an image caption describing the given image."
+        # inst = "<|image_1|> Represent the given image for image caption retrieval."
         # t2i
-        # inst = "<|image_1|> Represent the given image."  # MSCOCO t2i
+        # inst = "<|image_1|> Represent the given image."
 
         for row in self.raw_data:
             eval_data.append((inst, row["image"]))
