@@ -52,6 +52,7 @@ Our model is based on converting an existing well-trained VLM into an embedding 
 Our model is being trained on MMEB-train (20 tasks) and evaluated on MMEB-eval (20 IND tasks and 16 OOD tasks).
  - [Train data](https://huggingface.co/datasets/TIGER-Lab/MMEB-train)
  - [Eval data](https://huggingface.co/datasets/TIGER-Lab/MMEB-eval)
+<img alt="abs" src="figures/MMEB_Overview.jpg">
 
 
 ## Experimental Results
