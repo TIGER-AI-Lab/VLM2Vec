@@ -147,7 +147,12 @@ def Llava_NEXT_process_fn(model_inputs: dict, processor, max_length=None):
 
 def Phi3V_process_fn(model_inputs: dict, processor, max_length=None):
     input_ids, pixel_values, image_sizes, image_grid_thw = [], [], [], []
-    texts, images = model_inputs['text'], model_inputs['image']
+    texts = model_inputs['text']
+    if ('image' in model_inputs):
+        images = model_inputs['image']
+    else:
+        images = [None] * len(texts)
+        
     image_exists = False
     # 1. iterate each pair and process (since processors do not support batch processing)
     for text, image in zip(texts, images):
