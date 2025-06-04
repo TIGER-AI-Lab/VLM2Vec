@@ -1,8 +1,8 @@
 from src.model import MMEBModel
 from src.arguments import ModelArguments
-from src.utils import load_processor
+from src.model_utils import load_processor
+
 import torch
-from transformers import HfArgumentParser, AutoProcessor
 from PIL import Image
 import numpy as np
 
