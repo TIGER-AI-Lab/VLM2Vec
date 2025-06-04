@@ -206,6 +206,7 @@ class Phi3ImageEmbedding(nn.Module):
         hidden_states = self.wte(new_input_ids)  # [BS, seq_len, hidden_dim]
 
         if has_image:
+            #print ("In Phi3ImageEmbedding, has_image = True", pixel_values.shape)
             assert self.use_hd_transform
             num_images, num_crops, c, h, w = pixel_values.shape
             assert c == 3 and h == w == 336

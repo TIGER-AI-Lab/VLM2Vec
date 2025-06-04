@@ -1132,6 +1132,7 @@ class Phi3VModel(Phi3VPreTrainedModel):
             valid_pixel_values = torch.cat(valid_pixel_values).to(input_ids.device)
             valid_image_sizes = [image_sizes[i] if isinstance(image_sizes[i], torch.Tensor) else torch.from_numpy(image_sizes[i]) for i in idx_w_image]
             valid_image_sizes = torch.cat(valid_image_sizes).to(input_ids.device)
+            
             inputs_embed = self.vision_embed_tokens(input_ids[idx_w_image], pixel_values=valid_pixel_values, image_sizes=valid_image_sizes)
             inputs_embeds.append(inputs_embed)
         if len(idx_wo_image):
