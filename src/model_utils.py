@@ -51,14 +51,14 @@ def load_processor(model_args):
         processor = Phi3VProcessor.from_pretrained(
             model_args.processor_name if model_args.processor_name else model_args.model_name,
             trust_remote_code=True,
-            num_crops=model_args.num_crops
+            num_crops=model_args.num_crops,
         )
         processor.tokenizer.padding_side = "right"
     elif model_args.model_backbone == LLAVA_NEXT:
         from transformers import LlavaNextProcessor
         processor = LlavaNextProcessor.from_pretrained(
             "llava-hf/llava-v1.6-mistral-7b-hf",
-            trust_remote_code=True
+            trust_remote_code=True,
         )
     elif model_args.model_backbone == QWEN2_VL:
         from src.vlm_backbone.qwen2_vl.processing_qwen2_vl import Qwen2VLProcessor

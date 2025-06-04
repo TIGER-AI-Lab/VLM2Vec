@@ -18,3 +18,13 @@ def print_master(message):
             logger.info(message)
     else:
         logger.info(message)
+
+
+def batch_to_device(batch, device):
+    _batch = {}
+    for key, value in batch.items():
+        if isinstance(value, torch.Tensor):
+            _batch[key] = value.to(device)
+        else:
+            _batch[key] = value
+    return _batch

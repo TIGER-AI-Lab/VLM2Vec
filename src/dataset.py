@@ -173,11 +173,13 @@ class EvalDataset(Dataset):
 
 
 class FlickrDataset(Dataset):
-    def __init__(self, modality, model_backbone):
+    def __init__(self, modality, model_backbone, image_resolution):
         self.model_backbone = model_backbone
         self.modality = modality
+        self.image_resolution = image_resolution
         self.raw_data = load_dataset("nlphuji/flickr_1k_test_image_text_retrieval", split="test")
-        if modality == "image":
+
+        if self.modality == "image":
             self.eval_data, self.image_names = self.get_image_data()
         else:
             self.eval_data, self.image_names = self.get_text_data()
@@ -189,8 +191,8 @@ class FlickrDataset(Dataset):
         text, image = self.eval_data[idx]
         if self.model_backbone != PHI3V:
             text = text.replace(vlm_image_tokens[PHI3V], vlm_image_tokens[self.model_backbone])
-            if self.data_args.image_resolution:
-                image = process_image(image, self.data_args.image_resolution)
+            if self.image_resolution:
+                image = process_image(image, self.image_resolution)
         return text, image
 
     def get_image_data(self):

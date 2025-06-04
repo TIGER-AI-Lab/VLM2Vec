@@ -5,6 +5,7 @@ from src.model import MMEBModel
 from src.dataset import FlickrDataset
 from src.collator import EvalCollator
 from src.model_utils import load_processor
+from src.utils import batch_to_device
 
 from torch.utils.data import DataLoader
 import torch
@@ -26,10 +27,14 @@ def main():
     processor = load_processor(model_args)
 
     eval_img_dataset = FlickrDataset(
-        modality="image", model_backbone=model_args.model_backbone
+        modality="image",
+        model_backbone=model_args.model_backbone,
+        image_resolution="high",
     )
     eval_txt_dataset = FlickrDataset(
-        modality="text", model_backbone=model_args.model_backbone
+        modality="text",
+        model_backbone=model_args.model_backbone,
+        image_resolution="high",
     )
     eval_collator = EvalCollator(
         data_args=data_args,
@@ -41,45 +46,48 @@ def main():
     model.eval()
     model = model.to(training_args.device, dtype=torch.bfloat16)
 
-    eval_img_loader = DataLoader(
-        eval_img_dataset,
-        batch_size=training_args.per_device_eval_batch_size,
-        collate_fn=eval_collator,
-        shuffle=False,
-        drop_last=False,
-        num_workers=training_args.dataloader_num_workers,
-    )
-    eval_txt_loader = DataLoader(
-        eval_txt_dataset,
-        batch_size=training_args.per_device_eval_batch_size,
-        collate_fn=eval_collator,
-        shuffle=False,
-        drop_last=False,
-        num_workers=training_args.dataloader_num_workers,
-    )
+    encode_img_path = os.path.join(data_args.encode_output_path, f"flickr_image_1K")
+    encode_txt_path = os.path.join(data_args.encode_output_path, f"flickr_text_1K")
 
-    encode_img_path = os.path.join(data_args.encode_output_path, f"flickr_image_1K-crop{model_args.num_crops}")
-    encode_txt_path = os.path.join(data_args.encode_output_path, f"flickr_text_1K-crop{model_args.num_crops}")
+    if not (os.path.exists(encode_img_path) and os.path.exists(encode_txt_path)):
+        eval_img_loader = DataLoader(
+            eval_img_dataset,
+            batch_size=training_args.per_device_eval_batch_size,
+            collate_fn=eval_collator,
+            shuffle=False,
+            drop_last=False,
+            num_workers=training_args.dataloader_num_workers,
+        )
+        eval_txt_loader = DataLoader(
+            eval_txt_dataset,
+            batch_size=training_args.per_device_eval_batch_size,
+            collate_fn=eval_collator,
+            shuffle=False,
+            drop_last=False,
+            num_workers=training_args.dataloader_num_workers,
+        )
 
-    encoded_tensor = []
-    with torch.no_grad():
-        for batch in tqdm(eval_img_loader, desc="Encode image"):
-            batch = {key: value.to(training_args.device) for key, value in batch.items()}
-            output = model(qry=batch)
-            encoded_tensor.append(output["qry_reps"].cpu().detach().float().numpy())
-    encoded_tensor = np.concatenate(encoded_tensor)
-    with open(encode_img_path, 'wb') as f:
-        pickle.dump((encoded_tensor, eval_img_dataset.image_names), f)
+        encoded_tensor = []
+        with torch.no_grad():
+            for batch in tqdm(eval_img_loader, desc="Encode image"):
+                batch = batch_to_device(batch, training_args.device)
+                with torch.autocast(enabled=True, dtype=torch.bfloat16, device_type="cuda"):
+                    output = model(qry=batch)
+                encoded_tensor.append(output["qry_reps"].cpu().detach().float().numpy())
+        encoded_tensor = np.concatenate(encoded_tensor)
+        with open(encode_img_path, 'wb') as f:
+            pickle.dump((encoded_tensor, eval_img_dataset.image_names), f)
 
-    encoded_tensor = []
-    with torch.no_grad():
-        for batch in tqdm(eval_txt_loader, desc="Encode text"):
-            batch = {key: value.to(training_args.device) for key, value in batch.items()}
-            output = model(qry=batch)
-            encoded_tensor.append(output["qry_reps"].cpu().detach().float().numpy())
-    encoded_tensor = np.concatenate(encoded_tensor)
-    with open(encode_txt_path, 'wb') as f:
-        pickle.dump((encoded_tensor, eval_txt_dataset.image_names), f)
+        encoded_tensor = []
+        with torch.no_grad():
+            for batch in tqdm(eval_txt_loader, desc="Encode text"):
+                batch = batch_to_device(batch, training_args.device)
+                with torch.autocast(enabled=True, dtype=torch.bfloat16, device_type="cuda"):
+                    output = model(qry=batch)
+                encoded_tensor.append(output["qry_reps"].cpu().detach().float().numpy())
+        encoded_tensor = np.concatenate(encoded_tensor)
+        with open(encode_txt_path, 'wb') as f:
+            pickle.dump((encoded_tensor, eval_txt_dataset.image_names), f)
 
     with open(encode_img_path, 'rb') as f:
         img_tensor, i2t_name = pickle.load(f)
