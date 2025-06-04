@@ -56,13 +56,14 @@ def main():
         model=model,
         processing_class=processor,
         args=training_args,
+        model_args=model_args,
         train_dataset=train_dataset,
         data_collator=collator,
         max_length=data_args.max_len
     )
     train_dataset.trainer = trainer
 
-    trainer.train()
+    trainer.train(resume_from_checkpoint=training_args.resume_from_checkpoint)
     trainer.save_model(training_args.output_dir)
 
     if trainer.is_world_process_zero():

@@ -14,6 +14,7 @@ import torch
 import math
 
 from src.collator import split_vlm_inputs, get_dense_rep, split_and_process_vlm_inputs
+from src.model import MMEBModel
 from src.model_utils import process_vlm_inputs_fns
 from src.loss import SimpleContrastiveLoss, DistributedContrastiveLoss
 from itertools import repeat
@@ -88,6 +89,13 @@ class MMEBTrainer(Trainer):
             self.tokenizer.save_pretrained(output_dir)
 
         torch.save(self.args, os.path.join(output_dir, TRAINING_ARGS_NAME))
+
+
+    def _load_from_checkpoint(self, resume_from_checkpoint):
+        self.model_args.checkpoint_path = resume_from_checkpoint
+        logger.info(f"Loading checkpoint from {resume_from_checkpoint}")
+        self.model = MMEBModel.load(self.model_args, is_trainable=True)
+        self.model_wrapped = self.model
 
 
     def _inner_training_loop(
@@ -628,6 +636,9 @@ class GradCacheLateProcessTrainer(MMEBTrainer):
         self.max_length = kwargs.get("max_length", 512)
         if "max_length" in kwargs:
             del kwargs["max_length"]
+        self.model_args = kwargs.get("model_args", None)
+        if "model_args" in kwargs:
+            del kwargs["model_args"]
         super(GradCacheLateProcessTrainer, self).__init__(*args, **kwargs)
         self.is_ddp = dist.is_initialized()
         self._dist_loss_scale_factor = dist.get_world_size() if self.is_ddp else 1

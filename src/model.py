@@ -129,7 +129,7 @@ class MMEBModel(nn.Module):
         return model
 
     @classmethod
-    def load(cls, model_args: ModelArguments, **kwargs):
+    def load(cls, model_args: ModelArguments, is_trainable=False, **kwargs):
         # Loading the base model
         checkpoint_path = model_args.checkpoint_path if model_args.checkpoint_path else model_args.model_name
         config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
@@ -165,13 +165,16 @@ class MMEBModel(nn.Module):
         # Building the model on top of the base
         if model_args.lora:
             lora_config = LoraConfig.from_pretrained(checkpoint_path)
-            lora_model = PeftModel.from_pretrained(base_model, checkpoint_path, config=lora_config)
-
-            merged_model = lora_model.merge_and_unload()
+            lora_model = PeftModel.from_pretrained(base_model, checkpoint_path, config=lora_config,
+                                                   is_trainable=is_trainable)
+            lora_model.load_adapter(checkpoint_path, lora_model.active_adapter, is_trainable=is_trainable)
+            if not is_trainable:
+                lora_model = lora_model.merge_and_unload()
             model = cls(
-                encoder=merged_model,
+                encoder=lora_model,
                 pooling=model_args.pooling,
-                normalize=model_args.normalize
+                normalize=model_args.normalize,
+                temperature=model_args.temperature
             )
         else:
             model = cls(
