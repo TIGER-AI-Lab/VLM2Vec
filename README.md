@@ -22,18 +22,17 @@ This repo contains the code and data for [VLM2Vec: Training Vision-Language Mode
 ---
 
 ## 🔥News
+- [2025-06] 🔥 We’re excited to announce that VLM2Vec_V2 is coming soon! The existing VLM2Vec_V1 codebase will be moved to the ```v1``` branch.
 - [2025-02] 🔥 Two new VLM2Vec models are released, based on Qwen2VL 2B and 7B, achieving 60.1 and 65.8 (new SOTA!) on the MMEB benchmark. Check them out ([2B]([url](https://huggingface.co/TIGER-Lab/VLM2Vec-Qwen2VL-2B)), [7B]([url](https://huggingface.co/TIGER-Lab/VLM2Vec-Qwen2VL-7B)))!
-- [2025-02] We are starting to work on more advanced features and extensions for VLM2Vec, and will document all changes in the ```CHANGELOG.md```. If any changes conflict with previously supported features, please feel free to raise an issue here. Thank you in advance!
 - [2025-01] 🎉 **VLM2Vec is accepted to ICLR 2025.**
-- [2025-01] We have updated our [training data](https://huggingface.co/datasets/TIGER-Lab/MMEB-train). Each subset now contains two splits: ```original``` and ```diverse_instruction```. The ```original``` split is provided to support the reproduction of our paper results. The ```diverse_instruction``` split includes paraphrased instructions for each task, designed to enhance instruction diversity and improve the model's robustness to unseen instructions and tasks. Moving forward, our future releases will primarily use the ```diverse_instruction``` split.
+- [2024-10] The technical report, code, data, and model for VLM2Vec are all available online.
 
 <details>
   <summary>📜 View Older Updates</summary>
-
+- [2025-01] We have updated our [training data](https://huggingface.co/datasets/TIGER-Lab/MMEB-train). Each subset now contains two splits: ```original``` and ```diverse_instruction```. The ```original``` split is provided to support the reproduction of our paper results. The ```diverse_instruction``` split includes paraphrased instructions for each task, designed to enhance instruction diversity and improve the model's robustness to unseen instructions and tasks. Moving forward, our future releases will primarily use the ```diverse_instruction``` split.
 - [2024-12] We have released the [MMEB leaderboard](https://huggingface.co/spaces/TIGER-Lab/MMEB). Feel free to contact us if you want to include your model.
 - [2024-12] We have released a new variant of VLM2Vec built on the LLaVa-Next backbone, which is currently our best-performing version: https://huggingface.co/TIGER-Lab/VLM2Vec-LLaVa-Next.
 - [2024-10] VLM2Vec has been integrated into [vLLM](https://github.com/vllm-project/vllm/blob/main/examples/offline_inference_vision_language_embedding.py).
-- [2024-10] The technical report, code, data, and model for VLM2Vec are all available online.
 
 </details>
 
@@ -76,20 +75,22 @@ cd ../
 
 For GPUs with small memory, use GradCache to reduce memory usage, i.e. setting small values to `--gc_q_chunk_size` and `--gc_p_chunk_size`.
 
-Use `--lora --lora_r 16` to enable LoRA tuning.
+Below is a demo training script. You’ll need to set up the full list of ```subset_name``` and use a large batch size.
 ```bash
 torchrun --nproc_per_node=2 --master_port=22447 --max_restarts=0 train.py \
- --model_name microsoft/Phi-3.5-vision-instruct --bf16 --pooling last \
- --model_backbone phi3_v \
+ --model_name Qwen/Qwen2-VL-2B-Instruct --bf16 --pooling last \
  --dataset_name TIGER-Lab/MMEB-train \
+ --split_name original \
  --subset_name ImageNet_1K N24News HatefulMemes InfographicsVQA ChartQA Visual7W VisDial CIRR NIGHTS WebQA MSCOCO \
  --num_sample_per_subset 50000 \
  --image_dir MMEB-train \
- --max_len 256 --num_crops 4 --output_dir $OUTPUT_DIR --logging_steps 1 \
+ --image_resolution high --max_len 4096 \
+ --output_dir $OUTPUT_DIR --logging_steps 1 \
  --lr_scheduler_type linear --learning_rate 2e-5 --max_steps 2000 \
  --warmup_steps 200 --save_steps 1000 --normalize True \
  --temperature 0.02 --per_device_train_batch_size 8 \
- --grad_cache True --gc_q_chunk_size 2 --gc_p_chunk_size 2 
+ --grad_cache True --gc_q_chunk_size 2 --gc_p_chunk_size 2 \
+ --save_safetensors False
 ```
 
 ## Inference & Evaluation
@@ -100,26 +101,13 @@ wget https://huggingface.co/datasets/TIGER-Lab/MMEB-eval/resolve/main/images.zip
 unzip images.zip -d eval_images/
 ```
 
-1. For full-finetuned models, we use
-```bash
-python eval.py --model_name TIGER-Lab/VLM2Vec-Full \
-  --model_backbone phi3_v \
-  --encode_output_path outputs/ \
-  --num_crops 4 --max_len 256 \
-  --pooling last --normalize True \
-  --dataset_name TIGER-Lab/MMEB-eval \
-  --subset_name N24News CIFAR-100 HatefulMemes VOC2007 SUN397 ImageNet-A ImageNet-R ObjectNet Country211 \
-  --dataset_split test --per_device_eval_batch_size 16 \
-  --image_dir eval_images/
-```
 
-2. For LoRA-based models, we use
 ```bash
-python eval.py --lora --model_name microsoft/Phi-3.5-vision-instruct --checkpoint_path TIGER-Lab/VLM2Vec-LoRA \
-  --model_backbone phi3_v \
+python eval.py --model_name Qwen/Qwen2-VL-7B-Instruct --checkpoint_path TIGER-Lab/VLM2Vec-Qwen2VL-7B \
+  --model_backbone qwen2_vl \
   --encode_output_path outputs/ \
-  --num_crops 4 --max_len 256 \
   --pooling last --normalize True \
+  --lora True \
   --dataset_name TIGER-Lab/MMEB-eval \
   --subset_name N24News CIFAR-100 HatefulMemes VOC2007 SUN397 ImageNet-A ImageNet-R ObjectNet Country211 \
   --dataset_split test --per_device_eval_batch_size 16 \
