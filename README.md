@@ -71,27 +71,27 @@ git lfs install
 git clone https://huggingface.co/datasets/TIGER-Lab/MMEB-train
 cd MMEB-train
 python unzip_file.py
-cd ../
 ```
 
 For GPUs with small memory, use GradCache to reduce memory usage, i.e. setting small values to `--gc_q_chunk_size` and `--gc_p_chunk_size`.
 
-Below is a demo training script. You’ll need to set up the full list of ```subset_name``` and use a large batch size.
 ```bash
-torchrun --nproc_per_node=2 --master_port=22447 --max_restarts=0 train.py \
+torchrun --nproc_per_node=8 --master_port=22447 --max_restarts=0 train.py \
  --model_name Qwen/Qwen2-VL-2B-Instruct --bf16 --pooling last \
+ --lora \
  --dataset_name TIGER-Lab/MMEB-train \
  --split_name original \
- --subset_name ImageNet_1K N24News HatefulMemes InfographicsVQA ChartQA Visual7W VisDial CIRR NIGHTS WebQA MSCOCO \
- --num_sample_per_subset 50000 \
- --image_dir MMEB-train \
+ --subset_name A-OKVQA ChartQA HatefulMemes InfographicsVQA MSCOCO_i2t N24News OK-VQA SUN397 VisDial VisualNews_i2t WebQA CIRR DocVQA ImageNet_1K MSCOCO MSCOCO_t2i NIGHTS VOC2007 Visual7W VisualNews_t2i \
+ --num_sample_per_subset 100000 \
+ --image_dir MMEB-train/ \
  --image_resolution high --max_len 4096 \
  --output_dir $OUTPUT_DIR --logging_steps 1 \
  --lr_scheduler_type linear --learning_rate 2e-5 --max_steps 2000 \
  --warmup_steps 200 --save_steps 1000 --normalize True \
- --temperature 0.02 --per_device_train_batch_size 8 \
- --grad_cache True --gc_q_chunk_size 2 --gc_p_chunk_size 2 \
- --save_safetensors False
+ --temperature 0.02 --per_device_train_batch_size 128 \
+ --grad_cache True --gc_q_chunk_size 4 --gc_p_chunk_size 4 \
+ --save_safetensors False --remove_unused_columns False \
+ --report_to none
 ```
 
 ## Inference & Evaluation
@@ -102,17 +102,19 @@ wget https://huggingface.co/datasets/TIGER-Lab/MMEB-eval/resolve/main/images.zip
 unzip images.zip -d eval_images/
 ```
 
-
+Below is a demo evaluation script. You’ll need to set up the full list of ```subset_name```.
 ```bash
-python eval.py --model_name Qwen/Qwen2-VL-7B-Instruct --checkpoint_path TIGER-Lab/VLM2Vec-Qwen2VL-7B \
+python eval.py \
+  --model_name Qwen/Qwen2-VL-7B-Instruct \
+  --checkpoint_path TIGER-Lab/VLM2Vec-Qwen2VL-7B \
   --model_backbone qwen2_vl \
-  --encode_output_path outputs/ \
   --pooling last --normalize True \
   --lora True \
   --dataset_name TIGER-Lab/MMEB-eval \
   --subset_name N24News CIFAR-100 HatefulMemes VOC2007 SUN397 ImageNet-A ImageNet-R ObjectNet Country211 \
   --dataset_split test --per_device_eval_batch_size 16 \
-  --image_dir eval_images/
+  --image_dir eval_images/ \
+  --encode_output_path outputs/
 ```
 
 ## Acknowledgement

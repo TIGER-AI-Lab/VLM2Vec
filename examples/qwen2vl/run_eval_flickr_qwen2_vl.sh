@@ -2,7 +2,8 @@ export PYTHONPATH=/home/ziyan/VLM2Vec:$PYTHONPATH  # Change to your own path
 export HF_HOME=~/.cache/huggingface
 
 CUDA_VISIBLE_DEVICES=7 python evaluation/eval_flickr.py \
-  --model_name TIGER-Lab/VLM2Vec-Qwen2VL-7B \
+  --model_name Qwen/Qwen2-VL-7B-Instruct \
+  --checkpoint_path TIGER-Lab/VLM2Vec-Qwen2VL-7B \
   --model_backbone qwen2_vl \
   --pooling last --normalize True \
   --lora True \
