@@ -60,7 +60,7 @@ Our model can outperform the existing baselines by a huge margin.
 <img alt="abs" src="figures/vlm2vec_results.png">
 
 ## Quick Start
-We have provided several samples, including demonstration and evaluation code, located in the `scripts/` directory.
+We have provided several samples, including demonstration and evaluation code, located in the `examples/` directory.
 
 
 ## Training
