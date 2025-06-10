@@ -23,6 +23,18 @@ This repository contains the official code and data for **VLM2Vec-V2**, a unifie
 
 Our work introduces **MMEB-V2**, a comprehensive benchmark with 57 tasks designed to systematically evaluate embedding models across these modalities. VLM2Vec-V2 sets a new state-of-the-art, outperforming strong baselines across all categories.
 
+This is an open-source project, and we welcome contributions from the community. We are particularly interested in additions of new functionalities, support for new datasets, bug fixes, and improvements to documentation. Please feel free to open an issue to discuss your ideas or submit a pull request!
+
+
+> ## 🚨 Major V2 Update Alert (June 2025) 🚨
+>
+> This repository has been updated to **V2**, which is a complete overhaul of the codebase. The previous VLM2Vec code has been archived and can be found in the `v1` branch.
+>
+> **Warning:** **Please back up any local work before proceeding**. If you have a local clone from before this update, you must reset your main branch to sync with the new code. 
+>
+> For detailed instructions, please see the "**How to Upgrade to V2**" section below.
+> 
+> Your feedback on this transition process is highly appreciated. If you run into any problems, please let us know by opening an issue.
 
 
 
@@ -51,6 +63,21 @@ Our work introduces **MMEB-V2**, a comprehensive benchmark with 57 tasks designe
 - VLM2Vec-v2.0: brand-new embedding model based on Qwen2-VL-2B.
 - Easy configuration of training and evaluation using yaml files (see examples in `experiments/release`).
 - Easy extension of new datasets by creating and registering customized data loader (see examples in `src/dataset/`).
+
+
+## How to Upgrade to V2
+
+1. **Back Up Your Local Changes (Critical!)** The update process will discard any uncommitted changes on your local main branch. If you have work you want to save, commit it to a new branch or use `git stash`.
+2. **Reset Your Local Repository to V2.** Run the following commands to fetch the new `main` branch and reset your local copy to match it.
+
+```bash
+    # Make sure you are on your main branch first
+    git checkout main
+    # Fetch all recent updates from the remote and remove stale branch references
+    git fetch --all --prune
+    # Force your local main branch to match the new remote main branch
+    git reset --hard origin/main
+```
 
 
 ## Model
