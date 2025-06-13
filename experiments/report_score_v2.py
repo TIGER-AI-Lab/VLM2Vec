@@ -7,34 +7,65 @@ from datetime import datetime
 # ==============================================================================
 
 # ==> Unified list of experiments to process.
-# Fill in the metadata for each experiment. `None` will become `null` in the JSON.
+# Fill in the metadata for each experiment. Write `NONE` if a field is not applicable.
+# `*` means mandatory field.
 
-EXPERIMENTS = [
+METADATA_TEMPLATE = {
+    '*path': "path/to/your/model",                          # mandatory field, str
+    'metadata': {
+        '*model_name': "<Model Name>",                      # mandatory field, str, e.g., "VLM2Vec-Qwen2VL-V2.0-2B"
+        'model_backbone': "<Backbone Name>",                # str, e.g., "Qwen2VL"
+        'model_size': 10.0,                                 # float, in B, eg., 2.21
+        'embedding_dimension': 768,                         # int, e.g., 512, 768, etc.
+        'max_length_tokens': 1024,                          # int, e.g., 512, 1024, etc.
+        'model_release_date': "YYYY-MM-DD",                 # str, in format "YYYY-MM-DD", e.g., "2024-01-01"
+        'data_source': "Self-Reported",                     # str, use "Self-Reported"
+        'url': "<https://example.com/url/to/your/model>"    # str, e.g., Paper, GitHub, or Hugging Face link
+    }
+}
+
+EXAMPLES = [
     {
         "path": "vlm2vec_exps/VLM2Vec-Qwen2VL-V2.0-2B/",
         "metadata": {
             "model_name": "VLM2Vec-Qwen2VL-V2.0-2B",
-            "model_size": "2B parameters",
-            "embedding_dimension": None, # Please fill in
-            "max_length_tokens": None,   # Please fill in
-            "model_release_date": "2025-04-01", # Please adjust this date
-            "data_source": "",           # e.g., "Self-Reported" or "TIGER-Lab"
-            "url": ""                    # e.g., Paper, GitHub, or Hugging Face link
-        }
-    },
-    {
-        "path": "vlm2vec_exps/VLM2Vec-Qwen2VL-V2.1-2B/",
-        "metadata": {
-            "model_name": "VLM2Vec-Qwen2VL-V2.1-2B",
-            "model_size": "2B parameters",
-            "embedding_dimension": None, # Please fill in
-            "max_length_tokens": None,   # Please fill in
-            "model_release_date": "2025-05-15", # Please adjust this date
-            "data_source": "",           # e.g., "Self-Reported" or "TIGER-Lab"
-            "url": ""                    # e.g., Paper, GitHub, or Hugging Face link
+            "model_backbone": "Qwen2-VL-2B",
+            "model_size": 2.21,
+            "embedding_dimension": 768,
+            "max_length_tokens": 1024,
+            "model_release_date": "2025-04-01",
+            "data_source": "TIGER-Lab",
+            "url": "https://huggingface.co/VLM2Vec/VLM2Vec-V2.0"
         }
     },
 ]
+
+
+# ==============================================================================
+# TODO: Your models' metadata goes here. Please fill in the required fields.
+# ==============================================================================
+
+EXPERIMENTS = [
+    {
+        "path": ...,
+        "metadata": {
+            "model_name": ...,
+            "model_backbone": ...,
+            "model_size": ...,
+            "embedding_dimension": ...,
+            "max_length_tokens": ...,
+            "model_release_date": ...,
+            "data_source": "Self-Reported",
+            "url": ...
+        }
+    },
+    ...
+]
+
+
+# ==============================================================================
+# Main Processing Logic (No changes needed below this line)
+# ==============================================================================
 
 
 # Define the datasets grouped by modality
@@ -64,10 +95,6 @@ modality2metric = {
     "visdoc": "ndcg_linear@5",
 }
 modalities = ["image", "visdoc", "video"] # Process in this order
-
-# ==============================================================================
-# Main Processing Logic (No changes needed below this line)
-# ==============================================================================
 
 for experiment in EXPERIMENTS:
     base_path = experiment['path']
