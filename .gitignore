@@ -1,3 +1,4 @@
+experiments_private/*
 .idea/
 .vscode/
 .myenv/
@@ -6,6 +7,8 @@ __pycache__/
 # Custom directory exclusions
 archive/
 /VLM2Vec-pro.iml
+/VLM2Vec.iml
+/workspace.xml
 
 # Compiled source #
 ###################
