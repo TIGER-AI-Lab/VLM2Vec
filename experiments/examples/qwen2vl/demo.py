@@ -1,4 +1,4 @@
-from src.arguments import ModelArguments
+from src.arguments import ModelArguments, DataArguments
 from src.model.model import MMEBModel
 from src.model.processor import load_processor, QWEN2_VL, VLM_IMAGE_TOKENS
 from PIL import Image
@@ -12,15 +12,16 @@ model_args = ModelArguments(
     model_backbone='qwen2_vl',
     lora=True
 )
+data_args = DataArguments()
 
-processor = load_processor(model_args)
+processor = load_processor(model_args, data_args)
 model = MMEBModel.load(model_args)
 model = model.to('cuda', dtype=torch.bfloat16)
 model.eval()
 
 # Image + Text -> Text
 inputs = processor(text=f'{VLM_IMAGE_TOKENS[QWEN2_VL]} Represent the given image with the following question: What is in the image',
-                   images=Image.open('figures/example.jpg'),
+                   images=Image.open('assets/example.jpg'),
                    return_tensors="pt")
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 inputs['pixel_values'] = inputs['pixel_values'].unsqueeze(0)

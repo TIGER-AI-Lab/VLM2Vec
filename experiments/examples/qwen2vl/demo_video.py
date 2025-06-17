@@ -1,4 +1,4 @@
-from src.arguments import ModelArguments
+from src.arguments import ModelArguments, DataArguments
 from src.model.model import MMEBModel
 from src.model.processor import load_processor, QWEN2_VL, VLM_VIDEO_TOKENS
 import torch
@@ -12,8 +12,9 @@ model_args = ModelArguments(
     model_backbone='qwen2_vl',
     lora=True
 )
+data_args = DataArguments()
 
-processor = load_processor(model_args)
+processor = load_processor(model_args, data_args)
 model = MMEBModel.load(model_args)
 model = model.to('cuda', dtype=torch.bfloat16)
 model.eval()
@@ -24,7 +25,7 @@ messages = [
         "content": [
             {
                 "type": "video",
-                "video": "figures/example_video.mp4",
+                "video": "assets/example_video.mp4",
                 "max_pixels": 360 * 420,
                 "fps": 1.0,
             },
