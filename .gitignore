@@ -1,4 +1,5 @@
-experiments_private/*
+experiments_private/
+experiments/darth/
 .idea/
 .vscode/
 .myenv/
@@ -6,9 +7,9 @@ __pycache__/
 .DS_Store
 # Custom directory exclusions
 archive/
-/VLM2Vec-pro.iml
-/VLM2Vec.iml
-/workspace.xml
+VLM2Vec-pro.iml
+VLM2Vec.iml
+workspace.xml
 
 # Compiled source #
 ###################
