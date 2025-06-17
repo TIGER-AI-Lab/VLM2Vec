@@ -1,7 +1,7 @@
 import os
 import sys
 
-from datasets import load_dataset
+from datasets import load_dataset, concatenate_datasets
 from src.data.dataset.vidore_dataset import DATASET_PARSER_NAME
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook, RESOLUTION_MAPPING
 from src.data.eval_dataset.base_eval_dataset import ImageVideoInstance
@@ -101,9 +101,8 @@ def load_momentseeker_dataset(model_args, data_args, *args, **kwargs):
     dataset = load_dataset("json", data_files=kwargs["data_path"])
     # dataset = load_dataset("json", data_files="/data/yuepeng/moment_retrieval/dataset/debug_qv.jsonl")
     dataset = dataset["train"]
-    def fileter_data(example):
-        return example['input_frames'] == ""
-    dataset = dataset.filter(fileter_data)
+    dataset = concatenate_datasets([dataset.filter(lambda ex: ex['input_frames'] == ""), 
+                                    dataset.filter(lambda ex: ex['input_frames'] != "")]) # reorder rows with and without visual inputs
     num_sample_per_subset = kwargs.get("num_sample_per_subset", sys.maxsize)
     if num_sample_per_subset is not None and type(num_sample_per_subset) is str and num_sample_per_subset.isdigit():
         num_sample_per_subset = int(num_sample_per_subset)
