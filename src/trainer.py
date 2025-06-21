@@ -72,8 +72,6 @@ class MMEBTrainer(Trainer):
         self.is_ddp = dist.is_initialized()
         self.processor = self.processing_class
         self._dist_loss_scale_factor = dist.get_world_size() if self.is_ddp else 1
-        # make sure it contains all the keys defined in the output of src.dataset.TrainTextImageDataset
-        self._signature_columns = ['query_text', 'query_image', 'target_text', 'target_image', 'label_ids', 'label']
 
     def get_batch_samples(self, epoch_iterator, num_batches):
         batch_samples = []

@@ -18,7 +18,7 @@ sudo apt-get install git-lfs
 git clone https://huggingface.co/datasets/ShareGPTVideo/train_video_and_instruction/
 # unzip frames in train_300k/ and train_600k/
 
-# 3. Adjust the data path in the data config yaml, refer to `experiments/release_public/train/train_v2.yaml`
+# 3. Adjust the data path in the data config yaml, refer to `experiments/release_public/train/train_alltasks.yaml`
 
 
 ### Eval data
