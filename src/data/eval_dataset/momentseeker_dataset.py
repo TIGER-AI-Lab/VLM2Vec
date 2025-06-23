@@ -101,12 +101,6 @@ DATASET_PARSER_NAME = "momentseeker"
 def load_momentseeker_dataset(model_args, data_args, *args, **kwargs):
     dataset_name = kwargs["dataset_name"]
     dataset = load_dataset("json", data_files=kwargs["data_path"])["train"]
-    # def fileter_data(example):
-    #     return example['input_frames'] == ""
-    # dataset = dataset.filter(fileter_data)
-    dataset = concatenate_datasets([dataset.filter(lambda ex: ex['input_frames'] == ""),
-                                    dataset.filter(lambda ex: ex['input_frames'] != "")]) # reorder rows with and without visual inputs
-
     dataset = sample_dataset(dataset, **kwargs)
     kwargs['model_backbone'] = model_args.model_backbone
     kwargs['image_resolution'] = data_args.image_resolution
