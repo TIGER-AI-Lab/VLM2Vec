@@ -3,7 +3,7 @@ import logging
 import PIL
 from transformers.image_utils import ChannelDimension
 
-from src.model.vlm_backbone.colpali import ColPaliProcessor
+from src.model.baseline_backbone.colpali import ColPaliProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -11,13 +11,13 @@ import torch
 import numpy as np
 from src.utils import print_master
 
-from src.model.vlm_backbone.llava_next import LlavaNextForConditionalGeneration
-from src.model.vlm_backbone.phi3_v.modeling_phi3_v import Phi3VForCausalLM
+from src.model.baseline_backbone.llava_next import LlavaNextForConditionalGeneration
+from src.model.baseline_backbone.phi3_v.modeling_phi3_v import Phi3VForCausalLM
 from src.model.vlm_backbone.qwen2_vl import Qwen2VLForConditionalGeneration, Qwen2VLProcessor
 from src.model.vlm_backbone.qwen2_vl_tokenselection import \
     Qwen2VLForConditionalGeneration as Qwen2VLTokenSelectionForConditionalGeneration, \
     Qwen2VLProcessor as Qwen2VLTokenSelectionProcessor
-from src.model.vlm_backbone.internvideo2.modeling_internvideo2 import InternVideo2_Stage2
+from src.model.baseline_backbone.internvideo2.modeling_internvideo2 import InternVideo2_Stage2
 from src.model.vlm_backbone.qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
 from src.model.vlm_backbone.qwen2_5_vl_tokenselection import \
     Qwen2_5_VLForConditionalGeneration as Qwen2_5_VL_TokenSelectionForConditionalGeneration
@@ -105,15 +105,15 @@ def load_processor(model_args, data_args=None):
     model_name_or_path = model_args.checkpoint_path if model_args.checkpoint_path else model_args.model_name
     print_master(f'Loading processor from: {model_name_or_path}')
     if model_args.model_backbone == PHI3V:
-        from src.model.vlm_backbone.phi3_v.processing_phi3_v import Phi3VProcessor
+        from src.model.baseline_backbone.phi3_v.processing_phi3_v import Phi3VProcessor
         processor = Phi3VProcessor.from_pretrained(
             model_name_or_path,
             trust_remote_code=True,
             num_crops=model_args.num_crops
         )
         processor.tokenizer.padding_side = "right"
-    elif model_args.model_backbone in [LLAVA_NEXT, E5_V]:
-        from src.model.vlm_backbone.llava_next.processing_llava_next import LlavaNextProcessor
+    elif model_args.model_backbone == LLAVA_NEXT:
+        from src.model.baseline_backbone.llava_next import LlavaNextProcessor
         processor = LlavaNextProcessor.from_pretrained(
             model_name_or_path,
             trust_remote_code=True
@@ -530,7 +530,7 @@ def ColPali_process_fn(model_inputs: dict, processor, max_length=None):
 def InternVideo2_process_fn(model_inputs: dict, processor, max_length=None):
     if all(x is None for x in model_inputs["images"]):
         # Text side
-        from src.model.vlm_backbone.internvideo2.modeling_internvideo2 import BertTokenizer
+        from src.model.baseline_backbone.internvideo2.modeling_internvideo2 import BertTokenizer
         tokenizer = BertTokenizer.from_pretrained("bert-large-uncased")
         inputs = tokenizer(
             model_inputs["text"],

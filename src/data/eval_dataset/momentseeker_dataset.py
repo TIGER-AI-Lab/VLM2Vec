@@ -1,13 +1,14 @@
 import os
 import sys
 
-from datasets import load_dataset, concatenate_datasets
+from datasets import load_dataset
+from src.data.utils.dataset_utils import sample_dataset
+
 from src.data.dataset.vidore_dataset import DATASET_PARSER_NAME
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook, RESOLUTION_MAPPING
 from src.data.eval_dataset.base_eval_dataset import ImageVideoInstance
 from src.data.utils.vision_utils import sample_frames, load_frames, VID_EXTENSIONS, save_frames
 from src.model.processor import process_input_text
-
 
 TASK_INST_QRY_TEXT = "Find the clip that corresponds to the given text:"
 TASK_INST_QRY_IMG = "Select the video clip that aligns with the given text and image:"
@@ -45,6 +46,7 @@ def data_prepare(batch_dict, *args, **kwargs):
             input_image_path = os.path.join(raw_dataset_abspath, f"query_{input_frames}")
             query_images.append([{"bytes": [None] * 1, "paths": [input_image_path],
                                   "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)] * 1}])
+            # query_images.append([None]) # TODO query image is not properly added
         else:
             query_texts.append([process_input_text(TASK_INST_QRY_TEXT, model_backbone, text=query)])
             query_images.append([None])
@@ -98,24 +100,14 @@ DATASET_PARSER_NAME = "momentseeker"
 @AutoEvalPairDataset.register(DATASET_PARSER_NAME)
 def load_momentseeker_dataset(model_args, data_args, *args, **kwargs):
     dataset_name = kwargs["dataset_name"]
-    dataset = load_dataset("json", data_files=kwargs["data_path"])
-    # dataset = load_dataset("json", data_files="/data/yuepeng/moment_retrieval/dataset/debug_qv.jsonl")
-    dataset = dataset["train"]
-    dataset = concatenate_datasets([dataset.filter(lambda ex: ex['input_frames'] == ""), 
-                                    dataset.filter(lambda ex: ex['input_frames'] != "")]) # reorder rows with and without visual inputs
-    num_sample_per_subset = kwargs.get("num_sample_per_subset", sys.maxsize)
-    if num_sample_per_subset is not None and type(num_sample_per_subset) is str and num_sample_per_subset.isdigit():
-        num_sample_per_subset = int(num_sample_per_subset)
-    if num_sample_per_subset < dataset.num_rows:
-        dataset = dataset.select(range(num_sample_per_subset))
-        print(f"Subsample to {len(dataset)} samples")
-
+    dataset = load_dataset("json", data_files=kwargs["data_path"])["train"]
+    dataset = sample_dataset(dataset, **kwargs)
     kwargs['model_backbone'] = model_args.model_backbone
     kwargs['image_resolution'] = data_args.image_resolution
     kwargs['global_dataset_name'] = f'{DATASET_PARSER_NAME}/{dataset_name}'
-    
+
     dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True,
-                          batch_size=2048, num_proc=4,
+                          batch_size=2048, num_proc=1,
                           drop_last_batch=False, load_from_cache_file=False)
     dataset = dataset.select_columns(["query_text", "query_image", "cand_text", "cand_image", "dataset_infos"])
     return dataset, None

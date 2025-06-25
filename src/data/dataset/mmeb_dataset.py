@@ -101,15 +101,12 @@ def load_mmeb_dataset(model_args, data_args, training_args, *args, **kwargs):
     kwargs['model_backbone'] = model_args.model_backbone
     kwargs['image_resolution'] = data_args.image_resolution
     kwargs['global_dataset_name'] = f'{DATASET_PARSER_NAME}/{subset_name}'
-    # dataset = dataset.shuffle(buffer_size=8192, seed=training_args.seed)
-    remove_columns = ['qry', 'qry_image_path', 'pos_text', 'pos_image_path']
+    remove_columns = ['qry', 'qry_image_path', 'pos_image_path']
     if 'neg_image_path' in column_names:
-        remove_columns.append('neg_text')
         remove_columns.append('neg_image_path')
     dataset = dataset.map(lambda x:
-                          data_prepare(x, **kwargs), batched=True, batch_size=128,
-                          remove_columns=remove_columns, drop_last_batch=True
-                          )
+                          data_prepare(x, **kwargs), batched=True, batch_size=2048,
+                          remove_columns=remove_columns, drop_last_batch=True)
     # dataset = dataset._resolve_features()
     # features = _infer_features_from_batch(dataset._head()) # not working: {ArrowInvalid}ArrowInvalid('Could not convert <PIL.Image.Image image mode=RGB size=128x128 at 0x7F7C794E9BD0> with type Image: did not recognize Python value type when inferring an Arrow data type')
     dataset = dataset.cast(MULTIMODAL_FEATURES)
