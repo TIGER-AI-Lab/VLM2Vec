@@ -1,6 +1,7 @@
 from src.arguments import ModelArguments, DataArguments
 from src.model.model import MMEBModel
-from src.model.processor import load_processor, QWEN2_VL, VLM_IMAGE_TOKENS
+from src.model.processor import load_processor, QWEN2_VL, VLM_IMAGE_TOKENS, Qwen2_VL_process_fn
+from src.utils import batch_to_device
 from PIL import Image
 import torch
 
@@ -45,3 +46,30 @@ inputs = {key: value.to('cuda') for key, value in inputs.items()}
 tgt_output = model(tgt=inputs)["tgt_reps"]
 print(string, '=', model.compute_similarity(qry_output, tgt_output))
 ## A cat and a tiger = tensor([[0.2871]], device='cuda:0', dtype=torch.bfloat16)
+
+
+# Batch processing
+processor_inputs = {
+    "text": [f'{VLM_IMAGE_TOKENS[QWEN2_VL]} Represent the given image with the following question: What is in the image',
+          f'{VLM_IMAGE_TOKENS[QWEN2_VL]} Represent the given image with the following question: What is in the image'],
+    "images": [Image.open('assets/example.jpg'),
+            Image.open('assets/example.jpg')],
+}
+inputs = Qwen2_VL_process_fn(
+    processor_inputs,
+    processor)
+inputs = batch_to_device(inputs, "cuda")
+with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+    qry_output = model(qry=inputs)["qry_reps"]
+
+processor_inputs = {
+    "text": ['A cat and a dog', 'A cat and a tiger'],
+    "images": [None, None],
+}
+inputs = Qwen2_VL_process_fn(
+    processor_inputs,
+    processor)
+inputs = batch_to_device(inputs, "cuda")
+with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+    tgt_output = model(tgt=inputs)["tgt_reps"]
+print(model.compute_similarity(qry_output, tgt_output))

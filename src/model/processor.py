@@ -38,6 +38,7 @@ GME = 'gme'  # QWEN2-VL
 LamRA = 'lamra'  # QWEN2-VL
 LamRA_QWEN2_5 = 'lamra_qwen25'  # QWEN2.5-VL
 COLPALI = 'colpali'  # PaliGemma-3B
+E5_V = 'e5_v'  # Llava_next
 MODEL2BACKBONE = {  # keys are from hf_config.model_type or manually added if not provided
     'phi3_v': PHI3V,
     'llava_next': LLAVA_NEXT,
@@ -50,7 +51,8 @@ MODEL2BACKBONE = {  # keys are from hf_config.model_type or manually added if no
     'gme': GME, 
     'lamra': LamRA,
     'lamra_qwen25': LamRA,
-    'colpali': COLPALI
+    'colpali': COLPALI,
+    'e5_v': E5_V,
 }
 SUPPORTED_MODELS = set(MODEL2BACKBONE.keys())
 
@@ -66,6 +68,7 @@ VLM_IMAGE_TOKENS = {
     LamRA_QWEN2_5: "<|image_pad|>",
     INTERNVIDEO2: "",
     COLPALI: "",
+    E5_V: "<image>",
 }
 
 VLM_VIDEO_TOKENS = {
@@ -79,6 +82,7 @@ VLM_VIDEO_TOKENS = {
     LamRA_QWEN2_5: "<|video_pad|>",
     INTERNVIDEO2: "",
     COLPALI: "",
+    E5_V: "<image>",
 }
 
 backbone2model = {
@@ -89,6 +93,7 @@ backbone2model = {
     QWEN2_VL_TOKENSELECTION: Qwen2VLTokenSelectionForConditionalGeneration,
     QWEN2_5_VL_TOKENSELECTION: Qwen2_5_VL_TokenSelectionForConditionalGeneration,
     INTERNVIDEO2: InternVideo2_Stage2,
+    E5_V: LlavaNextForConditionalGeneration,
 }
 
 
@@ -107,7 +112,7 @@ def load_processor(model_args, data_args=None):
             num_crops=model_args.num_crops
         )
         processor.tokenizer.padding_side = "right"
-    elif model_args.model_backbone == LLAVA_NEXT:
+    elif model_args.model_backbone in [LLAVA_NEXT, E5_V]:
         from src.model.vlm_backbone.llava_next.processing_llava_next import LlavaNextProcessor
         processor = LlavaNextProcessor.from_pretrained(
             model_name_or_path,
@@ -212,7 +217,6 @@ def Llava_NEXT_process_fn(model_inputs: dict, processor, max_length=None):
             input_ids.append(input_id)
             pixel_values.append(None)
             image_sizes.append(None)
-            # image_grid_thw.append(None)
         else:
             image_exists = True
             # in theory, valid images should be a list of frames
@@ -233,7 +237,12 @@ def Llava_NEXT_process_fn(model_inputs: dict, processor, max_length=None):
     }
     image_exists = any([p is not None for p in pixel_values])
     if image_exists:
-        # add them to inputs
+        pixel_values = torch.from_numpy(np.array(pixel_values)).float()
+        pixel_values_shape = pixel_values.shape
+        pixel_values = pixel_values.reshape(pixel_values_shape[0] * pixel_values_shape[1], *pixel_values_shape[2:])
+        image_sizes = torch.tensor(np.array(image_sizes)).long()
+        image_sizes_shape = image_sizes.shape
+        image_sizes = image_sizes.reshape(image_sizes_shape[0] * image_sizes_shape[1], *image_sizes_shape[2:])
         inputs['pixel_values'] = torch.from_numpy(np.array(pixel_values)).float()
         inputs['image_sizes'] = torch.tensor(np.array(image_sizes)).long()
     else:
@@ -567,6 +576,27 @@ def InternVideo2_process_fn(model_inputs: dict, processor, max_length=None):
     return inputs
 
 
+def e5_v_prompt_template(text, add_video_token, add_image_token):
+    llama3_template = '<|start_header_id|>user<|end_header_id|>\n\n{}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n \n'
+    if text is not None and add_video_token is False and add_image_token is False:  # only text
+        prompt = llama3_template.format('{}\nSummary above sentence in one word: '.format(text))
+    if text is None and add_video_token:  # only video
+        prompt = llama3_template.format('<image>\nSummary above video in one word: ')
+    if text is None and add_image_token:  # only image
+        prompt = llama3_template.format('<image>\nSummary above image in one word: ')
+    if text is not None and add_video_token:  # video + text
+        prompt = llama3_template.format('<image>\n{}\nSummary above video and text in one word: '.format(text))
+    if text is not None and add_image_token:
+        prompt = llama3_template.format('<image>\n{}\nSummary above image and text in one word: '.format(text))
+
+    return prompt
+
+
+PROMPT_TEMPLATE_DICT = {
+    "e5_v": e5_v_prompt_template,
+}
+
+
 def process_input_text(instruction, model_backbone, text=None, add_video_token=False, add_image_token=False):
     # Formulate input text based on text, special token and instruction.
     # TBD: Reorganize the hard-code part for baselines such as internvideo2
@@ -577,6 +607,9 @@ def process_input_text(instruction, model_backbone, text=None, add_video_token=F
             return instruction + " " + text # GME and LamRA do not need special tokens
         else:
             return instruction + " "
+    elif model_backbone == E5_V:
+        return PROMPT_TEMPLATE_DICT[model_backbone](text, add_video_token, add_image_token)
+
     prompt = instruction
     if text:
         prompt = prompt + " " + text
@@ -602,4 +635,5 @@ process_vlm_inputs_fns = {
     LamRA: Gme_process_fn,
     LamRA_QWEN2_5: Gme_process_fn,
     COLPALI: ColPali_process_fn,
+    E5_V: Llava_NEXT_process_fn,
 }
