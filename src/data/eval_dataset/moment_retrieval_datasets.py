@@ -22,8 +22,7 @@ def data_prepare(batch_dict, *args, **kwargs):
 
     query_texts, query_images, cand_texts, cand_clip_images, dataset_infos = [], [], [], [], []
 
-    for query, query_video_path, clips_dir_path in \
-        zip(batch_dict['query'], batch_dict['video_path'], batch_dict['clips_dir_path']):
+    for query, query_video_path in zip(batch_dict['query'], batch_dict['video_path']):
 
         video_name = os.path.splitext(os.path.basename(query_video_path))[0]
         frames_dir = os.path.join(frame_root, video_name)

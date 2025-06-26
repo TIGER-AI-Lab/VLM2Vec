@@ -11,6 +11,8 @@ EVAL_DATASET_HF_PATH = {
     "Kinetics-700": ("VLM2Vec/Kinetics-700", None, "test"),
     "SmthSmthV2": ("VLM2Vec/SmthSmthV2", None, "test"),
     "QVHighlight": ("VLM2Vec/QVHighlight", None, "test"),
+    "Charades-STA": ("VLM2Vec/Charades-STA", None, "test"),
+    "MomentSeeker": ("VLM2Vec/MomentSeeker", None, "test"),
     "ViDoRe_arxivqa": ("vidore/arxivqa_test_subsampled_beir", None, "test"),
     "ViDoRe_docvqa": ("vidore/docvqa_test_subsampled_beir", None, "test"),
     "ViDoRe_infovqa": ("vidore/infovqa_test_subsampled_beir", None, "test"),
