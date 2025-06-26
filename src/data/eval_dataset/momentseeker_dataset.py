@@ -1,10 +1,9 @@
 import os
-import sys
 
 from datasets import load_dataset
-from src.data.utils.dataset_utils import sample_dataset
+from src.data.dataset_hf_path import EVAL_DATASET_HF_PATH
+from src.data.utils.dataset_utils import load_hf_dataset, sample_dataset
 
-from src.data.dataset.vidore_dataset import DATASET_PARSER_NAME
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook, RESOLUTION_MAPPING
 from src.data.eval_dataset.base_eval_dataset import ImageVideoInstance
 from src.data.utils.vision_utils import sample_frames, load_frames, VID_EXTENSIONS, save_frames
@@ -21,8 +20,7 @@ def data_prepare(batch_dict, *args, **kwargs):
     num_negative_clips = kwargs["num_negative_clips"]
     num_video_frames = kwargs["num_video_frames"]
     model_backbone = kwargs["model_backbone"]
-    frame_root = kwargs["frame_root"]
-    raw_dataset_abspath = kwargs.get("raw_dataset_abspath", '')
+    video_root, clip_root, frame_root = kwargs["video_root"], kwargs["clip_root"], kwargs["frame_root"]
 
     query_texts, query_images, cand_texts, cand_clip_images, dataset_infos = [], [], [], [], []
     for query, positive_frames, negative_frames, input_frames in \
@@ -33,20 +31,26 @@ def data_prepare(batch_dict, *args, **kwargs):
             query_video_name = input_frames.split(".mp4")[0].replace("/", "_")
             if query_video_name == 'movie101_77':  # TODO @yuepeng a buggy video?
                 pass
-            query_frame_dir = os.path.join(frame_root, query_video_name)
-            query_video_path = os.path.join(raw_dataset_abspath, input_frames)
-            save_frames(video_path=query_video_path,
-                        frame_dir=query_frame_dir,
-                        max_frames_saved=num_video_frames)
+            query_frame_dir = os.path.join(frame_root, "video_frames", query_video_name)
+            if not os.path.exists(query_frame_dir):
+                query_video_path = os.path.join(video_root, input_frames)
+                save_frames(video_path=query_video_path,
+                            frame_dir=query_frame_dir,
+                            max_frames_saved=num_video_frames)
             qry_frame_paths = load_frames(query_frame_dir)
-            query_images.append([{"bytes": [None] * len(qry_frame_paths), "paths": qry_frame_paths,
-                                  "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)] * len(qry_frame_paths)}])
+            query_images.append([ImageVideoInstance(
+                bytes=[None] * len(qry_frame_paths),
+                paths=qry_frame_paths,
+                resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)] * len(qry_frame_paths),
+            ).to_dict()])
         elif (input_frames.endswith(".jpg")):
             query_texts.append([process_input_text(TASK_INST_QRY_IMG, model_backbone, text=query, add_image_token=True)])
-            input_image_path = os.path.join(raw_dataset_abspath, f"query_{input_frames}")
-            query_images.append([{"bytes": [None] * 1, "paths": [input_image_path],
-                                  "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)] * 1}])
-            # query_images.append([None]) # TODO query image is not properly added
+            input_image_path = os.path.join(frame_root, "", f"query_{input_frames}")
+            query_images.append([ImageVideoInstance(
+                bytes=[None],
+                paths=[input_image_path],
+                resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+            ).to_dict()])
         else:
             query_texts.append([process_input_text(TASK_INST_QRY_TEXT, model_backbone, text=query)])
             query_images.append([None])
@@ -57,10 +61,9 @@ def data_prepare(batch_dict, *args, **kwargs):
         pos_clip_name, cand_clip_names, cand_frames = [], [], []
         for path in pos_clip_paths:
             cand_clip_name = path.replace("/", "_").split(".mp4")[0]
-            cand_clip_abs_path = os.path.join(raw_dataset_abspath, path)
-            cand_clip_frame_dir = os.path.join(frame_root, cand_clip_name)
+            cand_clip_frame_dir = os.path.join(frame_root, "video_frames", cand_clip_name)
             if not os.path.exists(cand_clip_frame_dir):
-                os.makedirs(cand_clip_frame_dir, exist_ok=True)
+                cand_clip_abs_path = os.path.join(clip_root, path)
                 save_frames(video_path=cand_clip_abs_path, frame_dir=cand_clip_frame_dir, max_frames_saved=num_video_frames)
             pos_clip_frames = load_frames(cand_clip_frame_dir)
             cand_frames.append(ImageVideoInstance(
@@ -72,10 +75,9 @@ def data_prepare(batch_dict, *args, **kwargs):
             pos_clip_name.append(cand_clip_frame_dir)
         for path in neg_clip_paths:
             cand_clip_name = path.replace("/", "_").split(".mp4")[0]
-            cand_clip_abs_path = os.path.join(raw_dataset_abspath, path)
-            cand_clip_frame_dir = os.path.join(frame_root, cand_clip_name)
+            cand_clip_frame_dir = os.path.join(frame_root, "video_frames", cand_clip_name)
             if not os.path.exists(cand_clip_frame_dir):
-                os.makedirs(cand_clip_frame_dir, exist_ok=True)
+                cand_clip_abs_path = os.path.join(clip_root, path)
                 save_frames(video_path=cand_clip_abs_path, frame_dir=cand_clip_frame_dir, max_frames_saved=num_video_frames)
             neg_clip_frames = load_frames(cand_clip_frame_dir)
             cand_frames.append(ImageVideoInstance(
@@ -99,12 +101,15 @@ def data_prepare(batch_dict, *args, **kwargs):
 DATASET_PARSER_NAME = "momentseeker"
 @AutoEvalPairDataset.register(DATASET_PARSER_NAME)
 def load_momentseeker_dataset(model_args, data_args, *args, **kwargs):
-    dataset_name = kwargs["dataset_name"]
-    dataset = load_dataset("json", data_files=kwargs["data_path"])["train"]
+    if kwargs.get("data_path", None) != None:
+        dataset = load_dataset("json", data_files=kwargs["data_path"])
+        dataset = dataset["train"]
+    else:
+        dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[kwargs['dataset_name']])
     dataset = sample_dataset(dataset, **kwargs)
+
     kwargs['model_backbone'] = model_args.model_backbone
     kwargs['image_resolution'] = data_args.image_resolution
-    kwargs['global_dataset_name'] = f'{DATASET_PARSER_NAME}/{dataset_name}'
 
     dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True,
                           batch_size=2048, num_proc=1,
