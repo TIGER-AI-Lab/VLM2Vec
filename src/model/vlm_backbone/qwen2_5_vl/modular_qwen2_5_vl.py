@@ -48,7 +48,13 @@ from transformers.activations import ACT2FN
 from transformers.cache_utils import StaticCache
 from transformers.configuration_utils import PretrainedConfig
 from transformers.feature_extraction_utils import BatchFeature
-from transformers.image_utils import ImageInput, VideoInput
+from transformers.image_utils import ImageInput
+try:
+    # transformers>=4.52
+    from transformers.video_utils import VideoInput
+except ImportError:
+    from transformers.image_utils import VideoInput
+
 from transformers.processing_utils import ProcessingKwargs, Unpack, VideosKwargs
 from transformers.tokenization_utils_base import PreTokenizedInput, TextInput
 from transformers.utils import is_flash_attn_2_available

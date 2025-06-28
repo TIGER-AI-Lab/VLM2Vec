@@ -121,3 +121,8 @@ DDP inference on multiple GPUs is supported. The whole evaluation process is str
 
 **How to run**: please see examples in `experiments/public/eval`. 
 
+## Heads-up for Reproducing Baseline Models
+- GME: requires an older version of the transformers library <=4.51.3.
+- MomentSeeker: we recommend using a single GPU with a batch size of 10. This is due to a limitation in baseline processors that cannot handle mixed batches of image and text-only data.
+
+

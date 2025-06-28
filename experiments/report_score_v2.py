@@ -7,35 +7,31 @@ from datetime import datetime
 # ==============================================================================
 
 # ==> Unified list of experiments to process.
-# Fill in the metadata for each experiment. Write `NONE` if a field is not applicable.
-# `*` means mandatory field.
+# Fill in the metadata for each experiment. `None` will become `null` in the JSON.
 
-METADATA_TEMPLATE = {
-    '*path': "path/to/your/model",                          # mandatory field, str
-    'metadata': {
-        '*model_name': "<Model Name>",                      # mandatory field, str, e.g., "VLM2Vec-Qwen2VL-V2.0-2B"
-        'model_backbone': "<Backbone Name>",                # str, e.g., "Qwen2VL"
-        'model_size': 10.0,                                 # float, in B, eg., 2.21
-        'embedding_dimension': 768,                         # int, e.g., 512, 768, etc.
-        'max_length_tokens': 1024,                          # int, e.g., 512, 1024, etc.
-        'model_release_date': "YYYY-MM-DD",                 # str, in format "YYYY-MM-DD", e.g., "2024-01-01"
-        'data_source': "Self-Reported",                     # str, use "Self-Reported"
-        'url': "<https://example.com/url/to/your/model>"    # str, e.g., Paper, GitHub, or Hugging Face link
-    }
-}
-
-EXAMPLES = [
+EXPERIMENTS = [
     {
         "path": "vlm2vec_exps/VLM2Vec-Qwen2VL-V2.0-2B/",
         "metadata": {
             "model_name": "VLM2Vec-Qwen2VL-V2.0-2B",
-            "model_backbone": "Qwen2-VL-2B",
-            "model_size": 2.21,
-            "embedding_dimension": 768,
-            "max_length_tokens": 1024,
-            "model_release_date": "2025-04-01",
-            "data_source": "TIGER-Lab",
-            "url": "https://huggingface.co/VLM2Vec/VLM2Vec-V2.0"
+            "model_size": "2B parameters",
+            "embedding_dimension": None, # Please fill in
+            "max_length_tokens": None,   # Please fill in
+            "model_release_date": "2025-04-01", # Please adjust this date
+            "score_source": "",           # e.g., "Self-Reported" or "TIGER-Lab"
+            "url": ""                    # e.g., Paper, GitHub, or Hugging Face link
+        }
+    },
+    {
+        "path": "vlm2vec_exps/VLM2Vec-Qwen2VL-V2.1-2B/",
+        "metadata": {
+            "model_name": "VLM2Vec-Qwen2VL-V2.1-2B",
+            "model_size": "2B parameters",
+            "embedding_dimension": None, # Please fill in
+            "max_length_tokens": None,   # Please fill in
+            "model_release_date": "2025-05-15", # Please adjust this date
+            "score_source": "",           # e.g., "Self-Reported" or "TIGER-Lab"
+            "url": ""                    # e.g., Paper, GitHub, or Hugging Face link
         }
     },
 ]
@@ -75,18 +71,18 @@ modality2dataset = {
         "OK-VQA", "A-OKVQA", "DocVQA", "InfographicsVQA", "ChartQA", "Visual7W", "ScienceQA", "VizWiz", "GQA", "TextVQA",
         "VisDial", "CIRR", "VisualNews_t2i", "VisualNews_i2t", "MSCOCO_t2i", "MSCOCO_i2t", "NIGHTS", "WebQA", "FashionIQ", "Wiki-SS-NQ", "OVEN", "EDIS",
         "MSCOCO", "RefCOCO", "RefCOCO-Matching", "Visual7W-Pointing"],
+    "video": [
+        "K700", "SmthSmthV2", "HMDB51", "UCF101", "Breakfast",
+        "MVBench", "Video-MME", "NExTQA", "EgoSchema", "ActivityNetQA",
+        "DiDeMo", "MSR-VTT", "MSVD", "VATEX", "YouCook2",
+        "QVHighlight", "Charades-STA", "MomentSeeker",
+    ],
     "visdoc": [
         "ViDoRe_arxivqa", "ViDoRe_docvqa", "ViDoRe_infovqa", "ViDoRe_tabfquad", "ViDoRe_tatdqa", "ViDoRe_shiftproject",
         "ViDoRe_syntheticDocQA_artificial_intelligence", "ViDoRe_syntheticDocQA_energy", "ViDoRe_syntheticDocQA_government_reports", "ViDoRe_syntheticDocQA_healthcare_industry",
-        "ViDoRe_esg_reports_human_labeled_v2", "ViDoRe_biomedical_lectures_v2", "ViDoRe_biomedical_lectures_v2_multilingual", "ViDoRe_economics_reports_v2", "ViDoRe_economics_reports_v2_multilingual", "ViDoRe_esg_reports_v2", "ViDoRe_esg_reports_v2_multilingual",
+        "ViDoRe_esg_reports_human_labeled_v2", "ViDoRe_biomedical_lectures_v2_multilingual", "ViDoRe_economics_reports_v2_multilingual", "ViDoRe_esg_reports_v2_multilingual",
         "VisRAG_ArxivQA", "VisRAG_ChartQA", "VisRAG_MP-DocVQA", "VisRAG_SlideVQA", "VisRAG_InfoVQA", "VisRAG_PlotQA",
         "ViDoSeek-page", "ViDoSeek-doc", "MMLongBench-page", "MMLongBench-doc"
-    ],
-    "video": [
-        "DiDeMo", "MSR-VTT", "MSVD", "VATEX", "YouCook2",
-        "QVHighlight", "Charades-STA", "MomentSeeker",
-        "K700", "SmthSmthV2", "HMDB51", "UCF101", "Breakfast",
-        "MVBench", "Video-MME", "NExTQA", "EgoSchema", "ActivityNetQA"
     ]
 }
 modality2metric = {
@@ -94,7 +90,7 @@ modality2metric = {
     "video": "hit@1",
     "visdoc": "ndcg_linear@5",
 }
-modalities = ["image", "visdoc", "video"] # Process in this order
+modalities = ["image", "video", "visdoc"] # Process in this order
 
 for experiment in EXPERIMENTS:
     base_path = experiment['path']
@@ -203,9 +199,9 @@ for experiment in EXPERIMENTS:
 
         if collected_metric_values:
             average_score = sum(collected_metric_values) / len(collected_metric_values)
-            print(f"      Average {main_metric_key}: {average_score:.4f} (from {len(collected_metric_values)} datasets)")
+            print(f"      Average of {modality.upper()}\t- {main_metric_key}:\t{average_score:.4f} (from {len(collected_metric_values)} datasets)")
         else:
-            print(f"      Average {main_metric_key}: N/A (no valid scores found)")
+            print(f"      Average of {modality.upper()}\t-  {main_metric_key}:\tN/A (no valid scores found)")
 
         if datasets_missing_score_file:
             print(f"      Datasets with missing/errored score files:")

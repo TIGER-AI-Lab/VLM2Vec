@@ -49,7 +49,12 @@ from transformers.image_utils import (
     valid_images,
     validate_preprocess_arguments,
 )
-from transformers.video_utils import VideoInput
+try:
+    # transformers>=4.52
+    from transformers.video_utils import VideoInput
+except ImportError:
+    from transformers.image_utils import VideoInput
+
 from transformers.utils import TensorType, is_vision_available, logging
 from ...utils import UnionFind
 

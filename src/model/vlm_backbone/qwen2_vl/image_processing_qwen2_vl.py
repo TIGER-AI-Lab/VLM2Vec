@@ -46,7 +46,12 @@ from transformers.image_utils import (
     validate_preprocess_arguments,
 )
 from transformers.utils import TensorType, logging
-from transformers.video_utils import VideoInput, make_batched_videos
+try:
+    # transformers>=4.52
+    from transformers.video_utils import VideoInput, make_batched_videos
+except ImportError:
+    from transformers.image_utils import VideoInput, make_batched_videos
+
 
 
 logger = logging.get_logger(__name__)
