@@ -41,7 +41,6 @@ class TrainTextImageDataset(Dataset):
                 num_rows = int(data_args.num_sample_per_subset)
                 subset_data = subset_data.select(range(num_rows))
             train_data.append(subset_data)
-            breakpoint()
         self.train_data = concatenate_datasets(train_data)
 
     def __len__(self):
