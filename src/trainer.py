@@ -663,7 +663,8 @@ class GradCacheLateProcessTrainer(MMEBTrainer):
             # process_fn=process_fn,
             get_rep_fn=get_dense_rep,
             fp16=self.args.fp16,
-            scaler=self.scaler if self.args.fp16 else None
+            scaler=self.scaler if self.args.fp16 else None,
+            dynamic_limit=self.args.gc_dynamic_limit
         )
 
     def training_step(self, model, inputs, *args, **kwargs) -> torch.Tensor:
