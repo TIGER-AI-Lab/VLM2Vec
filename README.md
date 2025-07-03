@@ -2,9 +2,9 @@
 
 <a target="_blank" href="#">
 <img style="height:22pt" src="https://img.shields.io/badge/-V2 Paper%20-black?style=flat&logo=arxiv"></a>
-<a target="_blank" href="https://https://github.com/TIGER-AI-Lab/VLM2Vec/blob/main/assets/vlm2vec_v2.pdf">
+<a target="_blank" href="https://github.com/TIGER-AI-Lab/VLM2Vec/blob/main/assets/vlm2vec_v2.pdf">
 <img style="height:22pt" src="https://img.shields.io/badge/-V1 Paper-black?style=flat&logo=arxiv"></a>
-<a target="_blank" href="https://github.com/TIGER-AI-Lab/VLM2Vec">
+<a target="_blank" href="https://arxiv.org/abs/2410.05160">
 <img style="height:22pt" src="https://img.shields.io/badge/-Code-green?style=flat&logo=github"></a>
 <a target="_blank" href="https://tiger-ai-lab.github.io/VLM2Vec/">
 <img style="height:22pt" src="https://img.shields.io/badge/-🌐%20Website-red?style=flat"></a>
