@@ -101,7 +101,7 @@ For current V2 models, we use **Qwen2-VL** as the model backbone, which capably 
 
  
 ## MMEB-v2 Benchmark
-We introduce **MMEB-V2**, an expanded benchmark that includes **81 total datasets** covering images, videos, and visual documents.
+We introduce **MMEB-V2**, an expanded benchmark that includes **78 total datasets** covering images, videos, and visual documents.
 - **New Video Tasks**: video retrieval, moment retrieval, video classification, and video QA.
 - **New visual document task**: visual document retrieval.
 - **Check out [MMEB-v2 datasets](https://huggingface.co/datasets/TIGER-Lab/MMEB-V2)** at Huggingface.
