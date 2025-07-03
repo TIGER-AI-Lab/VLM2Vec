@@ -1,8 +1,8 @@
 # VLM2Vec-V2: Unified Multimodal Embedding for Videos, Images, and Documents
 
 <a target="_blank" href="#">
-<img style="height:22pt" src="https://img.shields.io/badge/-V2 Paper (coming soon)%20-black?style=flat&logo=arxiv"></a>
-<a target="_blank" href="assets/mmeb_v2.pdf">
+<img style="height:22pt" src="https://img.shields.io/badge/-V2 Paper%20-black?style=flat&logo=arxiv"></a>
+<a target="_blank" href="https://https://github.com/TIGER-AI-Lab/VLM2Vec/blob/main/assets/vlm2vec_v2.pdf">
 <img style="height:22pt" src="https://img.shields.io/badge/-V1 Paper-black?style=flat&logo=arxiv"></a>
 <a target="_blank" href="https://github.com/TIGER-AI-Lab/VLM2Vec">
 <img style="height:22pt" src="https://img.shields.io/badge/-Code-green?style=flat&logo=github"></a>
