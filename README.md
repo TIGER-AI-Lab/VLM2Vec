@@ -133,6 +133,13 @@ DDP inference on multiple GPUs is supported. The whole evaluation process is str
   journal={arXiv preprint arXiv:2410.05160},
   year={2024}
 }
+
+@article{meng2025vlm2vecv2,
+  title={VLM2Vec-V2: Advancing Multimodal Embedding for Videos, Images, and Visual Documents},
+  author={Rui Meng and Ziyan Jiang and Ye Liu and Mingyi Su and Xinyi Yang and Yuepeng Fu and Can Qin and Zeyuan Chen and Ran Xu and Caiming Xiong and Yingbo Zhou and Wenhu Chen and Semih Yavuz},
+  journal={arXiv preprint arXiv:2507.04590},
+  year={2025}
+}
 ```
 
 
