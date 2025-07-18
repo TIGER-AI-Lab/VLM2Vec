@@ -22,7 +22,7 @@ model.eval()
 
 # Image + Text -> Text
 inputs = processor(text=f'{VLM_IMAGE_TOKENS[QWEN2_VL]} Represent the given image with the following question: What is in the image',
-                   images=Image.open('assets/example.jpg'),
+                   images=Image.open('../../../assets/example.jpg'),
                    return_tensors="pt")
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 inputs['pixel_values'] = inputs['pixel_values'].unsqueeze(0)
@@ -52,8 +52,8 @@ print(string, '=', model.compute_similarity(qry_output, tgt_output))
 processor_inputs = {
     "text": [f'{VLM_IMAGE_TOKENS[QWEN2_VL]} Represent the given image with the following question: What is in the image',
           f'{VLM_IMAGE_TOKENS[QWEN2_VL]} Represent the given image with the following question: What is in the image'],
-    "images": [Image.open('assets/example.jpg'),
-            Image.open('assets/example.jpg')],
+    "images": [Image.open('../../../assets/example.jpg'),
+            Image.open('../../../assets/example.jpg')],
 }
 inputs = Qwen2_VL_process_fn(
     processor_inputs,
@@ -73,3 +73,5 @@ inputs = batch_to_device(inputs, "cuda")
 with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
     tgt_output = model(tgt=inputs)["tgt_reps"]
 print(model.compute_similarity(qry_output, tgt_output))
+# tensor([[0.3316, 0.2900],
+#         [0.3286, 0.2879]], device='cuda:0', grad_fn=<MmBackward0>)

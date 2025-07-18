@@ -5,8 +5,7 @@ import torch
 from src.model.vlm_backbone.qwen2_vl.qwen_vl_utils import process_vision_info
 
 model_args = ModelArguments(
-    model_name='Qwen/Qwen2-VL-7B-Instruct',
-    checkpoint_path='TIGER-Lab/VLM2Vec-Qwen2VL-7B',
+    model_name='VLM2Vec/VLM2Vec-V2.0',
     pooling='last',
     normalize=True,
     model_backbone='qwen2_vl',
@@ -25,7 +24,7 @@ messages = [
         "content": [
             {
                 "type": "video",
-                "video": "assets/example_video.mp4",
+                "video": "../../../assets/example_video.mp4",
                 "max_pixels": 360 * 420,
                 "fps": 1.0,
             },
@@ -52,7 +51,7 @@ inputs = processor(text=string,
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 tgt_output = model(tgt=inputs)["tgt_reps"]
 print(string, '=', model.compute_similarity(qry_output, tgt_output))
-## tensor([[0.4746]], device='cuda:0', dtype=torch.bfloat16)
+## tensor([[0.4727]], device='cuda:0', dtype=torch.bfloat16)
 
 string = 'A person dressed in a blue jacket shovels the snow-covered pavement outside their house.'
 inputs = processor(text=string,
@@ -61,4 +60,4 @@ inputs = processor(text=string,
 inputs = {key: value.to('cuda') for key, value in inputs.items()}
 tgt_output = model(tgt=inputs)["tgt_reps"]
 print(string, '=', model.compute_similarity(qry_output, tgt_output))
-## tensor([[0.3223]], device='cuda:0', dtype=torch.bfloat16)
+## tensor([[0.3809]], device='cuda:0', dtype=torch.bfloat16)
