@@ -1,7 +1,7 @@
 # VLM2Vec-V2: Unified Multimodal Embedding for Videos, Images, and Documents
 
-<a target="_blank" href="#">
-<img style="height:22pt" src="https://img.shields.io/badge/-V2 Paper (coming soon)%20-black?style=flat&logo=arxiv"></a>
+<a target="_blank" href="https://arxiv.org/abs/2507.04590">
+<img style="height:22pt" src="https://img.shields.io/badge/-V2 Paper%20-black?style=flat&logo=arxiv"></a>
 <a target="_blank" href="https://arxiv.org/abs/2410.05160">
 <img style="height:22pt" src="https://img.shields.io/badge/-V1 Paper-black?style=flat&logo=arxiv"></a>
 <a target="_blank" href="https://github.com/TIGER-AI-Lab/VLM2Vec">
@@ -101,7 +101,7 @@ For current V2 models, we use **Qwen2-VL** as the model backbone, which capably 
 
  
 ## MMEB-v2 Benchmark
-We introduce **MMEB-V2**, an expanded benchmark that includes **81 total datasets** covering images, videos, and visual documents.
+We introduce **MMEB-V2**, an expanded benchmark that includes **78 total datasets** covering images, videos, and visual documents.
 - **New Video Tasks**: video retrieval, moment retrieval, video classification, and video QA.
 - **New visual document task**: visual document retrieval.
 - **Check out [MMEB-v2 datasets](https://huggingface.co/datasets/TIGER-Lab/MMEB-V2)** at Huggingface.
@@ -125,4 +125,25 @@ DDP inference on multiple GPUs is supported. The whole evaluation process is str
 - GME: requires an older version of the transformers library <=4.51.3.
 - MomentSeeker: we recommend using a single GPU with a batch size of 10. This is due to a limitation in baseline processors that cannot handle mixed batches of image and text-only data.
 
+## Citation
+```
+@article{jiang2024vlm2vec,
+  title={VLM2Vec: Training Vision-Language Models for Massive Multimodal Embedding Tasks},
+  author={Jiang, Ziyan and Meng, Rui and Yang, Xinyi and Yavuz, Semih and Zhou, Yingbo and Chen, Wenhu},
+  journal={arXiv preprint arXiv:2410.05160},
+  year={2024}
+}
+
+@article{meng2025vlm2vecv2,
+  title={VLM2Vec-V2: Advancing Multimodal Embedding for Videos, Images, and Visual Documents},
+  author={Rui Meng and Ziyan Jiang and Ye Liu and Mingyi Su and Xinyi Yang and Yuepeng Fu and Can Qin and Zeyuan Chen and Ran Xu and Caiming Xiong and Yingbo Zhou and Wenhu Chen and Semih Yavuz},
+  journal={arXiv preprint arXiv:2507.04590},
+  year={2025}
+}
+```
+
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=TIGER-AI-Lab/VLM2Vec&type=Date)](https://star-history.com/#TIGER-AI-Lab/VLM2Vec&Date)
 
