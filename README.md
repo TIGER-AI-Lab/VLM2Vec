@@ -41,7 +41,7 @@ This is an open-source project, and we welcome contributions from the community.
 ---
 
 ## 🔥 News
-- **[2025-05] VLM2Vec-v2 is released!** We introduce a unified embedding framework for **images, videos, and visual documents**. Our new **MMEB-V2 benchmark**, featuring 57 diverse tasks, is also available. The VLM2Vec-V2 model outperforms previous versions and strong specialized baselines.
+- **[2025-05] VLM2Vec-v2 is released!** We introduce a unified embedding framework for **images, videos, and visual documents**. Our new **MMEB-V2 benchmark**, featuring 81 diverse tasks, is also available. The VLM2Vec-V2 model outperforms previous versions and strong specialized baselines.
 - [2025-01] 🎉 **VLM2Vec is accepted to ICLR 2025.**
 
 <details>
