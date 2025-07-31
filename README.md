@@ -8,9 +8,9 @@
 <img style="height:22pt" src="https://img.shields.io/badge/-Code-green?style=flat&logo=github"></a>
 <a target="_blank" href="https://tiger-ai-lab.github.io/VLM2Vec/">
 <img style="height:22pt" src="https://img.shields.io/badge/-🌐%20Website-red?style=flat"></a>
-<a target="_blank" href="https://huggingface.co/datasets/TIGER-Lab/MMEB-eval">
-<img style="height:22pt" src="https://img.shields.io/badge/-🤗%20Dataset(V2)-red?style=flat"></a>
 <a target="_blank" href="https://huggingface.co/datasets/TIGER-Lab/MMEB-V2">
+<img style="height:22pt" src="https://img.shields.io/badge/-🤗%20Dataset(V2)-red?style=flat"></a>
+<a target="_blank" href="https://huggingface.co/datasets/TIGER-Lab/MMEB-eval">
 <img style="height:22pt" src="https://img.shields.io/badge/-🤗%20Dataset(V1)-red?style=flat"></a>
 <a target="_blank" href="https://huggingface.co/VLM2Vec">
 <img style="height:22pt" src="https://img.shields.io/badge/-🤗%20Models-red?style=flat"></a>
