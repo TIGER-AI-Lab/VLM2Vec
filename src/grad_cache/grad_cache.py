@@ -9,6 +9,9 @@ from torch import nn, Tensor
 from torch.cuda.amp import GradScaler, autocast
 from src.grad_cache.context_managers import RandContext
 
+import numpy as np
+import bisect
+
 logger = logging.getLogger(__name__)
 
 
@@ -28,6 +31,7 @@ class GradCache:
         fp16: bool = False,
         scaler: GradScaler = None,
         process_fn: Callable = None,
+        dynamic_limit: Union[int, List[int]] = None
     ):
         """
         Initialize the Gradient Cache class instance.
@@ -42,13 +46,26 @@ class GradCache:
         not provided, the generic output is assumed to be the representation tensor.
         :param fp16: If True, run mixed precision training, which requires scaler to also be set.
         :param scaler: A GradScaler object for automatic mixed precision training.
+        :param process_fn: An optional function that processes each input tensor before passing it to the model.
+        :param dynamic_limit: An optional integer that specifies the dynamic limit for the gradient cache chunk size. Or a list of integers of dynamic limit for each model.
         """
         self.models = models
 
         if isinstance(chunk_sizes, int):
-            self.chunk_sizes = [chunk_sizes for _ in range(len(models))]
+            self.chunk_sizes = [chunk_sizes] * len(models)
         else:
             self.chunk_sizes = chunk_sizes
+
+        # normalize dynamic_limit to list
+        if dynamic_limit is None:
+            self.dynamic_limit = None
+        elif isinstance(dynamic_limit, int):
+            self.dynamic_limit = [dynamic_limit] * len(models)
+        else:
+            self.dynamic_limit = dynamic_limit
+        
+        if self.dynamic_limit is not None and len(self.dynamic_limit) != len(models):
+            raise ValueError(f"dynamic_limit length ({len(self.dynamic_limit)}) must be None or match number of models ({len(models)})")
 
         self.split_input_fn = split_input_fn
         self.process_fn = process_fn
@@ -60,8 +77,17 @@ class GradCache:
 
         self.fp16 = fp16
         self.scaler = scaler
-
         self._get_input_tensors_strict = False
+        
+        if self.dynamic_limit is not None:
+            self.multipliers = [
+                [2**i for i in range(int(np.log2(cs)) + 1)]
+                for cs in self.chunk_sizes
+            ]
+            self.thresholds = [
+                [dl * m for m in mult]
+                for dl, mult in zip(self.dynamic_limit, self.multipliers)
+            ]
 
     def __call__(self, *args, **kwargs):
         """
@@ -263,8 +289,30 @@ class GradCache:
             assert all(map(lambda m: isinstance(m, nn.parallel.DistributedDataParallel), self.models)), \
                 'Some of models are not wrapped in DistributedDataParallel. Make sure you are running DDP with ' \
                 'proper initializations.'
+        
+        if self.dynamic_limit is None:
+            # if dynamic_limit is not set, use static chunk sizes
+            self.real_chunk_sizes = self.chunk_sizes
+        else:
+            dynamic_chunks = []
+            # support dynamic chunking for any number of models
+            model_keys = ['qry', 'tgt'][:len(self.models)]
+            for idx, key in enumerate(model_keys):
+                # measure sequence length from attention_mask
+                num_tokens = model_inputs[idx][key]['attention_mask'].shape[1]
+                thr = self.thresholds[idx]
+                mult = self.multipliers[idx]
+                # find index where num_tokens fits threshold
+                pos = bisect.bisect_left(thr, num_tokens)
+                # clamp index to available multipliers
+                pos = min(pos, len(mult) - 1)
+                # compute dynamic chunk: static // multiplier
+                dynamic_chunks.append(self.chunk_sizes[idx] // mult[pos])
 
-        model_inputs = [self.split_inputs(x, chunk_size) for x, chunk_size in zip(model_inputs, self.chunk_sizes)]
+            self.real_chunk_sizes = dynamic_chunks
+
+        model_inputs = [self.split_inputs(x, chunk_size) for x, chunk_size in zip(model_inputs, self.real_chunk_sizes)]
+
         if self.process_fn:
             # each minibatch -> self.process_fn(minibatch)
             _model_inputs = []
@@ -284,7 +332,7 @@ class GradCache:
             all_rnd_states.append(rnd_states)
 
         cache, loss = self.build_cache(*all_reps, **loss_kwargs)
-        cache = [c.split(chunk_size) for c, chunk_size in zip(cache, self.chunk_sizes)]
+        cache = [c.split(chunk_size) for c, chunk_size in zip(cache, self.real_chunk_sizes)]
 
         for model, x, model_cache, rnd_states in zip(
                 self.models, model_inputs, cache, all_rnd_states):
