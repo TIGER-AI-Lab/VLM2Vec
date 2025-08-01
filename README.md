@@ -27,7 +27,8 @@ Our work introduces **MMEB-V2**, a comprehensive benchmark with 78 tasks designe
 
 This is an open-source project, and we welcome contributions from the community. We are particularly interested in additions of new functionalities, support for new datasets, bug fixes, and improvements to documentation. Please feel free to open an issue to discuss your ideas or submit a pull request!
 
-Please check out our latest updates and features in the [CHANGELOG.md](./CHANGELOG.md)!
+📌 Please see our CHANGELOG for the latest features and bug fixes! [![CHANGELOG](https://img.shields.io/badge/View-CHANGELOG-blue)](./CHANGELOG.md)
+
 
 > ## 🚨 Major V2 Update Alert (June 2025) 🚨
 >
