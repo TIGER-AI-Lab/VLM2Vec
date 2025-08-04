@@ -46,6 +46,8 @@ class DataArguments:
     resize_max_pixels: int = field(default=28*28*1280, metadata={"help": "The max pixels of the image to resize the image. This is only works when `--resize_use_processor true`."})
     image_decay_factor: float = field(default=None, metadata={"help": "The image decay factor for resizing temporal images"})
     num_hardneg: int = field(default=0, metadata={"help": "hard negative number"})
+    tgt_prefix_mod: bool = field(default=False, metadata={"help": "Modify the pos_prefix"})
+    chunk_size: int = field(default=32, metadata={"help": "Cluster sizes in metis. Only used when interleave_datasets is true."})
 
 
 @dataclass
@@ -57,8 +59,9 @@ class TrainingArguments(TrainingArguments):
     logging_steps: int = field(default=1, metadata={"help": "logging steps"})
     num_train_epochs: int = field(default=1, metadata={"help": "number of training epochs"})
     grad_cache: bool = field(default=False, metadata={"help": "Use gradient cache update"})
-    gc_q_chunk_size: int = field(default=2, metadata={"help": "query side subset size"})
-    gc_p_chunk_size: int = field(default=2, metadata={"help": "target side subset size"})
+    gc_q_chunk_size: int = field(default=2, metadata={"help": "query side subset size. Should be power of 2."})
+    gc_p_chunk_size: int = field(default=2, metadata={"help": "target side subset size. Should be power of 2."})
+    interleave_datasets: bool = field(default=True, metadata={"help": "interleave datasets, if true, will interleave datasets in each batch"})
     interleave_stopping_strategy: str = field(default="all_exhausted", metadata={"help": "all_exhausted or first_exhausted"})
     interleave_batch_size: float = field(default=0, metadata={"help": "Specify mini-batch size to interleave data from multi-sources, 0/None means random sampling by examples, 1 means full batch."})
     gc_dynamic_limit: int = field(default=125, metadata={"help": "gc_chunk default limit - (128, 125) sized matrices works for Qwen2b. gc_dynamic_limit would be 125 and gc_p|q_chunk_size would be 128"})

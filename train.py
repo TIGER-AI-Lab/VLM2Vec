@@ -17,6 +17,7 @@ from transformers import HfArgumentParser
 from src.arguments import ModelArguments, DataArguments, TrainingArguments
 from src.data.collator.train_collator import MultimodalDataCollator
 from src.data.loader.mixed_dataset import init_mixed_dataset
+from src.data.dataset.mmeb_dataset import CustomRandomSampler
 from src.model.model import MMEBModel
 from src.trainer import GradCacheLateProcessTrainer
 from src.utils import print_rank, print_master, find_latest_checkpoint
@@ -86,7 +87,7 @@ def main():
 
     with open(data_args.dataset_config, 'r') as yaml_file:
         dataset_config = yaml.safe_load(yaml_file)
-        train_dataset = init_mixed_dataset(dataset_config, model_args, data_args, training_args)
+        train_dataset, dataset_lens = init_mixed_dataset(dataset_config, model_args, data_args, training_args)
     train_collator = MultimodalDataCollator(processor, model_args, data_args, training_args)
 
     trainer_cls = GradCacheLateProcessTrainer
@@ -100,6 +101,20 @@ def main():
         max_length=data_args.max_len,
     )
     train_dataset.trainer = trainer
+
+    if not data_args.interleave_datasets:
+        training_args.accelerator_config.use_seedable_sampler=False
+        # Multiple embedding datasets & we want to make sure each batch mostly comes from one dataset
+        # Set custom sampler, see https://github.com/huggingface/transformers/blob/ccb92be23def445f2afdea94c31286f84b89eb5b/src/transformers/trainer.py#L785
+        total_bs = training_args.per_device_train_batch_size * training_args.gradient_accumulation_steps
+        total_bs = total_bs * dist.get_world_size() if dist.is_initialized() else total_bs
+        
+        num_samples = np.sum(dataset_lens)
+        num_repeats = math.ceil((total_bs*training_args.max_steps)/num_samples)
+        
+        trainer._get_train_sampler = lambda: CustomRandomSampler(
+            total_batch_size=total_bs, ds_lens=dataset_lens,
+            _num_samples=num_samples, data_source=train_dataset, ordered_datasets=True, same_datasets=True, random_datasets=False, num_repeats=num_repeats, chunk_size=data_args.chunk_size)
 
     trainer.train(resume_from_checkpoint=resume_checkpoint_dir)
     trainer.save_model(training_args.output_dir)

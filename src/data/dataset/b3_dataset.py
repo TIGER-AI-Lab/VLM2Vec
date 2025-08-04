@@ -112,12 +112,8 @@ def data_prepare(example, *args, **kwargs):
     if not qry_text:
         print('something went wrong')
     # print_rank(f"global_dataset_name={kwargs.get('global_dataset_name', DATASET_PARSER_NAME)}, batch_size={batch_size}, processed_batch_size={len(query_texts)}")
-    if(kwargs["pos_only"]):
-        pos_text_list = [pos_text]
-        pos_image_list = [pos_image]
-    else:
-        pos_text_list = [pos_text]+ neg_text_list
-        pos_image_list = [pos_image]+neg_image_path_list
+    pos_text_list = [pos_text]+ neg_text_list
+    pos_image_list = [pos_image]+neg_image_path_list
     
     return {"query_text": [qry_text], "query_image": [qry_image],
             "pos_text": pos_text_list, "pos_image": pos_image_list,
@@ -157,7 +153,6 @@ def load_mmeb_dataset(model_args, data_args, training_args, *args, **kwargs):
     kwargs['model_backbone'] = model_args.model_backbone
     kwargs['image_resolution'] = data_args.image_resolution
     kwargs['global_dataset_name'] = f'{DATASET_PARSER_NAME}/{subset_name}'
-    kwargs['pos_only'] = data_args.pos_only
     # dataset = dataset.shuffle(buffer_size=8192, seed=training_args.seed)
     remove_columns = ['qry', 'qry_image_path', 'pos_text', 'pos_image_path']
     if 'neg_image_path' in column_names:
