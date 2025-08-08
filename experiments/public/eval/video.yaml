@@ -159,7 +159,6 @@ MVBench:
 ActivityNetQA:
     dataset_parser: activitynetqa
     dataset_name: ActivityNetQA
-    data_path: video-tasks/data/activitynetqa.jsonl
     video_root: video-tasks/videos/video_qa/ActivityNetQA
     frame_root: video-tasks/frames/video_qa/ActivityNetQA
     max_frames_saved: 64
