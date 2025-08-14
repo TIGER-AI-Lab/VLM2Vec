@@ -1,0 +1,243 @@
+{
+    "metadata": {
+        "model_name": "ReCo",
+        "model_backbone": "Qwen2-VL-7B-Instruct",
+        "model_size": "8.29 B",
+        "embedding_dimension": 3584,
+        "max_length_tokens": 4096,
+        "model_release_date": "2025-08-13",
+        "data_source": "Self-Reported",
+        "url": "",
+        "report_generated_date": "2025-08-13T14:43:27.661235"
+    },
+    "metrics": {
+        "image": {
+            "ImageNet-1K": {
+                "acc": 0.842,
+                "num_correct": 842,
+                "num_pred": 1000
+            },
+            "N24News": {
+                "acc": 0.838,
+                "num_correct": 838,
+                "num_pred": 1000
+            },
+            "HatefulMemes": {
+                "acc": 0.736,
+                "num_correct": 736,
+                "num_pred": 1000
+            },
+            "VOC2007": {
+                "acc": 0.888,
+                "num_correct": 888,
+                "num_pred": 1000
+            },
+            "SUN397": {
+                "acc": 0.812,
+                "num_correct": 812,
+                "num_pred": 1000
+            },
+            "Place365": {
+                "acc": 0.474,
+                "num_correct": 474,
+                "num_pred": 1000
+            },
+            "ImageNet-A": {
+                "acc": 0.583,
+                "num_correct": 583,
+                "num_pred": 1000
+            },
+            "ImageNet-R": {
+                "acc": 0.901,
+                "num_correct": 901,
+                "num_pred": 1000
+            },
+            "ObjectNet": {
+                "acc": 0.741,
+                "num_correct": 741,
+                "num_pred": 1000
+            },
+            "Country211": {
+                "acc": 0.28,
+                "num_correct": 280,
+                "num_pred": 1000
+            },
+            "OK-VQA": {
+                "acc": 0.741,
+                "num_correct": 741,
+                "num_pred": 1000
+            },
+            "A-OKVQA": {
+                "acc": 0.618,
+                "num_correct": 618,
+                "num_pred": 1000
+            },
+            "DocVQA": {
+                "acc": 0.951,
+                "num_correct": 951,
+                "num_pred": 1000
+            },
+            "InfographicsVQA": {
+                "acc": 0.763,
+                "num_correct": 763,
+                "num_pred": 1000
+            },
+            "ChartQA": {
+                "acc": 0.667,
+                "num_correct": 667,
+                "num_pred": 1000
+            },
+            "Visual7W": {
+                "acc": 0.672,
+                "num_correct": 672,
+                "num_pred": 1000
+            },
+            "ScienceQA": {
+                "acc": 0.545,
+                "num_correct": 545,
+                "num_pred": 1000
+            },
+            "VizWiz": {
+                "acc": 0.554,
+                "num_correct": 554,
+                "num_pred": 1000
+            },
+            "GQA": {
+                "acc": 0.768,
+                "num_correct": 768,
+                "num_pred": 1000
+            },
+            "TextVQA": {
+                "acc": 0.873,
+                "num_correct": 873,
+                "num_pred": 1000
+            },
+            "VisDial": {
+                "acc": 0.853,
+                "num_correct": 853,
+                "num_pred": 1000
+            },
+            "CIRR": {
+                "acc": 0.607,
+                "num_correct": 607,
+                "num_pred": 1000
+            },
+            "VisualNews_t2i": {
+                "acc": 0.815,
+                "num_correct": 815,
+                "num_pred": 1000
+            },
+            "VisualNews_i2t": {
+                "acc": 0.843,
+                "num_correct": 843,
+                "num_pred": 1000
+            },
+            "MSCOCO_t2i": {
+                "acc": 0.795,
+                "num_correct": 795,
+                "num_pred": 1000
+            },
+            "MSCOCO_i2t": {
+                "acc": 0.74,
+                "num_correct": 740,
+                "num_pred": 1000
+            },
+            "NIGHTS": {
+                "acc": 0.687,
+                "num_correct": 687,
+                "num_pred": 1000
+            },
+            "WebQA": {
+                "acc": 0.907,
+                "num_correct": 907,
+                "num_pred": 1000
+            },
+            "FashionIQ": {
+                "acc": 0.206,
+                "num_correct": 206,
+                "num_pred": 1000
+            },
+            "Wiki-SS-NQ": {
+                "acc": 0.721,
+                "num_correct": 721,
+                "num_pred": 1000
+            },
+            "OVEN": {
+                "acc": 0.74,
+                "num_correct": 740,
+                "num_pred": 1000
+            },
+            "EDIS": {
+                "acc": 0.926,
+                "num_correct": 926,
+                "num_pred": 1000
+            },
+            "MSCOCO": {
+                "acc": 0.741,
+                "num_correct": 741,
+                "num_pred": 1000
+            },
+            "RefCOCO": {
+                "acc": 0.935,
+                "num_correct": 935,
+                "num_pred": 1000
+            },
+            "RefCOCO-Matching": {
+                "acc": 0.941,
+                "num_correct": 941,
+                "num_pred": 1000
+            },
+            "Visual7W-Pointing": {
+                "acc": 0.891,
+                "num_correct": 891,
+                "num_pred": 1000
+            }
+        },
+        "video": {
+            "K700": "DIR_N/A",
+            "SmthSmthV2": "DIR_N/A",
+            "HMDB51": "DIR_N/A",
+            "UCF101": "DIR_N/A",
+            "Breakfast": "DIR_N/A",
+            "MVBench": "DIR_N/A",
+            "Video-MME": "DIR_N/A",
+            "NExTQA": "DIR_N/A",
+            "EgoSchema": "DIR_N/A",
+            "ActivityNetQA": "DIR_N/A",
+            "DiDeMo": "DIR_N/A",
+            "MSR-VTT": "DIR_N/A",
+            "MSVD": "DIR_N/A",
+            "VATEX": "DIR_N/A",
+            "YouCook2": "DIR_N/A",
+            "QVHighlight": "DIR_N/A",
+            "Charades-STA": "DIR_N/A",
+            "MomentSeeker": "DIR_N/A"
+        },
+        "visdoc": {
+            "ViDoRe_arxivqa": "DIR_N/A",
+            "ViDoRe_docvqa": "DIR_N/A",
+            "ViDoRe_infovqa": "DIR_N/A",
+            "ViDoRe_tabfquad": "DIR_N/A",
+            "ViDoRe_tatdqa": "DIR_N/A",
+            "ViDoRe_shiftproject": "DIR_N/A",
+            "ViDoRe_syntheticDocQA_artificial_intelligence": "DIR_N/A",
+            "ViDoRe_syntheticDocQA_energy": "DIR_N/A",
+            "ViDoRe_syntheticDocQA_government_reports": "DIR_N/A",
+            "ViDoRe_syntheticDocQA_healthcare_industry": "DIR_N/A",
+            "ViDoRe_esg_reports_human_labeled_v2": "DIR_N/A",
+            "ViDoRe_biomedical_lectures_v2_multilingual": "DIR_N/A",
+            "ViDoRe_economics_reports_v2_multilingual": "DIR_N/A",
+            "ViDoRe_esg_reports_v2_multilingual": "DIR_N/A",
+            "VisRAG_ArxivQA": "DIR_N/A",
+            "VisRAG_ChartQA": "DIR_N/A",
+            "VisRAG_MP-DocVQA": "DIR_N/A",
+            "VisRAG_SlideVQA": "DIR_N/A",
+            "VisRAG_InfoVQA": "DIR_N/A",
+            "VisRAG_PlotQA": "DIR_N/A",
+            "ViDoSeek-page": "DIR_N/A",
+            "ViDoSeek-doc": "DIR_N/A",
+            "MMLongBench-page": "DIR_N/A",
+            "MMLongBench-doc": "DIR_N/A"
+        }
+    }
+}
