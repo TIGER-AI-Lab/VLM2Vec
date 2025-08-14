@@ -45,8 +45,9 @@ This is an open-source project, and we welcome contributions from the community.
 ---
 
 ## 🔥 News
-- **[2025-05] VLM2Vec-v2 is released!** We introduce a unified embedding framework for **images, videos, and visual documents**. Our new **MMEB-V2 benchmark**, featuring 81 diverse tasks, is also available. The VLM2Vec-V2 model outperforms previous versions and strong specialized baselines.
-- [2025-01] 🎉 **VLM2Vec is accepted to ICLR 2025.**
+- **[2025-05] VLM2Vec-v2 is released!** We introduce a unified embedding framework for **images, videos, and visual documents**. Our new **MMEB-V2 benchmark**, featuring 78 diverse tasks, is also available. The VLM2Vec-V2 model outperforms previous versions and strong specialized baselines.
+- **[2025-01] 🎉 VLM2Vec is accepted to ICLR 2025.**
+- **[2024-10]** The technical report, code, data, and model for VLM2Vec are all available online.
 
 <details>
   <summary>📜 View Older Updates</summary>
@@ -57,13 +58,12 @@ This is an open-source project, and we welcome contributions from the community.
 - [2024-12] We have released the [MMEB leaderboard](https://huggingface.co/spaces/TIGER-Lab/MMEB). Feel free to contact us if you want to include your model.
 - [2024-12] We have released a new variant of VLM2Vec built on the LLaVa-Next backbone, which is currently our best-performing version: https://huggingface.co/TIGER-Lab/VLM2Vec-LLaVa-Next.
 - [2024-10] VLM2Vec has been integrated into [vLLM](https://github.com/vllm-project/vllm/blob/main/examples/offline_inference_vision_language_embedding.py).
-- [2024-10] The technical report, code, data, and model for VLM2Vec are all available online.
 
 </details>
 
 ## Key Updates
 - Unified framework for training and evaluating embedding models for three modalities of data: images, videos, and visual documents.
-- MMEB v2 Benchmark: Extend v1 benchmark with videos and visdoc tasks, including 81 tasks in total.
+- MMEB v2 Benchmark: Extend v1 benchmark with videos and visdoc tasks, including 78 tasks in total.
 - VLM2Vec-v2.0: brand-new embedding model based on Qwen2-VL-2B.
 - Easy configuration of training and evaluation using yaml files (see examples in `experiments/release`).
 - Easy extension of new datasets by creating and registering customized data loader (see examples in `src/dataset/`).

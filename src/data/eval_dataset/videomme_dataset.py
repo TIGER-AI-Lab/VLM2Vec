@@ -1,10 +1,9 @@
 import os
 import sys
 
-from datasets import load_dataset
-
+from src.data.dataset_hf_path import EVAL_DATASET_HF_PATH
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook
-from src.data.utils.dataset_utils import sample_dataset
+from src.data.utils.dataset_utils import load_hf_dataset, sample_dataset
 from src.data.utils.vision_utils import temporal_random_crop, process_video_frames, load_frames
 from src.model.processor import VLM_VIDEO_TOKENS
 import torchvision
@@ -87,16 +86,15 @@ def data_prepare(batch_dict, *args, **kwargs):
 
 
 DATASET_PARSER_NAME = "videomme"
-DATASET_HF_PATH = "lmms-lab/Video-MME"
 @AutoEvalPairDataset.register(DATASET_PARSER_NAME)
 def load_videomme_dataset(model_args, data_args, *args, **kwargs):
-    dataset = load_dataset(DATASET_HF_PATH, split="test")
-    print(f"Loading {DATASET_HF_PATH}, {len(dataset)} samples")
+    dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[kwargs['dataset_name']])
+    dataset = sample_dataset(dataset, **kwargs)
+
     kwargs['dataset_name'] = DATASET_PARSER_NAME
     kwargs['model_backbone'] = model_args.model_backbone
     kwargs['image_resolution'] = data_args.image_resolution
     kwargs['global_dataset_name'] = DATASET_PARSER_NAME
-    dataset = sample_dataset(dataset, **kwargs)
     dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True,
                           batch_size=256, num_proc=4,
                           drop_last_batch=False, load_from_cache_file=False)
