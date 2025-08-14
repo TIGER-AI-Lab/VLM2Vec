@@ -49,7 +49,6 @@ class DataArguments:
     tgt_prefix_mod: bool = field(default=False, metadata={"help": "Modify the pos_prefix"})
     chunk_size: int = field(default=32, metadata={"help": "Cluster sizes in metis. Only used when interleave_datasets is true."})
 
-
 @dataclass
 class TrainingArguments(TrainingArguments):
     image_encoder_freeze: bool = field(default=False, metadata={"help": "huggingface model name"})

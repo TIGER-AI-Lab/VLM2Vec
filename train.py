@@ -17,7 +17,7 @@ from transformers import HfArgumentParser
 from src.arguments import ModelArguments, DataArguments, TrainingArguments
 from src.data.collator.train_collator import MultimodalDataCollator
 from src.data.loader.mixed_dataset import init_mixed_dataset
-from src.data.dataset.mmeb_dataset import CustomRandomSampler
+from src.data.utils.sampler import HomogeneousSampler
 from src.model.model import MMEBModel
 from src.trainer import GradCacheLateProcessTrainer
 from src.utils import print_rank, print_master, find_latest_checkpoint
@@ -72,7 +72,7 @@ def main():
     if 'wandb' in training_args.report_to:
         if (torch.distributed.is_initialized() and torch.distributed.get_rank() == 0) or (not torch.distributed.is_initialized()):
             print_rank('init wandb')
-            wandb.init(project=training_args.project_name, name=training_args.run_name, mode="online")
+            wandb.init(project=training_args.project_name, name=training_args.run_name, mode="offline")
             wandb.config.update(model_args)
             wandb.config.update(data_args)
             wandb.config.update(training_args)
@@ -102,7 +102,7 @@ def main():
     )
     train_dataset.trainer = trainer
 
-    if not data_args.interleave_datasets:
+    if not training_args.interleave_datasets:
         training_args.accelerator_config.use_seedable_sampler=False
         # Multiple embedding datasets & we want to make sure each batch mostly comes from one dataset
         # Set custom sampler, see https://github.com/huggingface/transformers/blob/ccb92be23def445f2afdea94c31286f84b89eb5b/src/transformers/trainer.py#L785
@@ -112,7 +112,7 @@ def main():
         num_samples = np.sum(dataset_lens)
         num_repeats = math.ceil((total_bs*training_args.max_steps)/num_samples)
         
-        trainer._get_train_sampler = lambda: CustomRandomSampler(
+        trainer._get_train_sampler = lambda: HomogeneousSampler(
             total_batch_size=total_bs, ds_lens=dataset_lens,
             _num_samples=num_samples, data_source=train_dataset, ordered_datasets=True, same_datasets=True, random_datasets=False, num_repeats=num_repeats, chunk_size=data_args.chunk_size)
 
