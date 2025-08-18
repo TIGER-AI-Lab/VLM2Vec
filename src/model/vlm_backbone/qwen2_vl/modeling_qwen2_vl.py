@@ -52,7 +52,7 @@ if is_flash_attn_2_available():
     from transformers.modeling_flash_attention_utils import _flash_attention_forward
 else:
     flash_attn_varlen_func = None
-from src.utils import print_rank
+from src.utils.basic_utils import print_rank
 
 logger = logging.get_logger(__name__)
 

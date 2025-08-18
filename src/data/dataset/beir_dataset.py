@@ -2,7 +2,6 @@
 # All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 # For full license text, see the LICENSE file in the repo root or https://opensource.org/licenses/BSD-3-Clause
-import os
 
 import math
 import numpy as np
@@ -10,9 +9,9 @@ import json
 import random
 import datasets
 
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, MULTIMODAL_FEATURES
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook
 from src.prompt.base_prompt import AutoPrompt
-from src.text_utils.normalize_text import normalize
+from src.utils.text_utils.normalize_text import normalize
 
 
 def ex_dict2str(ex_dict, add_title=True):

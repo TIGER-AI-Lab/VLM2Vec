@@ -13,7 +13,7 @@ from src.model.processor import LLAVA_NEXT, QWEN2_VL, QWEN2_5_VL, \
     QWEN2_VL_TOKENSELECTION, QWEN2_5_VL_TOKENSELECTION, PHI3V, process_vlm_inputs_fns
 from PIL import Image
 import io
-from src.utils import print_rank, print_master
+from src.utils.basic_utils import print_rank, print_master
 
 
 logger = logging.getLogger(__name__)

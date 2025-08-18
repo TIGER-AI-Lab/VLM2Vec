@@ -1,14 +1,13 @@
 import json
 import os
 import shutil
-import sys
 
 from datasets import load_dataset
 
-from src.data.dataset_hf_path import EVAL_DATASET_HF_PATH
+from src.configs.dataset_hf_path import EVAL_DATASET_HF_PATH
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook
-from src.data.utils.dataset_utils import load_hf_dataset, sample_dataset
-from src.data.utils.vision_utils import temporal_random_crop, process_video_frames, load_frames, qa_template
+from src.utils.dataset_utils import load_hf_dataset, sample_dataset
+from src.utils.vision_utils.vision_utils import process_video_frames, load_frames
 from src.model.processor import VLM_VIDEO_TOKENS
 import random
 import cv2

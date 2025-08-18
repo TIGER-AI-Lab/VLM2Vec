@@ -12,7 +12,7 @@ import numpy as np
 
 from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook
 from src.prompt.base_prompt import AutoPrompt
-from src.text_utils.normalize_text import normalize
+from src.utils.text_utils.normalize_text import normalize
 
 SEP = ':\t'
 @add_metainfo_hook

@@ -7,7 +7,7 @@ import torchvision
 from PIL import Image
 from torchvision.datasets.folder import IMG_EXTENSIONS, pil_loader
 from torchvision.io import write_video
-
+from . import video_transforms
 
 VID_EXTENSIONS = (".mp4", ".avi", ".mov", ".mkv")
 
