@@ -1,6 +1,6 @@
 ImageNet_1K:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: ImageNet_1K
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -9,7 +9,7 @@ ImageNet_1K:
 
 N24News:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: N24News
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -18,7 +18,7 @@ N24News:
 
 HatefulMemes:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: HatefulMemes
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -27,7 +27,7 @@ HatefulMemes:
 
 VOC2007:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: VOC2007
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -36,7 +36,7 @@ VOC2007:
 
 SUN397:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: SUN397
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -45,7 +45,7 @@ SUN397:
 
 OK-VQA:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: OK-VQA
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -54,7 +54,7 @@ OK-VQA:
 
 A-OKVQA:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: A-OKVQA
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -63,7 +63,7 @@ A-OKVQA:
 
 DocVQA:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: DocVQA
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -72,7 +72,7 @@ DocVQA:
 
 InfographicsVQA:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: InfographicsVQA
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -81,7 +81,7 @@ InfographicsVQA:
 
 ChartQA:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: ChartQA
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -90,7 +90,7 @@ ChartQA:
 
 Visual7W:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: Visual7W
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -99,7 +99,7 @@ Visual7W:
 
 VisDial:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: VisDial
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -108,7 +108,7 @@ VisDial:
 
 CIRR:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: CIRR
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -117,7 +117,7 @@ CIRR:
 
 VisualNews_t2i:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: VisualNews_t2i
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -126,7 +126,7 @@ VisualNews_t2i:
 
 VisualNews_i2t:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: VisualNews_i2t
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -135,7 +135,7 @@ VisualNews_i2t:
 
 MSCOCO_t2i:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: MSCOCO_t2i
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -144,7 +144,7 @@ MSCOCO_t2i:
 
 MSCOCO_i2t:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: MSCOCO_i2t
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -153,7 +153,7 @@ MSCOCO_i2t:
 
 NIGHTS:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: NIGHTS
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -162,7 +162,7 @@ NIGHTS:
 
 WebQA:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: WebQA
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
@@ -171,7 +171,7 @@ WebQA:
 
 MSCOCO:
     dataset_parser: b3
-    dataset_name: TIGER-Lab/B3-7b
+    dataset_name: VLM2Vec/B3-7b
     subset_name: MSCOCO
     dataset_split: train
     image_dir: vlm2vec_train/MMEB-train/image
