@@ -302,7 +302,7 @@ class MMEBModel(nn.Module):
         scores = self.compute_similarity(all_qry_reps, all_tgt_reps)
         scores = scores.view(all_qry_reps.size(0), -1)
         target = torch.arange(scores.size(0), device=scores.device, dtype=torch.long)
-        target = target * (all_qry_reps.size(0) // all_tgt_reps.size(0))
+        target = target * (all_tgt_reps.size(0) // all_qry_reps.size(0))
         loss = self.cross_entropy(scores / self.temperature, target)
         if self.is_ddp:
             loss = loss * self.world_size

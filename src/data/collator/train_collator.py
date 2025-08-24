@@ -180,14 +180,69 @@ class MultimodalDataCollator:
         inputs = {'text': texts, 'images': visual_inputs}
         return inputs
 
+    def _get_negative_inputs(self, batch, text_keyname, image_keyname):
+        texts, visual_inputs = [], []
+        for example in batch:
+            # @ruimeng filter invalid data examples here may lead to fail to sync across devices (unequal batch size)
+            # use dummy input for now
+            if example is None or not example:
+                text, visual_input = '  ', None
+                texts.append(text)
+                visual_inputs.append(visual_input)
+                assert False, "This should not happen"
+            else:
+                text_list, raw_images_list = example[text_keyname], example[image_keyname]
+                for text, raw_images in zip(text_list, raw_images_list):
+                    if type(raw_images) == dict:
+                        visual_input = []
+                        assert 'resolutions' in raw_images, "we need len(raw_images['resolutions']) to determine the number of images, set it a list of None of for cases that no resizing is needed"
+                        num_images = len(raw_images['resolutions'])
+                        for image_idx in range(num_images):
+                            bytes = raw_images['bytes'][image_idx] if 'bytes' in raw_images else None
+                            path = raw_images['paths'][image_idx] if 'paths' in raw_images else None
+                            image_resolution = raw_images['resolutions'][image_idx] if 'resolutions' in raw_images else None
+                            if bytes is None and ((path is None) or (not path)):
+                                image = None
+                            elif bytes is not None:
+                                # vidore, image inputs are already bytes
+                                image = Image.open(io.BytesIO(bytes))
+                            elif (path is not None) and (path):
+                                # mmeb/video datasets, lazy image loading and processing
+                                with Image.open(path) as img:
+                                    image = img.convert("RGB")
+                            else:
+                                print_rank(f"\n{'=' * 50}\nsomething went wrong with a data point from {example['global_dataset_name']}, neither bytes or path is given. \n\t\tquery_text: {example['query_text']}")
+                            if not self.data_args.resize_use_processor and image is not None and image_resolution:
+                                image = image.resize(image_resolution)
+                            if image is not None and (self.data_args.image_decay_factor is not None and image_resolution is None):
+                                assert image_resolution is None, "image_resolution is conflicting with image_decay_factor"
+                                assert self.model_args.model_backbone in [QWEN2_VL, QWEN2_5_VL, QWEN2_VL_TOKENSELECTION, QWEN2_5_VL_TOKENSELECTION], "image_decay_factor is only supported for Qwen models"
+                                # TODO: this is a hacky way to decay image resolution, need to be refactored
+                                max_pixels = max(self.data_args.resize_min_pixels, self.data_args.resize_max_pixels * self.data_args.image_decay_factor ** (num_images - image_idx))
+                                width, height = image.size
+                                resized_height, resized_width = smart_resize(
+                                    height,
+                                    width,
+                                    min_pixels=self.data_args.resize_min_pixels,
+                                    max_pixels=max_pixels,
+                                )
+                                image = image.resize((resized_width, resized_height))  
+                            visual_input.append(image)
+                    else:
+                        visual_input = None
+                    texts.append(text)
+                    visual_inputs.append(visual_input)
+        inputs = {'text': texts, 'images': visual_inputs}
+        return inputs
+
 
     def __call__(self, examples):
         """
         :param examples: 'query_text', 'query_image_path', 'pos_text', 'pos_image_path', 'neg_text', 'neg_image_path'
         """
-        qry_inputs = self._get_batch_inputs(examples, "query_text", "query_image")
-        pos_inputs = self._get_batch_inputs(examples, "pos_text", "pos_image")
-        neg_inputs = self._get_batch_inputs(examples, "neg_text", "neg_image")
+        qry_inputs = self._get_negative_inputs(examples, "query_text", "query_image")
+        pos_inputs = self._get_negative_inputs(examples, "pos_text", "pos_image")
+        # neg_inputs = self._get_batch_inputs(examples, "neg_text", "neg_image")
         bs = len(qry_inputs['text'])
         assert bs > 0, 'An empty batch'
         # pad batch to batch_size to avoid hanging in distributed training
@@ -197,10 +252,10 @@ class MultimodalDataCollator:
         process_fn = process_vlm_inputs_fns[self.training_args.model_backbone]
         processed_qry_inputs = process_fn(qry_inputs, processor=self.processor, max_length=self.data_args.max_len)
         processed_pos_inputs = process_fn(pos_inputs, processor=self.processor, max_length=self.data_args.max_len)
-        processed_qry_inputs['text'] = [e['query_text'] for e in examples]
-        processed_pos_inputs['text'] = [e['pos_text'] for e in examples]
-        processed_qry_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
-        processed_pos_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
+        processed_qry_inputs['text'] = [f for e in examples for f in e['query_text']]
+        processed_pos_inputs['text'] = [f for e in examples for f in e['pos_text']]
+        processed_qry_inputs['global_dataset_name'] = [e['global_dataset_name'][0] for e in examples for _ in e['query_text']]
+        processed_pos_inputs['global_dataset_name'] = [e['global_dataset_name'][0] for e in examples for _ in e['pos_text']]
 
         # print_rank(f"\t\tQry collator: processed_qry_inputs['input_ids'].shape={processed_qry_inputs['input_ids'].shape}\t\tPos collator: processed_pos_inputs['input_ids'].shape={processed_pos_inputs['input_ids'].shape}")
         return processed_qry_inputs, processed_pos_inputs
