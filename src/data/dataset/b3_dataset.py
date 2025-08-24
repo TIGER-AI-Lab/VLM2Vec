@@ -3,6 +3,7 @@ import datasets
 from datasets import load_dataset, concatenate_datasets
 from PIL import Image
 import os
+import random
 from datasets.features.image import image_to_bytes
 
 from torch.jit import isinstance
@@ -45,63 +46,56 @@ def get_image_bytes_and_path(img_path, image_dir, model_backbone, image_resoluti
 
 
 @add_metainfo_hook
-def data_prepare(example, *args, **kwargs):
+def data_prepare(batch_dict, *args, **kwargs):
     image_dir = kwargs['image_dir']
     model_backbone = kwargs['model_backbone']
     image_resolution = kwargs['image_resolution']
-    
-    qry_text = example['qry']
-    qry_image_path = example['qry_image_path']
-    pos_text = example['pos_text']
-    pos_image_path = example['pos_image_path']
-    neg_text_list = example.get('neg_text', [])
-    neg_image_path_list = example.get('neg_image_path', [])
-    
-    # batch_size = len(batch_dict['qry'])
-    # query_texts, query_images, pos_texts, pos_images, neg_texts, neg_images = [], [], [], [], [], []
-    # for qry_text, qry_image_path, pos_text, pos_image_path, neg_text_list, neg_image_path_list in \
-    #     zip(batch_dict['qry'], batch_dict['qry_image_path'],
-    #         batch_dict['pos_text'], batch_dict['pos_image_path'],
-    #         batch_dict.get('neg_text', [''] * 1), batch_dict.get('neg_image_path', [None] * 1)):
+    num_hardneg = kwargs['num_hardneg']
+
+    batch_size = len(batch_dict['qry'])
+    query_texts, query_images, pos_texts, pos_images, neg_texts, neg_images = [], [], [], [], [], []
+    for qry_text, qry_image_path, pos_text, pos_image_path, neg_text_list, neg_image_path_list in \
+        zip(batch_dict['qry'], batch_dict['qry_image_path'],
+            batch_dict['pos_text'], batch_dict['pos_image_path'],
+            batch_dict.get('neg_text', [['']] * batch_size), batch_dict.get('neg_image_path', [[None]] * batch_size)):
+        if (not qry_text and not qry_image_path) or (not pos_text and not pos_image_path):
+            print("empty inputs")
+            continue
         
-    neg_text_list = [] if((not neg_text_list) or type(neg_text_list)==str) else neg_text_list
-    neg_image_path_list = [] if((not neg_image_path_list) or type(neg_image_path_list)==str) else neg_image_path_list
-    
-    #! neg_text is a list. need to modify all following parts.
-    # import ipdb; ipdb.set_trace()
-
-    # if (not qry_text and not qry_image_path) or (not pos_text and not pos_image_path):
-    #     print("empty inputs")
-    #     continue
-    if model_backbone != PHI3V:
-        qry_text = qry_text.replace(VLM_IMAGE_TOKENS[PHI3V], VLM_IMAGE_TOKENS[model_backbone])
-        pos_text = pos_text.replace(VLM_IMAGE_TOKENS[PHI3V], VLM_IMAGE_TOKENS[model_backbone])
-        neg_text_list = [neg_text.replace(VLM_IMAGE_TOKENS[PHI3V], VLM_IMAGE_TOKENS[model_backbone]) if neg_text else '' for neg_text in neg_text_list]
-    # query_texts.append(qry_text)
-    # pos_texts.append(pos_text)
-    # pos_texts.extend(neg_text_list)
-    # neg_texts.append(neg_text_list)
-    # 20240227 defer image loading and transforming to data-loader to avoid repeatedly Serialization/Deserialization of PIL Images
-    qry_image = {"bytes": [None], "paths": [os.path.join(image_dir, qry_image_path) if qry_image_path else ''], "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)]}
-    pos_image = {"bytes": [None], "paths": [os.path.join(image_dir, pos_image_path) if pos_image_path else ''], "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)]}
-    # import ipdb; ipdb.set_trace()
-    neg_image_path_list = [{"bytes": [None], "paths": [os.path.join(image_dir, neg_image_path) if neg_image_path else ''], "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)]} for neg_image_path in neg_image_path_list]
-    # query_images.append(qry_image)
-    # pos_images.append(pos_image)
-    # pos_images.extend(neg_image_path_list)
-    # neg_images.append(neg_image_path_list)
-    # import ipdb; ipdb.set_trace()
-
-    if not qry_text:
+        # Handle negative sampling based on num_hardneg
+        if num_hardneg == 0:
+            # If num_hardneg is 0, use no negatives
+            neg_text_list = ['']
+            neg_image_path_list = [None]
+        elif num_hardneg > 0 and len(neg_text_list) > num_hardneg:
+            # If we have more negatives than needed, randomly sample
+            sampled_indices = random.sample(range(len(neg_text_list)), num_hardneg)
+            neg_text_list = [neg_text_list[i] for i in sampled_indices]
+            neg_image_path_list = [neg_image_path_list[i] for i in sampled_indices]
+        # If len(neg_text_list) <= num_hardneg, use all available negatives (no change needed)
+        
+        if model_backbone != PHI3V:
+            qry_text = qry_text.replace(VLM_IMAGE_TOKENS[PHI3V], VLM_IMAGE_TOKENS[model_backbone])
+            pos_text = pos_text.replace(VLM_IMAGE_TOKENS[PHI3V], VLM_IMAGE_TOKENS[model_backbone])
+            neg_text_list = [neg_text.replace(VLM_IMAGE_TOKENS[PHI3V], VLM_IMAGE_TOKENS[model_backbone]) if neg_text else '' for neg_text in neg_text_list]
+        
+        query_texts.append(qry_text)
+        pos_texts.append(pos_text)
+        neg_texts.append(neg_text_list)
+        # 20240227 defer image loading and transforming to data-loader to avoid repeatedly Serialization/Deserialization of PIL Images
+        qry_image = {"bytes": [None], "paths": [os.path.join(image_dir, qry_image_path) if qry_image_path else None], "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)]}
+        pos_image = {"bytes": [None], "paths": [os.path.join(image_dir, pos_image_path) if pos_image_path else None], "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)]}
+        neg_image_path_list = [{"bytes": [None], "paths": [os.path.join(image_dir, neg_image_path) if neg_image_path else ''], "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)]} for neg_image_path in neg_image_path_list]
+        
+        query_images.append(qry_image)
+        pos_images.append(pos_image)
+        neg_images.append(neg_image_path_list)
+    if len(query_texts) == 0:
         print('something went wrong')
     # print_rank(f"global_dataset_name={kwargs.get('global_dataset_name', DATASET_PARSER_NAME)}, batch_size={batch_size}, processed_batch_size={len(query_texts)}")
-
-    pos_text_list = [pos_text]+ neg_text_list
-    pos_image_list = [pos_image]+neg_image_path_list
-
-    return {"query_text": [qry_text], "query_image": [qry_image],
-            "pos_text": pos_text_list, "pos_image": pos_image_list,
-            "neg_text": [], "neg_image": []}
+    return {"query_text": query_texts, "query_image": query_images,
+            "pos_text": pos_texts, "pos_image": pos_images,
+            "neg_text": neg_texts, "neg_image": neg_images}
 
 
 DATASET_PARSER_NAME = "b3"
@@ -126,17 +120,23 @@ def load_b3_dataset(model_args, data_args, training_args, *args, **kwargs):
 
     kwargs['model_backbone'] = model_args.model_backbone
     kwargs['image_resolution'] = data_args.image_resolution
+    kwargs['num_hardneg'] = data_args.num_hardneg
     kwargs['global_dataset_name'] = f'{DATASET_PARSER_NAME}/{subset_name}'
     # dataset = dataset.shuffle(buffer_size=8192, seed=training_args.seed)
     remove_columns = ['qry', 'qry_image_path', 'pos_text', 'pos_image_path']
-    if 'neg_image_path' in column_names:
+    if 'neg_text' in column_names:
         remove_columns.append('neg_text')
+    if 'neg_image_path' in column_names:
         remove_columns.append('neg_image_path')
-    dataset = dataset.map(lambda x, idx: {**data_prepare(x, **kwargs), "idx": idx}, with_indices=True, batched=False, remove_columns=remove_columns, load_from_cache_file=False, cache_file_name=None, keep_in_memory=True,)
-    #! check here
-    # dataset = dataset._resolve_features()
-    # features = _infer_features_from_batch(dataset._head()) # not working: {ArrowInvalid}ArrowInvalid('Could not convert <PIL.Image.Image image mode=RGB size=128x128 at 0x7F7C794E9BD0> with type Image: did not recognize Python value type when inferring an Arrow data type')
-    #! commenting casting
+    
+    # Use batched processing like MMEB
+    dataset = dataset.map(lambda x: data_prepare(x, **kwargs), 
+                         batched=True, 
+                         batch_size=2048,
+                         remove_columns=remove_columns, 
+                         drop_last_batch=True)
+    
+    # Cast to multimodal features like MMEB
     # dataset = dataset.cast(MULTIMODAL_FEATURES)
     print_master(f"Loaded {DATASET_PARSER_NAME}/{subset_name} dataset with {num_rows} samples")
 

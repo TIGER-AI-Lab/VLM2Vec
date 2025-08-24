@@ -240,9 +240,9 @@ class MultimodalDataCollator:
         """
         :param examples: 'query_text', 'query_image_path', 'pos_text', 'pos_image_path', 'neg_text', 'neg_image_path'
         """
-        qry_inputs = self._get_negative_inputs(examples, "query_text", "query_image")
-        pos_inputs = self._get_negative_inputs(examples, "pos_text", "pos_image")
-        # neg_inputs = self._get_batch_inputs(examples, "neg_text", "neg_image")
+        qry_inputs = self._get_batch_inputs(examples, "query_text", "query_image")
+        pos_inputs = self._get_batch_inputs(examples, "pos_text", "pos_image")
+
         bs = len(qry_inputs['text'])
         assert bs > 0, 'An empty batch'
         # pad batch to batch_size to avoid hanging in distributed training
@@ -251,11 +251,64 @@ class MultimodalDataCollator:
             pass
         process_fn = process_vlm_inputs_fns[self.training_args.model_backbone]
         processed_qry_inputs = process_fn(qry_inputs, processor=self.processor, max_length=self.data_args.max_len)
-        processed_pos_inputs = process_fn(pos_inputs, processor=self.processor, max_length=self.data_args.max_len)
-        processed_qry_inputs['text'] = [f for e in examples for f in e['query_text']]
-        processed_pos_inputs['text'] = [f for e in examples for f in e['pos_text']]
-        processed_qry_inputs['global_dataset_name'] = [e['global_dataset_name'][0] for e in examples for _ in e['query_text']]
-        processed_pos_inputs['global_dataset_name'] = [e['global_dataset_name'][0] for e in examples for _ in e['pos_text']]
+        processed_qry_inputs['text'] = [e['query_text'] for e in examples]
+        processed_qry_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
 
-        # print_rank(f"\t\tQry collator: processed_qry_inputs['input_ids'].shape={processed_qry_inputs['input_ids'].shape}\t\tPos collator: processed_pos_inputs['input_ids'].shape={processed_pos_inputs['input_ids'].shape}")
-        return processed_qry_inputs, processed_pos_inputs
+        # Create processed_tgt_inputs when num_hardneg > 0
+        if self.data_args.num_hardneg > 0:
+            neg_inputs = self._get_negative_inputs(examples, "neg_text", "neg_image")
+            # Create target inputs combining positives and negatives
+            tgt_texts, tgt_images = [], []
+            max_row_length = 0
+            
+            # First pass: collect all texts and images, find max_row_length
+            for i, example in enumerate(examples):
+                # Start with 1 positive
+                row_texts = [pos_inputs['text'][i]]
+                row_images = [pos_inputs['images'][i]]
+                
+                # Add negatives for this example
+                neg_text_list = example.get('neg_text', [])
+                neg_image_list = example.get('neg_image', [])
+                
+                neg_count = min(len(neg_text_list), self.data_args.num_hardneg)
+                for j in range(neg_count):
+                    assert j < len(neg_inputs['text']) and j < len(neg_inputs['images']), "Negative input index out of range"
+                    # Find the corresponding negative for this example
+                    neg_idx = i * len(neg_text_list) + j
+                    row_texts.append(neg_inputs['text'][neg_idx])
+                    row_images.append(neg_inputs['images'][neg_idx])
+
+                max_row_length = max(max_row_length, len(row_texts))
+                tgt_texts.append(row_texts)
+                tgt_images.append(row_images)
+            
+            target_length = min(max_row_length, self.data_args.num_hardneg + 1)
+            padded_tgt_texts, padded_tgt_images = [], []
+            
+            for row_texts, row_images in zip(tgt_texts, tgt_images):
+                # Pad or truncate to target_length
+                if len(row_texts) < target_length:
+                    # Pad with empty strings and None images
+                    row_texts.extend([''] * (target_length - len(row_texts)))
+                    row_images.extend([None] * (target_length - len(row_images)))
+                elif len(row_texts) > target_length:
+                    # Truncate
+                    row_texts = row_texts[:target_length]
+                    row_images = row_images[:target_length]
+                
+                padded_tgt_texts.extend(row_texts)
+                padded_tgt_images.extend(row_images)
+            
+            # Process the combined target inputs
+            tgt_inputs = {'text': padded_tgt_texts, 'images': padded_tgt_images}
+            processed_tgt_inputs = process_fn(tgt_inputs, processor=self.processor, max_length=self.data_args.max_len)
+            processed_tgt_inputs['text'] = padded_tgt_texts
+            processed_tgt_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples for _ in range(target_length)]
+            
+        else:
+            processed_tgt_inputs = process_fn(pos_inputs, processor=self.processor, max_length=self.data_args.max_len)
+            processed_tgt_inputs['text'] = [e['pos_text'] for e in examples]
+            processed_tgt_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
+
+        return processed_qry_inputs, processed_tgt_inputs
