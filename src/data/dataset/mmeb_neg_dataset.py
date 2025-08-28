@@ -94,9 +94,9 @@ def data_prepare(batch_dict, *args, **kwargs):
             "neg_text": neg_texts, "neg_image": neg_images}
 
 
-DATASET_PARSER_NAME = "b3"
+DATASET_PARSER_NAME = "mmeb_neg"
 @AutoPairDataset.register(DATASET_PARSER_NAME)
-def load_b3_dataset(model_args, data_args, training_args, *args, **kwargs):
+def load_mmeb_neg_dataset(model_args, data_args, training_args, *args, **kwargs):
     dataset_name = kwargs.get("dataset_name", DATASET_PARSER_NAME)
     subset_name = kwargs.get("subset_name")
     dataset_split = kwargs.get("dataset_split", "original")

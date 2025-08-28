@@ -15,4 +15,4 @@ from .msvd_dataset import load_msvd_dataset
 from .didemo_dataset import load_didemo_dataset
 from .cls_dataset import load_video_class_dataset
 from .ssv2_dataset import load_ssv2_dataset
-from .b3_dataset import load_b3_dataset
+from .mmeb_neg_dataset import load_mmeb_neg_dataset

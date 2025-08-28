@@ -1,5 +1,5 @@
 ImageNet_1K:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: ImageNet_1K
     dataset_split: train
@@ -8,7 +8,7 @@ ImageNet_1K:
     weight: 1
 
 N24News:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: N24News
     dataset_split: train
@@ -17,7 +17,7 @@ N24News:
     weight: 1
 
 HatefulMemes:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: HatefulMemes
     dataset_split: train
@@ -26,7 +26,7 @@ HatefulMemes:
     weight: 0.5
 
 VOC2007:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: VOC2007
     dataset_split: train
@@ -35,7 +35,7 @@ VOC2007:
     weight: 0.5
 
 SUN397:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: SUN397
     dataset_split: train
@@ -44,7 +44,7 @@ SUN397:
     weight: 0.5
 
 OK-VQA:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: OK-VQA
     dataset_split: train
@@ -53,7 +53,7 @@ OK-VQA:
     weight: 0.5
 
 A-OKVQA:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: A-OKVQA
     dataset_split: train
@@ -62,7 +62,7 @@ A-OKVQA:
     weight: 0.5
 
 DocVQA:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: DocVQA
     dataset_split: train
@@ -71,7 +71,7 @@ DocVQA:
     weight: 1
 
 InfographicsVQA:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: InfographicsVQA
     dataset_split: train
@@ -80,7 +80,7 @@ InfographicsVQA:
     weight: 0.5
 
 ChartQA:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: ChartQA
     dataset_split: train
@@ -89,7 +89,7 @@ ChartQA:
     weight: 0.5
 
 Visual7W:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: Visual7W
     dataset_split: train
@@ -98,7 +98,7 @@ Visual7W:
     weight: 1
 
 VisDial:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: VisDial
     dataset_split: train
@@ -107,7 +107,7 @@ VisDial:
     weight: 1
 
 CIRR:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: CIRR
     dataset_split: train
@@ -116,7 +116,7 @@ CIRR:
     weight: 0.5
 
 VisualNews_t2i:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: VisualNews_t2i
     dataset_split: train
@@ -125,7 +125,7 @@ VisualNews_t2i:
     weight: 1
 
 VisualNews_i2t:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: VisualNews_i2t
     dataset_split: train
@@ -134,7 +134,7 @@ VisualNews_i2t:
     weight: 1
 
 MSCOCO_t2i:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: MSCOCO_t2i
     dataset_split: train
@@ -143,7 +143,7 @@ MSCOCO_t2i:
     weight: 1
 
 MSCOCO_i2t:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: MSCOCO_i2t
     dataset_split: train
@@ -152,7 +152,7 @@ MSCOCO_i2t:
     weight: 1
 
 NIGHTS:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: NIGHTS
     dataset_split: train
@@ -161,7 +161,7 @@ NIGHTS:
     weight: 0.5
 
 WebQA:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: WebQA
     dataset_split: train
@@ -170,7 +170,7 @@ WebQA:
     weight: 0.5
 
 MSCOCO:
-    dataset_parser: b3
+    dataset_parser: mmeb_neg
     dataset_name: VLM2Vec/B3-7b
     subset_name: MSCOCO
     dataset_split: train
