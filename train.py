@@ -17,7 +17,7 @@ from transformers import HfArgumentParser
 from src.arguments import ModelArguments, DataArguments, TrainingArguments
 from src.data.collator.train_collator import MultimodalDataCollator
 from src.data.loader.mixed_dataset import init_mixed_dataset
-from src.data.utils.sampler import HomogeneousSampler
+from src.utils.vision_utils.sampler import HomogeneousSampler
 from src.model.model import MMEBModel
 from src.trainer import GradCacheLateProcessTrainer
 from src.utils.basic_utils import print_rank, print_master, find_latest_checkpoint

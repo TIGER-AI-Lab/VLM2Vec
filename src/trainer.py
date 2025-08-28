@@ -4,7 +4,6 @@ import functools
 import shutil
 import sys
 import time
-from datetime import timedelta
 
 from packaging import version
 from accelerate import skip_first_batches, DistributedType, InitProcessGroupKwargs
