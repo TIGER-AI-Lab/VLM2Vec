@@ -1,7 +1,7 @@
 # import faiss
 import numpy as np
 import hnswlib
-from src.utils import print_rank
+from src.utils.basic_utils import print_rank
 
 # class FAISSIndex:
 #     """

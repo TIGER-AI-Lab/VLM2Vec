@@ -5,9 +5,7 @@ import torch
 import torchvision
 from torchvision.datasets.folder import IMG_EXTENSIONS, pil_loader
 
-from ..utils.vision_utils import VID_EXTENSIONS, get_transforms_image, get_transforms_video, read_file, temporal_random_crop
-
-import random
+from src.utils.vision_utils import VID_EXTENSIONS, get_transforms_image, get_transforms_video, read_file, temporal_random_crop
 
 IMG_FPS = 120
 

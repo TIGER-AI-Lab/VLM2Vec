@@ -48,8 +48,8 @@ from transformers.utils import (
     ADAPTER_WEIGHTS_NAME, ADAPTER_SAFE_WEIGHTS_NAME
 )
 
-from src.utils import batch_to_device
-from src.utils import print_master, print_rank
+from src.utils.basic_utils import batch_to_device
+from src.utils.basic_utils import print_master, print_rank
 
 if is_apex_available():
     from apex import amp

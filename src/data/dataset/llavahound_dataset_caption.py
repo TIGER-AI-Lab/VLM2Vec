@@ -4,7 +4,7 @@ import datasets
 from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, MULTIMODAL_FEATURES, \
     RESOLUTION_MAPPING
 from src.model.processor import VLM_VIDEO_TOKENS
-from ..utils.vision_utils import process_video_frames
+from src.utils.vision_utils.vision_utils import process_video_frames
 
 
 def process_conversations(conversations, video_token):
@@ -37,6 +37,7 @@ def data_prepare(batch_dict, *args, **kwargs):
             if data_mode == 'caption_retrieval':
                 query, pos_text = process_conversations(conversations, video_token=VLM_VIDEO_TOKENS[model_backbone])
                 frame_paths = process_video_frames(os.path.join(frame_basedir, video_id), num_frames=num_frames)
+                assert len(frame_paths) > 0, f"llavahound_dataset_caption.py: No frames found for video_id={video_id} at {os.path.join(frame_basedir, video_id)}."
                 video_frames = {"bytes": [None] * num_frames, "paths": frame_paths, "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)] * num_frames}
                 query_texts.append(query)
                 pos_texts.append(pos_text)

@@ -20,7 +20,7 @@ from src.data.loader.mixed_dataset import init_mixed_dataset
 from src.data.utils.sampler import HomogeneousSampler
 from src.model.model import MMEBModel
 from src.trainer import GradCacheLateProcessTrainer
-from src.utils import print_rank, print_master, find_latest_checkpoint
+from src.utils.basic_utils import print_rank, print_master, find_latest_checkpoint
 from src.model.processor import load_processor, get_backbone_name
 
 

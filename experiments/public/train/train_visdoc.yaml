@@ -1,0 +1,34 @@
+ImageNet_1K:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: ImageNet_1K
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 100000
+    weight: 1
+N24News:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: N24News
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 50000
+    weight: 1
+HatefulMemes:
+    dataset_parser: mmeb
+    dataset_name: TIGER-Lab/MMEB-train
+    subset_name: HatefulMemes
+    dataset_split: original
+    image_dir: vlm2vec_train/MMEB-train/image
+    num_sample_per_subset: 10000
+    weight: 1
+
+colpali_train_set:
+    dataset_parser: vidore
+    dataset_name: vidore/colpali_train_set
+    weight: 10
+visrag-indomain:
+    dataset_parser: visrag
+    dataset_name: openbmb/VisRAG-Ret-Train-In-domain-data
+    global_dataset_name: VisRAG-Indomain-data
+    weight: 12

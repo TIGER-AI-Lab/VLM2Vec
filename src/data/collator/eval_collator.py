@@ -7,7 +7,7 @@ from qwen_vl_utils import smart_resize
 from PIL import Image
 from src.model.processor import LLAVA_NEXT, QWEN2_VL, QWEN2_5_VL, PHI3V, QWEN2_VL_TOKENSELECTION, QWEN2_5_VL_TOKENSELECTION, process_vlm_inputs_fns
 
-from src.utils import print_rank, print_master
+from src.utils.basic_utils import print_rank, print_master
 import io
 
 logger = logging.getLogger(__name__)
