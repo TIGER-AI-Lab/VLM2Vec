@@ -17,7 +17,7 @@ from transformers import HfArgumentParser
 from src.arguments import ModelArguments, DataArguments, TrainingArguments
 from src.data.collator.train_collator import MultimodalDataCollator
 from src.data.loader.mixed_dataset import init_mixed_dataset
-from src.utils.vision_utils.sampler import HomogeneousSampler
+from src.data.sampler.sampler import HomogeneousSampler
 from src.model.model import MMEBModel
 from src.trainer import GradCacheLateProcessTrainer
 from src.utils.basic_utils import print_rank, print_master, find_latest_checkpoint
@@ -102,7 +102,7 @@ def main():
     )
     train_dataset.trainer = trainer
 
-    if not training_args.interleave_datasets:
+    if training_args.homogeneous_sampling:
         training_args.accelerator_config.use_seedable_sampler=False
         # Multiple embedding datasets & we want to make sure each batch mostly comes from one dataset
         # Set custom sampler, see https://github.com/huggingface/transformers/blob/ccb92be23def445f2afdea94c31286f84b89eb5b/src/transformers/trainer.py#L785

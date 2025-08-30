@@ -181,20 +181,24 @@ class MultimodalDataCollator:
         return inputs
 
     def _get_negative_inputs(self, batch, text_keyname, image_keyname):
-        texts, visual_inputs = [], []
+        # Keep nested structure: list of lists for each example
+        all_texts, all_visual_inputs = [], []
         for example in batch:
             # @ruimeng filter invalid data examples here may lead to fail to sync across devices (unequal batch size)
             # use dummy input for now
             if example is None or not example:
-                text, visual_input = '  ', None
-                texts.append(text)
-                visual_inputs.append(visual_input)
-                assert False, "This should not happen"
+                dummy_texts, dummy_visual_inputs = [], []
+                all_texts.append(dummy_texts)
+                all_visual_inputs.append(dummy_visual_inputs)
             else:
                 text_list, raw_images_list = example[text_keyname], example[image_keyname]
+
+                assert len(text_list) == len(raw_images_list), f"Example {example.get('global_dataset_name', 'unknown')} has mismatched text/image lengths"
+
+                example_texts, example_visual_inputs = [], []
                 for text, raw_images in zip(text_list, raw_images_list):
+                    visual_input = []
                     if type(raw_images) == dict:
-                        visual_input = []
                         assert 'resolutions' in raw_images, "we need len(raw_images['resolutions']) to determine the number of images, set it a list of None of for cases that no resizing is needed"
                         num_images = len(raw_images['resolutions'])
                         for image_idx in range(num_images):
@@ -228,11 +232,11 @@ class MultimodalDataCollator:
                                 )
                                 image = image.resize((resized_width, resized_height))  
                             visual_input.append(image)
-                    else:
-                        visual_input = None
-                    texts.append(text)
-                    visual_inputs.append(visual_input)
-        inputs = {'text': texts, 'images': visual_inputs}
+                    example_texts.append(text)
+                    example_visual_inputs.append(visual_input)
+                all_texts.append(example_texts)
+                all_visual_inputs.append(example_visual_inputs)
+        inputs = {'text': all_texts, 'images': all_visual_inputs}
         return inputs
 
 
@@ -254,8 +258,28 @@ class MultimodalDataCollator:
         processed_qry_inputs['text'] = [e['query_text'] for e in examples]
         processed_qry_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
 
-        # Create processed_tgt_inputs when num_hardneg > 0
-        if self.data_args.num_hardneg > 0:
+        # Check if negatives exist and are non-empty
+        def has_valid_negatives(example):
+            neg_text_list = example.get('neg_text', [])
+            if not neg_text_list:  # Empty list
+                return False
+            # Check if all texts are empty strings or nested empty lists
+            for text in neg_text_list:
+                if isinstance(text, list[str]):
+                    # Handle nested list case (list of list of strings)
+                    if text and any(t.strip() for t in text if isinstance(t, str)):
+                        return True
+                elif isinstance(text, str) and text.strip():
+                    # Handle simple string case
+                    return True
+            return False
+
+        # Check if any example has valid negatives (cache results to avoid double computation)
+        valid_negatives_cache = [has_valid_negatives(example) for example in examples]
+        has_negatives = any(valid_negatives_cache)
+
+        # Create processed_tgt_inputs when negatives exist
+        if has_negatives:
             neg_inputs = self._get_negative_inputs(examples, "neg_text", "neg_image")
             # Create target inputs combining positives and negatives
             tgt_texts, tgt_images = [], []
@@ -267,35 +291,31 @@ class MultimodalDataCollator:
                 row_texts = [pos_inputs['text'][i]]
                 row_images = [pos_inputs['images'][i]]
                 
-                # Add negatives for this example
-                neg_text_list = example.get('neg_text', [])
-                neg_image_list = example.get('neg_image', [])
-                
-                neg_count = min(len(neg_text_list), self.data_args.num_hardneg)
-                for j in range(neg_count):
-                    assert j < len(neg_inputs['text']) and j < len(neg_inputs['images']), "Negative input index out of range"
-                    # Find the corresponding negative for this example
-                    neg_idx = i * len(neg_text_list) + j
-                    row_texts.append(neg_inputs['text'][neg_idx])
-                    row_images.append(neg_inputs['images'][neg_idx])
+                # Add negatives for this example if they exist (use cached result)
+                if valid_negatives_cache[i]:
+                    example_neg_texts = neg_inputs['text'][i]  # Get negatives for this specific example
+                    example_neg_images = neg_inputs['images'][i]
+                    
+                    # Add safety check for mismatched lengths
+                    assert len(example_neg_texts) == len(example_neg_images), f"Example {i} has mismatched neg text/image lengths"
+
+                    # Add all available negatives for this example
+                    for neg_text, neg_image in zip(example_neg_texts, example_neg_images):
+                        row_texts.append(neg_text)
+                        row_images.append(neg_image)
 
                 max_row_length = max(max_row_length, len(row_texts))
                 tgt_texts.append(row_texts)
                 tgt_images.append(row_images)
             
-            target_length = min(max_row_length, self.data_args.num_hardneg + 1)
             padded_tgt_texts, padded_tgt_images = [], []
             
             for row_texts, row_images in zip(tgt_texts, tgt_images):
-                # Pad or truncate to target_length
-                if len(row_texts) < target_length:
-                    # Pad with empty strings and None images
-                    row_texts.extend([''] * (target_length - len(row_texts)))
-                    row_images.extend([None] * (target_length - len(row_images)))
-                elif len(row_texts) > target_length:
-                    # Truncate
-                    row_texts = row_texts[:target_length]
-                    row_images = row_images[:target_length]
+                # Pad or truncate to max_row_length
+                assert len(row_texts) <= max_row_length, f"row_texts length {len(row_texts)} exceeds max_row_length {max_row_length}"
+                # Pad with empty strings and None images
+                row_texts.extend([''] * (max_row_length - len(row_texts)))
+                row_images.extend([None] * (max_row_length - len(row_images)))
                 
                 padded_tgt_texts.extend(row_texts)
                 padded_tgt_images.extend(row_images)
@@ -304,7 +324,7 @@ class MultimodalDataCollator:
             tgt_inputs = {'text': padded_tgt_texts, 'images': padded_tgt_images}
             processed_tgt_inputs = process_fn(tgt_inputs, processor=self.processor, max_length=self.data_args.max_len)
             processed_tgt_inputs['text'] = padded_tgt_texts
-            processed_tgt_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples for _ in range(target_length)]
+            processed_tgt_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples for _ in range(max_row_length)]
             
         else:
             processed_tgt_inputs = process_fn(pos_inputs, processor=self.processor, max_length=self.data_args.max_len)

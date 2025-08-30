@@ -50,7 +50,6 @@ class HomogeneousSampler(torch.utils.data.sampler.RandomSampler):
         # Create random indices for each dataset
 
         if(self.ordered_datasets):
-            print(">>>>>>>>>>>>>>>>>>>>>>Asking for ordered datasets", flush=True)
             ds_indices = []
             for n in self.ds_lens:
                 assert n % self.chunk_size == 0, f"Dataset length {n} is not divisible by chunk_size"

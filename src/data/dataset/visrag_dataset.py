@@ -2,7 +2,7 @@ from datasets import load_dataset
 from PIL import Image
 from datasets.features.image import image_to_bytes
 from torch.jit import isinstance
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, MULTIMODAL_FEATURES, \
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, MULTIMODAL_FEATURES, \
     RESOLUTION_MAPPING
 from src.model.processor import VLM_IMAGE_TOKENS
 
@@ -40,6 +40,7 @@ target_source2prompt = {
 }
 
 @add_metainfo_hook
+@convert_neg_fields
 def data_prepare(batch_dict, *args, **kwargs):
     model_backbone = kwargs['model_backbone']
     image_resolution = kwargs['image_resolution']

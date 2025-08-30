@@ -6,7 +6,7 @@ import os
 from datasets.features.image import image_to_bytes
 
 from torch.jit import isinstance
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, MULTIMODAL_FEATURES, \
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, MULTIMODAL_FEATURES, \
     RESOLUTION_MAPPING
 from src.model.processor import PHI3V, VLM_IMAGE_TOKENS
 from src.utils.basic_utils import print_master, print_rank
@@ -45,6 +45,7 @@ def get_image_bytes_and_path(img_path, image_dir, model_backbone, image_resoluti
 
 
 @add_metainfo_hook
+@convert_neg_fields
 def data_prepare(batch_dict, *args, **kwargs):
     image_dir = kwargs['image_dir']
     model_backbone = kwargs['model_backbone']

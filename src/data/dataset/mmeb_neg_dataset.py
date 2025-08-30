@@ -46,7 +46,7 @@ def data_prepare(batch_dict, *args, **kwargs):
     image_dir = kwargs['image_dir']
     model_backbone = kwargs['model_backbone']
     image_resolution = kwargs['image_resolution']
-    num_hardneg = kwargs['num_hardneg']
+    num_hardneg = kwargs.get("num_hardneg", 0)
 
     batch_size = len(batch_dict['qry'])
     query_texts, query_images, pos_texts, pos_images, neg_texts, neg_images = [], [], [], [], [], []
@@ -104,24 +104,19 @@ def load_mmeb_neg_dataset(model_args, data_args, training_args, *args, **kwargs)
     dataset = load_dataset(dataset_name, subset_name, split=f"{dataset_split}")
 
     column_names = dataset.column_names
-    # if num_sample_per_subset is not None and num_sample_per_subset < dataset.num_rows:
-    #     num_rows = int(num_sample_per_subset)
-    #     dataset = dataset.select(range(num_rows))
+    if num_sample_per_subset is not None and num_sample_per_subset < dataset.num_rows:
+        num_rows = int(num_sample_per_subset)
+        dataset = dataset.select(range(num_rows))
     num_rows = dataset.num_rows
 
     num_shards = training_args.dataloader_num_workers if training_args.dataloader_num_workers > 0 else 1
-    #! big change. Not iterable dataset anymore.
-    # dataset = dataset.to_iterable_dataset(num_shards=num_shards)  # convert to IterableDataset and multiple shards
+    dataset = dataset.to_iterable_dataset(num_shards=num_shards)  # convert to IterableDataset and multiple shards
     
 
     kwargs['model_backbone'] = model_args.model_backbone
     kwargs['image_resolution'] = data_args.image_resolution
-    kwargs['num_hardneg'] = data_args.num_hardneg
     kwargs['global_dataset_name'] = f'{DATASET_PARSER_NAME}/{subset_name}'
-    # dataset = dataset.shuffle(buffer_size=8192, seed=training_args.seed)
-    remove_columns = ['qry', 'qry_image_path', 'pos_text', 'pos_image_path']
-    if 'neg_text' in column_names:
-        remove_columns.append('neg_text')
+    remove_columns = ['qry', 'qry_image_path', 'pos_image_path']
     if 'neg_image_path' in column_names:
         remove_columns.append('neg_image_path')
     
@@ -132,13 +127,10 @@ def load_mmeb_neg_dataset(model_args, data_args, training_args, *args, **kwargs)
                          remove_columns=remove_columns, 
                          drop_last_batch=True)
     
-    # Cast to multimodal features like MMEB
-    # dataset = dataset.cast(MULTIMODAL_FEATURES)
+    dataset = dataset.cast(MULTIMODAL_FEATURES)
+    
     print_master(f"Loaded {DATASET_PARSER_NAME}/{subset_name} dataset with {num_rows} samples")
 
-    # import ipdb; ipdb.set_trace()
-    # num_rows in iterable_dataset is overridden, set it here for printing dataset stats
-    #! commenting out num_rows for us
-    # setattr(dataset, 'num_rows', num_rows)
+    setattr(dataset, 'num_rows', num_rows)
 
     return dataset

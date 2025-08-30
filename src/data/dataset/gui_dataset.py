@@ -5,7 +5,7 @@ import os, ast
 import torch
 
 from torch.jit import isinstance
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, MULTIMODAL_FEATURES, \
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, MULTIMODAL_FEATURES, \
     RESOLUTION_MAPPING
 from src.model.processor import PHI3V, VLM_IMAGE_TOKENS
 from src.utils.basic_utils import print_master, print_rank
@@ -29,6 +29,7 @@ def process_multi_images(image_basedir, image_paths) -> List[str]:
 
 
 @add_metainfo_hook
+@convert_neg_fields
 def data_prepare(batch_dict, *args, **kwargs):
     image_dir = kwargs['image_dir']
     model_backbone = kwargs['model_backbone']

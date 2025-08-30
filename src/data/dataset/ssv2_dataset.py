@@ -1,7 +1,7 @@
 import os
 
 from datasets import load_dataset
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, RESOLUTION_MAPPING, MULTIMODAL_FEATURES
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, RESOLUTION_MAPPING, MULTIMODAL_FEATURES
 from src.data.eval_dataset.video_classification_utils import DATASET_INSTRUCTION
 from src.utils.vision_utils.vision_utils import save_frames, load_frames, sample_frames
 from src.utils.dataset_utils import sample_dataset
@@ -9,6 +9,7 @@ from src.model.processor import process_input_text
 
 
 @add_metainfo_hook
+@convert_neg_fields
 def data_prepare(batch_dict, *args, **kwargs):
     image_resolution = kwargs['image_resolution']
     num_frames = kwargs['num_frames']

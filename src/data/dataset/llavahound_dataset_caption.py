@@ -1,7 +1,7 @@
 import os
 
 import datasets
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, MULTIMODAL_FEATURES, \
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, MULTIMODAL_FEATURES, \
     RESOLUTION_MAPPING
 from src.model.processor import VLM_VIDEO_TOKENS
 from src.utils.vision_utils.vision_utils import process_video_frames
@@ -24,6 +24,7 @@ def process_conversations_for_vret(conversations, prompt):
 VRET_QRY_PROMPT = "Find a video that contains the following visual content: "
 VRET_TGT_PROMPT = "Understand the content of the provided video: "
 @add_metainfo_hook
+@convert_neg_fields
 def data_prepare(batch_dict, *args, **kwargs):
     model_backbone = kwargs['model_backbone']
     image_resolution = kwargs['image_resolution']

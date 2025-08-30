@@ -5,7 +5,7 @@ from PIL import Image
 from datasets.features.image import image_to_bytes
 import io
 
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, MULTIMODAL_FEATURES, \
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, MULTIMODAL_FEATURES, \
     RESOLUTION_MAPPING
 from src.model.processor import VLM_IMAGE_TOKENS
 
@@ -13,6 +13,7 @@ from src.model.processor import VLM_IMAGE_TOKENS
 DOCMATIX_QUERY_PROMPT = "Given the question below, retrieve the most relevant PDF document that can help answer it:\n: "
 DOCMATIX_DOC_PROMPT = "Represent the following PDF pages: "
 @add_metainfo_hook
+@convert_neg_fields
 def data_prepare(batch_dict, *args, **kwargs):
     model_backbone = kwargs['model_backbone']
     image_resolution = kwargs['image_resolution']

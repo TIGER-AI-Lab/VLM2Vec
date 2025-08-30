@@ -32,8 +32,8 @@ def init_mixed_dataset(dataset_config, model_args, data_args, training_args):
     assert total_num_rows >= (training_args.per_device_train_batch_size * world_size), \
         f"total_num_rows(={total_num_rows}) must be greater than or equal to global batch size (={training_args.per_device_train_batch_size * world_size}), since the last batch will be dropped."
 
-    dataset_lens = [len(td) for td in train_datasets]
-    if training_args.interleave_datasets:
+    dataset_lens = None
+    if not training_args.homogeneous_sampling:
         if len(train_datasets) > 1:
             train_dataset = interleave_datasets(train_datasets, probabilities=probs, batch_size=interleave_batch_size,
                                                 seed=training_args.seed, stopping_strategy=training_args.interleave_stopping_strategy)
@@ -41,6 +41,7 @@ def init_mixed_dataset(dataset_config, model_args, data_args, training_args):
             train_dataset = train_datasets[0]
         
     else:
+        dataset_lens = [len(td) for td in train_datasets]
         train_dataset = concatenate_datasets(train_datasets)
 
     if torch.distributed.is_initialized():

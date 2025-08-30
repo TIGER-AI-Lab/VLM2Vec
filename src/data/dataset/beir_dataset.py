@@ -9,7 +9,7 @@ import json
 import random
 import datasets
 
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields
 from src.prompt.base_prompt import AutoPrompt
 from src.utils.text_utils.normalize_text import normalize
 
@@ -25,7 +25,8 @@ def ex_dict2str(ex_dict, add_title=True):
     return text
 
 @add_metainfo_hook
-def data_prepare(batch_dict, dataset_name=None, num_hardneg=0,
+@convert_neg_fields
+def data_prepare(batch_dict, dataset_name=None,
                  query_group_name=None, query_group_range=None,
                  hardneg_range=None, neg_score_threshold=None,
                  posneg_margin=None, posneg_ratio=None,
@@ -37,6 +38,7 @@ def data_prepare(batch_dict, dataset_name=None, num_hardneg=0,
     neg_contexts, neg_docs = [], []
     num_neg_cands = []
     dataset_names = []
+    num_hardneg = kwargs.get("num_hardneg", 0)
     for data_idx, text in enumerate(batch_dict['text']):
         try:
             example = json.loads(text)
@@ -189,8 +191,7 @@ def load_beir_dataset(model_args, data_args, training_args, dataset_name, file_p
 
     num_shards = training_args.dataloader_num_workers if training_args.dataloader_num_workers > 0 else 1
     dataset = dataset.to_iterable_dataset(num_shards=num_shards)  # convert to IterableDataset and multiple shards
-    num_hardneg = kwargs.get("num_hardneg", data_args.num_hardneg)
-    dataset = dataset.map(lambda x: data_prepare(x, dataset_name=dataset_name, num_hardneg=num_hardneg,
+    dataset = dataset.map(lambda x: data_prepare(x, dataset_name=dataset_name,
                                                  query_prompt=query_prompt, doc_prompt=doc_prompt,
                                                  **kwargs),
                           drop_last_batch=True,

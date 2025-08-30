@@ -1,7 +1,7 @@
 import os
 
 import datasets
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, MULTIMODAL_FEATURES, \
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, MULTIMODAL_FEATURES, \
     RESOLUTION_MAPPING
 from src.model.processor import VLM_VIDEO_TOKENS
 from src.utils.vision_utils.vision_utils import process_video_frames
@@ -16,6 +16,7 @@ def process_conversations(conversations, video_token, prompt):
 
 QA_QUERY_PROMPT="Answer a question based on the content of a video. "
 @add_metainfo_hook
+@convert_neg_fields
 def data_prepare(batch_dict, *args, **kwargs):
     model_backbone = kwargs['model_backbone']
     image_resolution = kwargs['image_resolution']
