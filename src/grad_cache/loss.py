@@ -43,7 +43,7 @@ class SimpleContrastiveLoss:
         # print("gather SimpleContrastiveLoss")
         if target is None:
             assert x.size(0) * self.target_per_qry == y.size(0)
-            target = torch.arange(0, y.size(0), step=self.target_per_qry, dtype=torch.long, device=x.device)
+            target = torch.arange(start=0, end=y.size(0), step=self.target_per_qry, dtype=torch.long, device=x.device)
         logits = torch.matmul(x, y.transpose(0, 1)) * self.temperature
         preds = torch.argmax(logits, dim=-1)
         loss = F.cross_entropy(logits, target, reduction=reduction)

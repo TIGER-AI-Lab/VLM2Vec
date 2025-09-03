@@ -1,0 +1,55 @@
+ImageNet_1K:
+    dataset_parser: mmeb_neg
+    dataset_name: VLM2Vec/B3-2b
+    subset_name: ImageNet_1K
+    dataset_split: train
+    image_dir: /mnt/disks/rmeng_pd/data/vlm2vec/VLM2Vec-train/image-tasks
+    num_sample_per_subset: 100000
+    num_hardneg: 3
+    weight: 1
+N24News:
+    dataset_parser: mmeb_neg
+    dataset_name: VLM2Vec/B3-2b
+    subset_name: N24News
+    dataset_split: train
+    image_dir: /mnt/disks/rmeng_pd/data/vlm2vec/VLM2Vec-train/image-tasks
+    num_sample_per_subset: 50000
+    num_hardneg: 3
+    weight: 1
+OK-VQA:
+    dataset_parser: mmeb_neg
+    dataset_name: VLM2Vec/B3-2b
+    subset_name: OK-VQA
+    dataset_split: train
+    image_dir: /mnt/disks/rmeng_pd/data/vlm2vec/VLM2Vec-train/image-tasks
+    num_sample_per_subset: 10000
+    num_hardneg: 3
+    weight: 1
+CIRR:
+    dataset_parser: mmeb_neg
+    dataset_name: VLM2Vec/B3-2b
+    subset_name: CIRR
+    dataset_split: train
+    image_dir: /mnt/disks/rmeng_pd/data/vlm2vec/VLM2Vec-train/image-tasks
+    num_sample_per_subset: 30000
+    num_hardneg: 3
+    weight: 1
+MSCOCO:
+    dataset_parser: mmeb_neg
+    dataset_name: VLM2Vec/B3-2b
+    subset_name: MSCOCO
+    dataset_split: train
+    image_dir: /mnt/disks/rmeng_pd/data/vlm2vec/VLM2Vec-train/image-tasks
+    num_sample_per_subset: 100000
+    num_hardneg: 3
+    weight: 1
+
+colpali_train_set:
+  dataset_parser: vidore
+  dataset_name: vidore/colpali_train_set
+  weight: 3
+visrag-indomain:
+  dataset_parser: visrag
+  dataset_name: openbmb/VisRAG-Ret-Train-In-domain-data
+  global_dataset_name: VisRAG-Indomain-data
+  weight: 3

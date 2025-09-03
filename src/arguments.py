@@ -58,6 +58,7 @@ class TrainingArguments(TrainingArguments):
     grad_cache: bool = field(default=False, metadata={"help": "Use gradient cache update"})
     gc_q_chunk_size: int = field(default=2, metadata={"help": "query side subset size. Should be power of 2."})
     gc_p_chunk_size: int = field(default=2, metadata={"help": "target side subset size. Should be power of 2."})
+    interleave_datasets: bool = field(default=True, metadata={"help": "interleave datasets, if true, will interleave datasets in each batch"})
     homogeneous_sampling: bool = field(default=False, metadata={"help": "Use homogeneous sampling"})
     interleave_stopping_strategy: str = field(default="all_exhausted", metadata={"help": "all_exhausted or first_exhausted"})
     interleave_batch_size: float = field(default=0, metadata={"help": "Specify mini-batch size to interleave data from multi-sources, 0/None means random sampling by examples, 1 means full batch."})

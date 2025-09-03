@@ -239,6 +239,23 @@ class MultimodalDataCollator:
         inputs = {'text': all_texts, 'images': all_visual_inputs}
         return inputs
 
+    # Check if negatives exist and are non-empty
+    @staticmethod
+    def has_valid_negatives(example):
+        neg_text_list = example.get('neg_text', [])
+        if not neg_text_list:  # Empty list
+            return False
+        # Check if all texts are empty strings or nested empty lists
+        for text in neg_text_list:
+            if isinstance(text, list[str]):
+                # Handle nested list case (list of list of strings)
+                if text and any(t.strip() for t in text if isinstance(t, str)):
+                    return True
+            elif isinstance(text, str) and text.strip():
+                # Handle simple string case
+                return True
+        return False
+
 
     def __call__(self, examples):
         """
@@ -258,24 +275,8 @@ class MultimodalDataCollator:
         processed_qry_inputs['text'] = [e['query_text'] for e in examples]
         processed_qry_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
 
-        # Check if negatives exist and are non-empty
-        def has_valid_negatives(example):
-            neg_text_list = example.get('neg_text', [])
-            if not neg_text_list:  # Empty list
-                return False
-            # Check if all texts are empty strings or nested empty lists
-            for text in neg_text_list:
-                if isinstance(text, list[str]):
-                    # Handle nested list case (list of list of strings)
-                    if text and any(t.strip() for t in text if isinstance(t, str)):
-                        return True
-                elif isinstance(text, str) and text.strip():
-                    # Handle simple string case
-                    return True
-            return False
-
         # Check if any example has valid negatives (cache results to avoid double computation)
-        valid_negatives_cache = [has_valid_negatives(example) for example in examples]
+        valid_negatives_cache = [self.has_valid_negatives(example) for example in examples]
         has_negatives = any(valid_negatives_cache)
 
         # Create processed_tgt_inputs when negatives exist
@@ -330,5 +331,11 @@ class MultimodalDataCollator:
             processed_tgt_inputs = process_fn(pos_inputs, processor=self.processor, max_length=self.data_args.max_len)
             processed_tgt_inputs['text'] = [e['pos_text'] for e in examples]
             processed_tgt_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
+
+        print_rank(f"\t\tQry collator: processed_qry_inputs['input_ids'].shape={processed_qry_inputs['input_ids'].shape}\t\tPos collator: processed_pos_inputs['input_ids'].shape={processed_tgt_inputs['input_ids'].shape}")
+        from collections import Counter
+        counter_by_source = Counter([e["global_dataset_name"] for e in examples])
+        for dname, count in counter_by_source.items():
+            print_rank(f"\t\tdataset_name={dname}, count={count}")
 
         return processed_qry_inputs, processed_tgt_inputs

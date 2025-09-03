@@ -103,6 +103,7 @@ def main():
     train_dataset.trainer = trainer
 
     if training_args.homogeneous_sampling:
+        # TODO, move homogeneous_sampling initialization to somewhere nice
         training_args.accelerator_config.use_seedable_sampler=False
         # Multiple embedding datasets & we want to make sure each batch mostly comes from one dataset
         # Set custom sampler, see https://github.com/huggingface/transformers/blob/ccb92be23def445f2afdea94c31286f84b89eb5b/src/transformers/trainer.py#L785

@@ -11,8 +11,7 @@ class SimpleContrastiveLoss:
     def __call__(self, x: Tensor, y: Tensor, target: Tensor = None, reduction: str = 'mean') -> Tensor:
         if target is None:
             target_per_qry = y.size(0) // x.size(0)
-            target = torch.arange(
-                0, x.size(0) * target_per_qry, target_per_qry, device=x.device, dtype=torch.long)
+            target = torch.arange(start=0, end=x.size(0) * target_per_qry, step=target_per_qry, device=x.device, dtype=torch.long)
         logits = torch.matmul(x, y.transpose(0, 1))
         loss = F.cross_entropy(logits / self.temperature, target, reduction=reduction)
         return loss
