@@ -16,3 +16,5 @@ from .didemo_dataset import load_didemo_dataset
 from .cls_dataset import load_video_class_dataset
 from .ssv2_dataset import load_ssv2_dataset
 from .mmeb_neg_dataset import load_mmeb_neg_dataset
+from .vidore_neg_dataset import load_vidore_neg_dataset
+from .docmatix_neg_dataset import load_docmatix_neg_dataset

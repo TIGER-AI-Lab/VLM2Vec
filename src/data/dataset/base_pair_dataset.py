@@ -129,3 +129,21 @@ def convert_neg_fields(fn):
 
         return out
     return wrapper
+
+class ImageVideoInstance:
+    """
+    len(bytes) == len(path) == len(resolution) == 1: image
+    len(bytes) == len(path) == len(resolution) > 1: multi-image / video
+    """
+    def __init__(self, bytes, paths, resolutions):
+        assert len(bytes) == len(paths) == len(resolutions)
+        self.bytes = bytes
+        self.paths = paths
+        self.resolutions = resolutions
+
+    def to_dict(self):
+        return {
+            "bytes": self.bytes,
+            "paths": self.paths,
+            "resolutions": self.resolutions,
+        }

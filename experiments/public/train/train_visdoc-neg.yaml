@@ -1,0 +1,55 @@
+Tevatron_colpali:
+    dataset_parser: vidore_neg
+    dataset_name: Tevatron/colpali
+    dataset_split: train
+    corpus_name: Tevatron/colpali-corpus
+    corpus_split: train
+    image_dir: vlm2vec_train/visdoc-tasks/colpali
+    num_sample_per_subset: 10000
+    weight: 1
+    num_hardneg: 3
+
+Tevatron_wiki:
+    dataset_parser: vidore_neg
+    dataset_name: Tevatron/wiki-ss-nq-new
+    dataset_split: train
+    corpus_name: Tevatron/wiki-ss-corpus-new
+    corpus_split: train
+    image_dir: vlm2vec_train/visdoc-tasks/wiki
+    num_sample_per_subset: 10000
+    weight: 1
+    num_hardneg: 3
+
+Tevatron_pixmo:
+    dataset_parser: vidore_neg
+    dataset_name: Tevatron/pixmo-docs
+    dataset_split: train
+    corpus_name: Tevatron/pixmo-docs-corpus
+    corpus_split: train
+    image_dir: vlm2vec_train/visdoc-tasks/pixmo
+    num_sample_per_subset: 10000
+    weight: 1
+    num_hardneg: 3
+
+Tevatron_msmarco:
+    dataset_parser: vidore_neg
+    dataset_name: Tevatron/msmarco-passage-new
+    dataset_split: train
+    corpus_name: Tevatron/msmarco-passage-corpus-new
+    corpus_split: train
+    image_dir: vlm2vec_train/visdoc-tasks/msmarco
+    num_sample_per_subset: 10000
+    weight: 1
+    num_hardneg: 3
+
+Tevatron_docmatix:
+    dataset_parser: docmatix_neg
+    dataset_name: Tevatron/docmatix-ir
+    dataset_split: train
+    corpus_name: HuggingFaceM4/Docmatix
+    corpus_config: images
+    corpus_split: train
+    image_dir: vlm2vec_train/visdoc-tasks/docmatix
+    num_sample_per_subset: 10000
+    weight: 1
+    num_hardneg: 3
