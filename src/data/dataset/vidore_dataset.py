@@ -4,8 +4,8 @@ from datasets.features.image import image_to_bytes
 import io
 
 from torch.jit import isinstance
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, MULTIMODAL_FEATURES, \
-    RESOLUTION_MAPPING
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, ImageVideoInstance, \
+    MULTIMODAL_FEATURES, RESOLUTION_MAPPING
 from src.model.processor import VLM_IMAGE_TOKENS
 
 
@@ -43,8 +43,16 @@ def data_prepare(batch_dict, *args, **kwargs):
         else:
             raise ValueError(f"Unsupported image type: {type(image)}")
         query_images.append({"bytes": [image_bytes], "paths": [path], "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)]})
-        pos_images.append(None)
-        neg_images.append(None)
+        pos_images.append(ImageVideoInstance(
+            bytes=[None],
+            paths=[None],
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+        ).to_dict())
+        neg_images.append(ImageVideoInstance(
+            bytes=[None],
+            paths=[None],
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+        ).to_dict())
     if len(query_texts) == 0:
         print('something went wrong')
     # print_rank(f"global_dataset_name={kwargs.get('global_dataset_name', DATASET_PARSER_NAME)}, batch_size={batch_size}, processed_batch_size={len(query_texts)}")
