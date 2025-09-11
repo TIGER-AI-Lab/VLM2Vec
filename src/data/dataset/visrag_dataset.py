@@ -2,7 +2,7 @@ from datasets import load_dataset
 from PIL import Image
 from datasets.features.image import image_to_bytes
 from torch.jit import isinstance
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, MULTIMODAL_FEATURES, \
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, MULTIMODAL_FEATURES, ImageVideoInstance,\
     RESOLUTION_MAPPING
 from src.model.processor import VLM_IMAGE_TOKENS
 
@@ -63,9 +63,17 @@ def data_prepare(batch_dict, *args, **kwargs):
             path = image['path']
         else:
             raise ValueError(f"Unsupported image type: {type(image)}")
-        query_images.append(None)
+        query_images.append(ImageVideoInstance(
+            bytes=[None],
+            paths=[None],
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+        ).to_dict())
         pos_images.append({"bytes": [image_bytes], "paths": [path], "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)]})
-        neg_images.append(None)
+        neg_images.append(ImageVideoInstance(
+            bytes=[None],
+            paths=[None],
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+        ).to_dict())
     if len(query_texts) == 0:
         print('something went wrong')
     # print_rank(f"global_dataset_name={kwargs.get('global_dataset_name', DATASET_PARSER_NAME)}, batch_size={batch_size}, processed_batch_size={len(query_texts)}")
@@ -102,8 +110,8 @@ def load_visreg_dataset(model_args, data_args, training_args, *args, **kwargs):
     kwargs['global_dataset_name'] = global_dataset_name
     # dataset = dataset.shuffle(buffer_size=8192, seed=training_args.seed)
     dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True, batch_size=128,
-                          remove_columns=['image'],
-                          # remove_columns=['query', 'image', 'source'],
+                          # remove_columns=['image'],
+                          remove_columns=['query', 'image', 'source'],
                           drop_last_batch = True)
     dataset = dataset.cast(MULTIMODAL_FEATURES)
     setattr(dataset, 'num_rows', num_rows)

@@ -152,6 +152,7 @@ def load_vidore_neg_dataset(model_args, data_args, training_args, *args, **kwarg
 
     num_shards = training_args.dataloader_num_workers if training_args.dataloader_num_workers > 0 else 1
     dataset = dataset.to_iterable_dataset(num_shards=num_shards)  # convert to IterableDataset and multiple shards
+    corpus = corpus.to_iterable_dataset(num_shards=num_shards)
 
     kwargs['model_backbone'] = model_args.model_backbone
     kwargs['image_resolution'] = data_args.image_resolution
@@ -163,12 +164,12 @@ def load_vidore_neg_dataset(model_args, data_args, training_args, *args, **kwarg
     # dataset = dataset.shuffle(buffer_size=8192, seed=training_args.seed)
     remove_columns = ['docid', 'image', 'text', 'source']
     remove_columns = [c for c in remove_columns if c in corpus.column_names]
-    corpus = corpus.map(lambda x: corpus_prepare(x, **kwargs), batched=True, batch_size=512,
+    corpus = corpus.map(lambda x: corpus_prepare(x, **kwargs), batched=True, batch_size=2048,
                         remove_columns=remove_columns,
                         drop_last_batch=False)
     remove_columns = ['query_id', 'query_text', 'query_image', 'positive_document_ids', 'negative_document_ids', 'answer', 'source']
     remove_columns = [c for c in remove_columns if c in dataset.column_names]
-    dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True, batch_size=512,
+    dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True, batch_size=2048,
                           remove_columns=remove_columns,
                           drop_last_batch = True)
     # dataset = dataset._resolve_features()

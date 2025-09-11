@@ -2,7 +2,7 @@ import os
 
 import datasets
 from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, MULTIMODAL_FEATURES, \
-    RESOLUTION_MAPPING
+    RESOLUTION_MAPPING, ImageVideoInstance
 from src.model.processor import VLM_VIDEO_TOKENS
 from src.utils.vision_utils.vision_utils import process_video_frames
 
@@ -34,8 +34,16 @@ def data_prepare(batch_dict, *args, **kwargs):
             pos_texts.append(pos_text)
             neg_texts.append("")
             query_images.append(video_frames)
-            pos_images.append(None)
-            neg_images.append(None)
+            pos_images.append(ImageVideoInstance(
+                bytes=[None],
+                paths=[None],
+                resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+            ).to_dict())
+            neg_images.append(ImageVideoInstance(
+                bytes=[None],
+                paths=[None],
+                resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+            ).to_dict())
         except Exception as e:
             print(f'Error in processing {DATASET_PARSER_NAME}: \n\t\tdata id: {data_id} \n\t\tconversations: {conversations}')
             print(e)

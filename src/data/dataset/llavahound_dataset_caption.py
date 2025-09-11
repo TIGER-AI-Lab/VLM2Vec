@@ -2,7 +2,7 @@ import os
 
 import datasets
 from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, MULTIMODAL_FEATURES, \
-    RESOLUTION_MAPPING
+    RESOLUTION_MAPPING, ImageVideoInstance
 from src.model.processor import VLM_VIDEO_TOKENS
 from src.utils.vision_utils.vision_utils import process_video_frames
 
@@ -44,8 +44,16 @@ def data_prepare(batch_dict, *args, **kwargs):
                 pos_texts.append(pos_text)
                 neg_texts.append("")
                 query_images.append(video_frames)
-                pos_images.append(None)
-                neg_images.append(None)
+                pos_images.append(ImageVideoInstance(
+                    bytes=[None],
+                    paths=[None],
+                    resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+                ).to_dict())
+                neg_images.append(ImageVideoInstance(
+                    bytes=[None],
+                    paths=[None],
+                    resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+                ).to_dict())
             elif data_mode == 'video_retrieval':
                 query = process_conversations_for_vret(conversations, prompt=VRET_QRY_PROMPT)
                 frame_paths = process_video_frames(os.path.join(frame_basedir, video_id), num_frames=num_frames)
@@ -53,9 +61,17 @@ def data_prepare(batch_dict, *args, **kwargs):
                 query_texts.append(query)
                 pos_texts.append(VRET_TGT_PROMPT + VLM_VIDEO_TOKENS[model_backbone])
                 neg_texts.append("")
-                query_images.append(None)
+                query_images.append(ImageVideoInstance(
+                    bytes=[None],
+                    paths=[None],
+                    resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+                ).to_dict())
                 pos_images.append(video_frames)
-                neg_images.append(None)
+                neg_images.append(ImageVideoInstance(
+                    bytes=[None],
+                    paths=[None],
+                    resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+                ).to_dict())
             else:
                 raise NotImplementedError(f'data_mode={data_mode} not implemented.')
         except Exception as e:

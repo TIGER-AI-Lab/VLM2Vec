@@ -7,7 +7,7 @@ import os
 
 from torch.jit import isinstance
 from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, MULTIMODAL_FEATURES, \
-    RESOLUTION_MAPPING
+    RESOLUTION_MAPPING, ImageVideoInstance
 from src.model.processor import VLM_IMAGE_TOKENS
 
 
@@ -23,12 +23,20 @@ def data_prepare(batch_dict, *args, **kwargs):
     for query, doc_id, neg_doc_ids in zip(batch_dict['query_text'], batch_dict['positive_document_ids'], batch_dict['negative_document_ids']):
         query = QUERY_INSTRUCTION + query
         query_texts.append(query)
-        query_images.append(None)
+        query_images.append(ImageVideoInstance(
+            bytes=[None],
+            paths=[None],
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+        ).to_dict())
         pos_texts.append(TARGET_INSTRUCTION + VLM_IMAGE_TOKENS[model_backbone])
         path = os.path.join(image_dir, f"{doc_id[0]}.png")
         pos_images.append({"bytes": [None], "paths": [path], "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)]})
         neg_texts.append('')
-        neg_images.append(None)
+        neg_images.append(ImageVideoInstance(
+            bytes=[None],
+            paths=[None],
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+        ).to_dict())
     if len(query_texts) == 0:
         print('something went wrong')
     return {"query_text": query_texts, "query_image": query_images,

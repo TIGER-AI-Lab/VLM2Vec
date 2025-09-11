@@ -10,7 +10,7 @@ import random
 import datasets
 import numpy as np
 
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, RESOLUTION_MAPPING, ImageVideoInstance
 from src.prompt.base_prompt import AutoPrompt
 from src.utils.text_utils.normalize_text import normalize
 
@@ -75,9 +75,14 @@ def data_prepare(examples,
             raise e
 
     batch_len = len(queries)
-    return_dict = {"query_text": queries, "query_image": [None]*batch_len,
-                   "pos_text": docs, "pos_image": [None]*batch_len,
-                   "neg_text": neg_docs if neg_docs else [None]*batch_len, "neg_image": [None]*batch_len}
+    empty_image = ImageVideoInstance(
+        bytes=[None],
+        paths=[None],
+        resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+    ).to_dict()
+    return_dict = {"query_text": queries, "query_image": [empty_image]*batch_len,
+                   "pos_text": docs, "pos_image": [empty_image]*batch_len,
+                   "neg_text": neg_docs if neg_docs else [None]*batch_len, "neg_image": [empty_image]*batch_len}
     return return_dict
 
 

@@ -6,7 +6,7 @@ from datasets.features.image import image_to_bytes
 import io
 
 from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, MULTIMODAL_FEATURES, \
-    RESOLUTION_MAPPING
+    RESOLUTION_MAPPING, ImageVideoInstance
 from src.model.processor import VLM_IMAGE_TOKENS
 
 
@@ -23,11 +23,19 @@ def data_prepare(batch_dict, *args, **kwargs):
         chat = random.choice(chats)
         query = f'{DOCMATIX_QUERY_PROMPT} Q: {chat["user"]}'
         query_texts.append(query)
-        query_images.append(None)
+        query_images.append(ImageVideoInstance(
+            bytes=[None],
+            paths=[None],
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+        ).to_dict())
         pos_images.append({"bytes": [i['bytes'] for i in images], "paths": [i['path'] for i in images], "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)] * len(images)})
         pos_texts.append(f"{DOCMATIX_DOC_PROMPT} {''.join([VLM_IMAGE_TOKENS[model_backbone]] * len(images))}")
         neg_texts.append(None)
-        neg_images.append(None)
+        neg_images.append(ImageVideoInstance(
+            bytes=[None],
+            paths=[None],
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+        ).to_dict())
     if len(query_texts) == 0:
         print('something went wrong')
     # print_rank(f"global_dataset_name={kwargs.get('global_dataset_name', DATASET_PARSER_NAME)}, batch_size={batch_size}, processed_batch_size={len(query_texts)}")
