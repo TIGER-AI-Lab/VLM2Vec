@@ -40,8 +40,11 @@ def data_prepare(batch_dict, *args, **kwargs):
         ).to_dict())
         pos_image_paths = []
         for passage in pos_passages:
-            image_path = f'{image_dir}/{passage["doc_id"]}.png'
-            if not os.path.exists(image_path):
+            if passage and passage.get("docid", None):
+                image_path = f'{image_dir}/{passage["docid"]}.png'
+            else:
+                image_path = ''
+            if image_path and not os.path.exists(image_path):
                 raise FileNotFoundError(f'Image path {image_path} not found.')
             pos_image_paths.append(image_path)
         
@@ -67,12 +70,13 @@ def data_prepare(batch_dict, *args, **kwargs):
         neg_texts.append(neg_text)
         neg_image = []
         for passage in neg_passages:
-            if passage and passage.get("doc_id", None):
-                image_path = f'{image_dir}/{passage["doc_id"]}.png'
+            if passage and passage.get("docid", None):
+                image_path = f'{image_dir}/{passage["docid"]}.png'
             else:
                 image_path = ''
             if image_path and not os.path.exists(image_path):
-                raise FileNotFoundError(f'Image path {image_path} not found.')
+                print(f'Negative image path {image_path} not found, it might be an issue of the dataset itself. Skipping this image.')
+                continue
             neg_image.append(ImageVideoInstance(
                 bytes=[None],
                 paths=[image_path],
@@ -144,7 +148,7 @@ def load_docmatix_neg_dataset(model_args, data_args, training_args, *args, **kwa
 
     num_shards = training_args.dataloader_num_workers if training_args.dataloader_num_workers > 0 else 1
     dataset = dataset.to_iterable_dataset(num_shards=num_shards)  # convert to IterableDataset and multiple shards
-    corpus = corpus.to_iterable_dataset(num_shards=num_shards)
+    # corpus = corpus.to_iterable_dataset(num_shards=num_shards)
 
     kwargs['model_backbone'] = model_args.model_backbone
     kwargs['image_resolution'] = data_args.image_resolution
@@ -154,9 +158,9 @@ def load_docmatix_neg_dataset(model_args, data_args, training_args, *args, **kwa
         subset_name = kwargs.get("subset_name", None)
         kwargs['global_dataset_name'] = f'{DATASET_PARSER_NAME}/{subset_name}'
     # dataset = dataset.shuffle(buffer_size=8192, seed=training_args.seed)
-    corpus = corpus.map(lambda x: corpus_prepare(x, **kwargs), batched=True, batch_size=2048,
+    corpus = corpus.map(lambda x: corpus_prepare(x, **kwargs), batched=True, batch_size=2048, num_proc=8,
                         remove_columns=['images', 'texts'],
-                        drop_last_batch=False)
+                        drop_last_batch=False, load_from_cache_file=False)
     dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True, batch_size=2048,
                           remove_columns=['query_id', 'query', 'positive_passages', 'negative_passages'],
                           drop_last_batch = True)
