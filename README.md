@@ -75,12 +75,12 @@ This is an open-source project, and we welcome contributions from the community.
 2. **Reset Your Local Repository to V2.** Run the following commands to fetch the new `main` branch and reset your local copy to match it.
 
 ```bash
-    # Make sure you are on your main branch first
-    git checkout main
-    # Fetch all recent updates from the remote and remove stale branch references
-    git fetch --all --prune
-    # Force your local main branch to match the new remote main branch
-    git reset --hard origin/main
+# Make sure you are on your main branch first
+git checkout main
+# Fetch all recent updates from the remote and remove stale branch references
+git fetch --all --prune
+# Force your local main branch to match the new remote main branch
+git reset --hard origin/main
 ```
 
 
@@ -130,7 +130,7 @@ DDP inference on multiple GPUs is supported. The whole evaluation process is str
 - MomentSeeker: we recommend using a single GPU with a batch size of 10. This is due to a limitation in baseline processors that cannot handle mixed batches of image and text-only data.
 
 ## Citation
-```
+```bibtex
 @article{jiang2024vlm2vec,
   title={VLM2Vec: Training Vision-Language Models for Massive Multimodal Embedding Tasks},
   author={Jiang, Ziyan and Meng, Rui and Yang, Xinyi and Yavuz, Semih and Zhou, Yingbo and Chen, Wenhu},
@@ -150,4 +150,3 @@ DDP inference on multiple GPUs is supported. The whole evaluation process is str
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=TIGER-AI-Lab/VLM2Vec&type=Date)](https://star-history.com/#TIGER-AI-Lab/VLM2Vec&Date)
-
