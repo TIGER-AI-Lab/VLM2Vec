@@ -15,7 +15,7 @@ CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 BATCH_SIZE=16
 MODALITIES=("image" "video" "visdoc")
 DATA_BASEDIR="~/data/vlm2vec_eval"
-OUTPUT_BASEDIR="~/exps/vlm2vec/"
+OUTPUT_BASEDIR="~/exps/vlm2vec"
 
 
 # ==> Define models and their base output paths here
