@@ -50,7 +50,11 @@ rmdir MMEB
 popd
 
 pushd ../video-tasks/frames/
-for f in *.tar.gz; do tar -xzvf "$f" -C "${f%%.*}"; done
+for f in *.tar.gz; do
+    dest=${f%%.*}
+    mkdir -p "$dest"
+    tar -xzvf "$f" -C "$dest"
+done
 popd
 
 popd
