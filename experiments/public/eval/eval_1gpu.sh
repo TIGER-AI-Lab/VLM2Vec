@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 echo "==> Environment"
 echo "conda location: $(which conda)"
