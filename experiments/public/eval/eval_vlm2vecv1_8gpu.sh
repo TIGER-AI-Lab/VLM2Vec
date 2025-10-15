@@ -38,7 +38,7 @@ for spec in "${MODEL_SPECS[@]}"; do
 
   # Loop through each modality for the current model
   for MODALITY in "${MODALITIES[@]}"; do
-    DATA_CONFIG_PATH="experiments/release/eval/$MODALITY.yaml"
+    DATA_CONFIG_PATH="experiments/public/eval/$MODALITY.yaml"
     OUTPUT_PATH="$BASE_OUTPUT_PATH/$MODALITY/"
 
     echo "-------------------------------------------------"
