@@ -50,11 +50,13 @@ rmdir MMEB
 popd
 
 pushd ../video-tasks/frames/
-for f in *.tar.gz; do
-    dest=${f%%.*}
-    mkdir -p "$dest"
-    tar -xzvf "$f" -C "$dest"
-done
+mkdir video_cls
+mkdir video_ret
+# `video_mret` and `video_qa` are part of the archives already so they'll be created.
+tar -xzvf video_cls.tar.gz -C video_cls
+tar -xzvf video_mret.tar.gz
+tar -xzvf video_ret.tar.gz -C video_ret
+cat video_qa.tar.gz-0{0..4} | tar -xzv
 popd
 
 popd
