@@ -49,7 +49,7 @@ mv MMEB/* .
 rmdir MMEB
 popd
 
-pushd ../video-tasks/frames/
+pushd video-tasks/frames/
 mkdir video_cls
 mkdir video_ret
 # `video_mret` and `video_qa` are part of the archives already so they'll be created.
