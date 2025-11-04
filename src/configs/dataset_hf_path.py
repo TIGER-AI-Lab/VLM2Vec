@@ -50,9 +50,9 @@ EVAL_DATASET_HF_PATH = {
 
     # Visdoc-ViDoSeek
     "ViDoSeek-doc": ("VLM2Vec/ViDoSeek", None, "test"),
-    "ViDoSeek-page": ("VLM2Vec/ViDoSeek-page", None, "test"),
+    "ViDoSeek-page": ("VLM2Vec/ViDoSeek-page-fixed", None, "test"),
     "MMLongBench-doc": ("VLM2Vec/MMLongBench-doc", None, "test"),
-    "MMLongBench-page": ("VLM2Vec/MMLongBench", None, "test"),
+    "MMLongBench-page": ("VLM2Vec/MMLongBench-page-fixed", None, "test"),
 
     # Visdoc-ViDoRe_v2
     "ViDoRe_esg_reports_human_labeled_v2": ("vidore/esg_reports_human_labeled_v2", None, "test"),
@@ -62,4 +62,12 @@ EVAL_DATASET_HF_PATH = {
     "ViDoRe_economics_reports_v2_multilingual": ("vidore/economics_reports_v2", None, "test"),
     "ViDoRe_esg_reports_v2": ("vidore/esg_reports_v2", "english", "test"),
     "ViDoRe_esg_reports_v2_multilingual": ("vidore/esg_reports_v2", None, "test"),
+
+    # "ViDoRe_esg_reports_v2":("vidore/synthetic_rse_restaurant_filtered_v1.0", None, "test"),
+    # "ViDoRe_esg_reports_v2_multilingual":("vidore/synthetic_rse_restaurant_filtered_v1.0_multilingual", None, "test"),
+    # "ViDoRe_biomedical_lectures_v2":("vidore/synthetic_mit_biomedical_tissue_interactions_unfiltered", None, "test"),
+    # "ViDoRe_biomedical_lectures_v2_multilingual":("vidore/synthetic_mit_biomedical_tissue_interactions_unfiltered_multilingual", None, "test"),
+    # "ViDoRe_economics_reports_v2":("vidore/synthetic_economics_macro_economy_2024_filtered_v1.0", None, "test"),
+    # "ViDoRe_economics_reports_v2_multilingual":("vidore/synthetic_economics_macro_economy_2024_filtered_v1.0_multilingual", None, "test"),
+    # "ViDoRe_esg_reports_human_labeled_v2":("vidore/esg_reports_human_labeled_v2", None, "test"),
 }

@@ -87,5 +87,5 @@ def load_hf_dataset_multiple_subset(hf_path, subset_names):
         dataset = dataset.add_column("subset", new_column)
         subsets.append(dataset)
     dataset = datasets.concatenate_datasets(subsets)
-    return dataset
 
+    return dataset

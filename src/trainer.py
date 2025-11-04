@@ -671,12 +671,12 @@ class GradCacheLateProcessTrainer(MMEBTrainer):
         queries, targets = inputs
         queries = batch_to_device(queries, model.device)
         targets = batch_to_device(targets, model.device)
-        queries, targets = {'qry': queries}, {'tgt': targets}
 
-        _distributed = self.args.local_rank > -1
+        _distributed = dist.is_initialized() and dist.get_world_size() > 1
         if _distributed:
+            gc_queries, gc_targets = {'qry': queries}, {'tgt': targets}
             self.gc.models = [model, model]
-            loss = self.gc(queries, targets, no_sync_except_last=_distributed)
+            loss = self.gc(gc_queries, gc_targets, no_sync_except_last=True)
         else:
             loss = model(queries, targets)
         return loss / self._dist_loss_scale_factor

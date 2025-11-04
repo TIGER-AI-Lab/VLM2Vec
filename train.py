@@ -86,6 +86,11 @@ def main():
 
     with open(data_args.dataset_config, 'r') as yaml_file:
         dataset_config = yaml.safe_load(yaml_file)
+        if data_args.data_basedir:
+            for _, task_config in dataset_config.items():
+                image_dir = task_config.get('image_dir')
+                if image_dir and not os.path.isabs(image_dir):
+                    task_config['image_dir'] = os.path.join(data_args.data_basedir, image_dir)
         train_dataset = init_mixed_dataset(dataset_config, model_args, data_args, training_args)
     train_collator = MultimodalDataCollator(processor, model_args, data_args, training_args)
 

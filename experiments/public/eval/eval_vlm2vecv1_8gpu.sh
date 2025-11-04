@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 echo "==> Environment"
 echo "conda location: $(which conda)"
@@ -14,8 +14,8 @@ cd projects/VLM2Vec/ || exit
 CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 BATCH_SIZE=32
 MODALITIES=("image" "video" "visdoc")
-DATA_BASEDIR="~/data/vlm2vec_eval"
-OUTPUT_BASEDIR="~/exps/vlm2vec/"
+DATA_BASEDIR=data/vlm2vec_eval
+OUTPUT_BASEDIR=exps/vlm2vec
 
 # ==> Define models and their base output paths here
 # Format: "MODEL_NAME;BASE_OUTPUT_PATH"
@@ -38,7 +38,7 @@ for spec in "${MODEL_SPECS[@]}"; do
 
   # Loop through each modality for the current model
   for MODALITY in "${MODALITIES[@]}"; do
-    DATA_CONFIG_PATH="experiments/release/eval/$MODALITY.yaml"
+    DATA_CONFIG_PATH="experiments/public/eval/$MODALITY.yaml"
     OUTPUT_PATH="$BASE_OUTPUT_PATH/$MODALITY/"
 
     echo "-------------------------------------------------"
