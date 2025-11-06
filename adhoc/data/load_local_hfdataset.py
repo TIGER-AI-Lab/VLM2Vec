@@ -1,4 +1,4 @@
-from src.configs.dataset_hflocal_path import EVAL_DATASET_HF_PATH
+from src.constant.dataset_hflocal_path import EVAL_DATASET_HF_PATH
 from src.utils.dataset_utils import load_local_hf_dataset
 
 if __name__ == "__main__":

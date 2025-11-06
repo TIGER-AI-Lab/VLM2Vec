@@ -1,6 +1,6 @@
 import os
 
-from src.configs.dataset_hf_path import EVAL_DATASET_HF_PATH
+from src.constant.dataset_hf_path import EVAL_DATASET_HF_PATH
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook
 from src.utils.dataset_utils import load_hf_dataset, sample_dataset
 from src.utils.vision_utils.vision_utils import process_video_frames, load_frames, qa_template
