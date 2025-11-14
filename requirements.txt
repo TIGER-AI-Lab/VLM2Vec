@@ -2,9 +2,9 @@ accelerate
 datasets
 decord
 einops
-flash-attn  # check out orginal repo README for accelerating installation: https://github.com/Dao-AILab/flash-attention
+# flash-attn  # check out orginal repo README for accelerating installation: https://github.com/Dao-AILab/flash-attention
 hjson
-hnswlib
+# hnswlib
 huggingface-hub
 ninja
 numpy==1.26.4
@@ -13,8 +13,9 @@ opencv-python
 peft
 pillow
 py-cpuinfo
-pytrec-eval
-qwen-vl-utils[decord]==0.0.8  # https://huggingface.co/Qwen/Qwen2.5-VL-3B-Instruct/discussions/30
+# pytrec-eval
+pytrec_eval_terrier
+qwen-vl-utils[decord]==0.0.8  # https://hf-mirror.com/Qwen/Qwen2.5-VL-3B-Instruct/discussions/30
 ray
 scikit-image
 scikit-learn

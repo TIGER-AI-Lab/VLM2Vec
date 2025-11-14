@@ -1,4 +1,4 @@
-# You can find the script gme_inference.py in https://huggingface.co/Alibaba-NLP/gme-Qwen2-VL-2B-Instruct/blob/main/gme_inference.py
+# You can find the script gme_inference.py in https://hf-mirror.com/Alibaba-NLP/gme-Qwen2-VL-2B-Instruct/blob/main/gme_inference.py
 from lamra_inference import LamRAQwen2VL
 
 texts = [

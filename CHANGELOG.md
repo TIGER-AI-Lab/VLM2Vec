@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file.
 - Fixed the issue in ```ViDoSeek-page``` and ```MMLongBench-page```. More details in this [issue](https://github.com/TIGER-AI-Lab/VLM2Vec/issues/167).
 
 ## ![new-release] 2025-08-08
-- Release the raw video files [here](https://huggingface.co/datasets/TIGER-Lab/MMEB_Raw_Video). Please note that raw videos are not required for MMEB evaluation — video frames are all you need. We provide the raw videos only in case they are useful for your own purposes. Please refer to our [main data repository](https://huggingface.co/datasets/TIGER-Lab/MMEB-V2) for more instructions.
+- Release the raw video files [here](https://hf-mirror.com/datasets/TIGER-Lab/MMEB_Raw_Video). Please note that raw videos are not required for MMEB evaluation — video frames are all you need. We provide the raw videos only in case they are useful for your own purposes. Please refer to our [main data repository](https://hf-mirror.com/datasets/TIGER-Lab/MMEB-V2) for more instructions.
 
 ## ![bug-fix] 2025-07-31
 - Updated the MomentSeeker task by deduplicating some test cases. More details in this [issue](https://github.com/TIGER-AI-Lab/VLM2Vec/issues/123#issuecomment-3141653760).

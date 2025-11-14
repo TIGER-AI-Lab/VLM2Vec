@@ -23,7 +23,7 @@ from transformers.utils import logging
 logger = logging.get_logger(__name__)
 
 PHI3V_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "microsoft/Phi-3-vision-128k-instruct": "https://huggingface.co/microsoft/Phi-3-vision-128k-instruct/resolve/main/config.json",
+    "microsoft/Phi-3-vision-128k-instruct": "https://hf-mirror.com/microsoft/Phi-3-vision-128k-instruct/resolve/main/config.json",
 }
 
 
@@ -32,7 +32,7 @@ class Phi3VConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`Phi3VModel`]. It is used to instantiate a Phi-3
     model according to the specified arguments, defining the model architecture. Instantiating a configuration with the
     defaults will yield a similar configuration to that of the
-    [microsoft/Phi-3-vision-128k-instruct](https://huggingface.co/microsoft/Phi-3-vision-128k-instruct).
+    [microsoft/Phi-3-vision-128k-instruct](https://hf-mirror.com/microsoft/Phi-3-vision-128k-instruct).
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

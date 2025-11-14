@@ -63,7 +63,7 @@ _CONFIG_FOR_DOC = "Phi3VConfig"
 
 PHI3V_PRETRAINED_MODEL_ARCHIVE_LIST = [
     "microsoft/Phi-3-vision-128k-instruct",
-    # See all Phi-3 models at https://huggingface.co/models?filter=Phi-3
+    # See all Phi-3 models at https://hf-mirror.com/models?filter=Phi-3
 ]
 
 

@@ -1117,7 +1117,7 @@ class BertConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`BertModel`] or a [`TFBertModel`]. It is used to
     instantiate a BERT model according to the specified arguments, defining the model architecture. Instantiating a
     configuration with the defaults will yield a similar configuration to that of the BERT
-    [bert-base-uncased](https://huggingface.co/bert-base-uncased) architecture.
+    [bert-base-uncased](https://hf-mirror.com/bert-base-uncased) architecture.
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.
     Args:
@@ -2451,24 +2451,24 @@ VOCAB_FILES_NAMES = {"vocab_file": "vocab.txt"}
 
 PRETRAINED_VOCAB_FILES_MAP = {
     "vocab_file": {
-        "bert-base-uncased": "https://huggingface.co/bert-base-uncased/resolve/main/vocab.txt",
-        "bert-large-uncased": "https://huggingface.co/bert-large-uncased/resolve/main/vocab.txt",
-        "bert-base-cased": "https://huggingface.co/bert-base-cased/resolve/main/vocab.txt",
-        "bert-large-cased": "https://huggingface.co/bert-large-cased/resolve/main/vocab.txt",
-        "bert-base-multilingual-uncased": "https://huggingface.co/bert-base-multilingual-uncased/resolve/main/vocab.txt",
-        "bert-base-multilingual-cased": "https://huggingface.co/bert-base-multilingual-cased/resolve/main/vocab.txt",
-        "bert-base-chinese": "https://huggingface.co/bert-base-chinese/resolve/main/vocab.txt",
-        "bert-base-german-cased": "https://huggingface.co/bert-base-german-cased/resolve/main/vocab.txt",
-        "bert-large-uncased-whole-word-masking": "https://huggingface.co/bert-large-uncased-whole-word-masking/resolve/main/vocab.txt",
-        "bert-large-cased-whole-word-masking": "https://huggingface.co/bert-large-cased-whole-word-masking/resolve/main/vocab.txt",
-        "bert-large-uncased-whole-word-masking-finetuned-squad": "https://huggingface.co/bert-large-uncased-whole-word-masking-finetuned-squad/resolve/main/vocab.txt",
-        "bert-large-cased-whole-word-masking-finetuned-squad": "https://huggingface.co/bert-large-cased-whole-word-masking-finetuned-squad/resolve/main/vocab.txt",
-        "bert-base-cased-finetuned-mrpc": "https://huggingface.co/bert-base-cased-finetuned-mrpc/resolve/main/vocab.txt",
-        "bert-base-german-dbmdz-cased": "https://huggingface.co/bert-base-german-dbmdz-cased/resolve/main/vocab.txt",
-        "bert-base-german-dbmdz-uncased": "https://huggingface.co/bert-base-german-dbmdz-uncased/resolve/main/vocab.txt",
-        "TurkuNLP/bert-base-finnish-cased-v1": "https://huggingface.co/TurkuNLP/bert-base-finnish-cased-v1/resolve/main/vocab.txt",
-        "TurkuNLP/bert-base-finnish-uncased-v1": "https://huggingface.co/TurkuNLP/bert-base-finnish-uncased-v1/resolve/main/vocab.txt",
-        "wietsedv/bert-base-dutch-cased": "https://huggingface.co/wietsedv/bert-base-dutch-cased/resolve/main/vocab.txt",
+        "bert-base-uncased": "https://hf-mirror.com/bert-base-uncased/resolve/main/vocab.txt",
+        "bert-large-uncased": "https://hf-mirror.com/bert-large-uncased/resolve/main/vocab.txt",
+        "bert-base-cased": "https://hf-mirror.com/bert-base-cased/resolve/main/vocab.txt",
+        "bert-large-cased": "https://hf-mirror.com/bert-large-cased/resolve/main/vocab.txt",
+        "bert-base-multilingual-uncased": "https://hf-mirror.com/bert-base-multilingual-uncased/resolve/main/vocab.txt",
+        "bert-base-multilingual-cased": "https://hf-mirror.com/bert-base-multilingual-cased/resolve/main/vocab.txt",
+        "bert-base-chinese": "https://hf-mirror.com/bert-base-chinese/resolve/main/vocab.txt",
+        "bert-base-german-cased": "https://hf-mirror.com/bert-base-german-cased/resolve/main/vocab.txt",
+        "bert-large-uncased-whole-word-masking": "https://hf-mirror.com/bert-large-uncased-whole-word-masking/resolve/main/vocab.txt",
+        "bert-large-cased-whole-word-masking": "https://hf-mirror.com/bert-large-cased-whole-word-masking/resolve/main/vocab.txt",
+        "bert-large-uncased-whole-word-masking-finetuned-squad": "https://hf-mirror.com/bert-large-uncased-whole-word-masking-finetuned-squad/resolve/main/vocab.txt",
+        "bert-large-cased-whole-word-masking-finetuned-squad": "https://hf-mirror.com/bert-large-cased-whole-word-masking-finetuned-squad/resolve/main/vocab.txt",
+        "bert-base-cased-finetuned-mrpc": "https://hf-mirror.com/bert-base-cased-finetuned-mrpc/resolve/main/vocab.txt",
+        "bert-base-german-dbmdz-cased": "https://hf-mirror.com/bert-base-german-dbmdz-cased/resolve/main/vocab.txt",
+        "bert-base-german-dbmdz-uncased": "https://hf-mirror.com/bert-base-german-dbmdz-uncased/resolve/main/vocab.txt",
+        "TurkuNLP/bert-base-finnish-cased-v1": "https://hf-mirror.com/TurkuNLP/bert-base-finnish-cased-v1/resolve/main/vocab.txt",
+        "TurkuNLP/bert-base-finnish-uncased-v1": "https://hf-mirror.com/TurkuNLP/bert-base-finnish-uncased-v1/resolve/main/vocab.txt",
+        "wietsedv/bert-base-dutch-cased": "https://hf-mirror.com/wietsedv/bert-base-dutch-cased/resolve/main/vocab.txt",
     }
 }
 
@@ -3213,7 +3213,7 @@ class InternVideo2_Stage2(
             text (dict): The output of huggingface's `PreTrainedTokenizer`. contains keys:
                 - input_ids (torch.Tensor): Token ids to be fed to a model. Shape: [B,L].
                 - attention_mask (torch.Tensor): The mask indicate padded tokens. Shape: [B,L]. 0 is padded token.
-                - other keys refer to "https://huggingface.co/docs/transformers/v4.21.2/en/main_classes/tokenizer#transformers.PreTrainedTokenizer.__call__".
+                - other keys refer to "https://hf-mirror.com/docs/transformers/v4.21.2/en/main_classes/tokenizer#transformers.PreTrainedTokenizer.__call__".
         Returns: tuple.
             - text_embeds (torch.Tensor): The features of all tokens. Shape: [B,L,C].
             - pooled_text_embeds (torch.Tensor): The pooled features. Shape: [B,C].

@@ -8,13 +8,13 @@
 <img style="height:22pt" src="https://img.shields.io/badge/-Code-green?style=flat&logo=github"></a>
 <a target="_blank" href="https://tiger-ai-lab.github.io/VLM2Vec/">
 <img style="height:22pt" src="https://img.shields.io/badge/-🌐%20Website-red?style=flat"></a>
-<a target="_blank" href="https://huggingface.co/datasets/TIGER-Lab/MMEB-V2">
+<a target="_blank" href="https://hf-mirror.com/datasets/TIGER-Lab/MMEB-V2">
 <img style="height:22pt" src="https://img.shields.io/badge/-🤗%20Dataset(V2)-red?style=flat"></a>
-<a target="_blank" href="https://huggingface.co/datasets/TIGER-Lab/MMEB-eval">
+<a target="_blank" href="https://hf-mirror.com/datasets/TIGER-Lab/MMEB-eval">
 <img style="height:22pt" src="https://img.shields.io/badge/-🤗%20Dataset(V1)-red?style=flat"></a>
-<a target="_blank" href="https://huggingface.co/VLM2Vec">
+<a target="_blank" href="https://hf-mirror.com/VLM2Vec">
 <img style="height:22pt" src="https://img.shields.io/badge/-🤗%20Models-red?style=flat"></a>
-<a target="_blank" href="https://huggingface.co/spaces/TIGER-Lab/MMEB-Leaderboard">
+<a target="_blank" href="https://hf-mirror.com/spaces/TIGER-Lab/MMEB-Leaderboard">
 <img style="height:22pt" src="https://img.shields.io/badge/-🤗%20Leaderboard-red?style=flat"></a>
 <a target="_blank" href="https://x.com/WenhuChen/status/1844577017930694984">
 <img style="height:22pt" src="https://img.shields.io/badge/-Tweet-blue?style=flat&logo=twitter"></a>
@@ -52,11 +52,11 @@ This is an open-source project, and we welcome contributions from the community.
 <details>
   <summary>📜 View Older Updates</summary>
 
-- [2025-02] 🔥 Two new VLM2Vec models are released, based on Qwen2VL 2B and 7B, achieving 60.1 and 65.8 (new SOTA!) on the MMEB benchmark. Check them out ([2B]([url](https://huggingface.co/TIGER-Lab/VLM2Vec-Qwen2VL-2B)), [7B]([url](https://huggingface.co/TIGER-Lab/VLM2Vec-Qwen2VL-7B)))!
+- [2025-02] 🔥 Two new VLM2Vec models are released, based on Qwen2VL 2B and 7B, achieving 60.1 and 65.8 (new SOTA!) on the MMEB benchmark. Check them out ([2B]([url](https://hf-mirror.com/TIGER-Lab/VLM2Vec-Qwen2VL-2B)), [7B]([url](https://hf-mirror.com/TIGER-Lab/VLM2Vec-Qwen2VL-7B)))!
 - [2025-02] We are starting to work on more advanced features and extensions for VLM2Vec, and will document all changes in the ```CHANGELOG.md```. If any changes conflict with previously supported features, please feel free to raise an issue here. Thank you in advance!
-- [2025-01] We have updated our [training data](https://huggingface.co/datasets/TIGER-Lab/MMEB-train). Each subset now contains two splits: ```original``` and ```diverse_instruction```. The ```original``` split is provided to support the reproduction of our paper results. The ```diverse_instruction``` split includes paraphrased instructions for each task, designed to enhance instruction diversity and improve the model's robustness to unseen instructions and tasks. Moving forward, our future releases will primarily use the ```diverse_instruction``` split.
-- [2024-12] We have released the [MMEB leaderboard](https://huggingface.co/spaces/TIGER-Lab/MMEB). Feel free to contact us if you want to include your model.
-- [2024-12] We have released a new variant of VLM2Vec built on the LLaVa-Next backbone, which is currently our best-performing version: https://huggingface.co/TIGER-Lab/VLM2Vec-LLaVa-Next.
+- [2025-01] We have updated our [training data](https://hf-mirror.com/datasets/TIGER-Lab/MMEB-train). Each subset now contains two splits: ```original``` and ```diverse_instruction```. The ```original``` split is provided to support the reproduction of our paper results. The ```diverse_instruction``` split includes paraphrased instructions for each task, designed to enhance instruction diversity and improve the model's robustness to unseen instructions and tasks. Moving forward, our future releases will primarily use the ```diverse_instruction``` split.
+- [2024-12] We have released the [MMEB leaderboard](https://hf-mirror.com/spaces/TIGER-Lab/MMEB). Feel free to contact us if you want to include your model.
+- [2024-12] We have released a new variant of VLM2Vec built on the LLaVa-Next backbone, which is currently our best-performing version: https://hf-mirror.com/TIGER-Lab/VLM2Vec-LLaVa-Next.
 - [2024-10] VLM2Vec has been integrated into [vLLM](https://github.com/vllm-project/vllm/blob/main/examples/offline_inference_vision_language_embedding.py).
 
 </details>
@@ -92,15 +92,15 @@ For current V2 models, we use **Qwen2-VL** as the model backbone, which capably 
 [//]: # (<img width="768" alt="abs" src="assets/train_vlm.png">)
 
 ### Released checkpoints
-- **[VLM2Vec-v2.0 (Qwen2VL-2B)](https://huggingface.co/VLM2Vec/VLM2Vec-V2.0)**: Our primary model, demonstrating strong, balanced performance across all modalities.
+- **[VLM2Vec-v2.0 (Qwen2VL-2B)](https://hf-mirror.com/VLM2Vec/VLM2Vec-V2.0)**: Our primary model, demonstrating strong, balanced performance across all modalities.
 
 <details>
 <summary> V1 checkpoints </summary>
 
-- [VLM2Vec-Qwen2VL (7B)](https://huggingface.co/TIGER-Lab/VLM2Vec-Qwen2VL-7B)
-- [VLM2Vec-Qwen2VL (2B)](https://huggingface.co/TIGER-Lab/VLM2Vec-Qwen2VL-2B)
-- [VLM2Vec-LLaVa-Next](https://huggingface.co/TIGER-Lab/VLM2Vec-LLaVa-Next)
-- [VLM2Vec-Phi3.5V](https://huggingface.co/TIGER-Lab/VLM2Vec-Full)
+- [VLM2Vec-Qwen2VL (7B)](https://hf-mirror.com/TIGER-Lab/VLM2Vec-Qwen2VL-7B)
+- [VLM2Vec-Qwen2VL (2B)](https://hf-mirror.com/TIGER-Lab/VLM2Vec-Qwen2VL-2B)
+- [VLM2Vec-LLaVa-Next](https://hf-mirror.com/TIGER-Lab/VLM2Vec-LLaVa-Next)
+- [VLM2Vec-Phi3.5V](https://hf-mirror.com/TIGER-Lab/VLM2Vec-Full)
 </details>
 
  
@@ -108,7 +108,7 @@ For current V2 models, we use **Qwen2-VL** as the model backbone, which capably 
 We introduce **MMEB-V2**, an expanded benchmark that includes **78 total datasets** covering images, videos, and visual documents.
 - **New Video Tasks**: video retrieval, moment retrieval, video classification, and video QA.
 - **New visual document task**: visual document retrieval.
-- **Check out [MMEB-v2 datasets](https://huggingface.co/datasets/TIGER-Lab/MMEB-V2)** at Huggingface.
+- **Check out [MMEB-v2 datasets](https://hf-mirror.com/datasets/TIGER-Lab/MMEB-V2)** at Huggingface.
 
 <img width="768" alt="MMEB-V2 Overview" src="assets/mmeb_v2.png">
 

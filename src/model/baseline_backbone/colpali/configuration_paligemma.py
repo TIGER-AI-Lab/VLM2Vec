@@ -29,7 +29,7 @@ class PaliGemmaConfig(PretrainedConfig):
     PaliGemmamodel according to the specified arguments, defining the model architecture. Instantiating a configuration
     with the defaults will yield a similar configuration to that of the PaliGemma-2B.
 
-    e.g. [paligemma-hf/paligemma-2b](https://huggingface.co/paligemma-hf/paligemma-2b)
+    e.g. [paligemma-hf/paligemma-2b](https://hf-mirror.com/paligemma-hf/paligemma-2b)
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

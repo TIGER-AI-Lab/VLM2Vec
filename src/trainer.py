@@ -582,7 +582,7 @@ class MMEBTrainer(Trainer):
             # Clean the state at the end of training
             delattr(self, "_past")
 
-        logger.info("\n\nTraining completed. Do not forget to share your model on huggingface.co/models =)\n\n")
+        logger.info("\n\nTraining completed. Do not forget to share your model on hf-mirror.com/models =)\n\n")
         if args.load_best_model_at_end and self.state.best_model_checkpoint is not None:
             # Wait for everyone to get here so we are sure the model has been saved by process 0.
             if is_torch_xla_available():

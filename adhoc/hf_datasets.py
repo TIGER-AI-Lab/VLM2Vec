@@ -1,6 +1,6 @@
 from datasets import load_dataset
 
-# official example from https://huggingface.co/docs/datasets/en/stream
+# official example from https://hf-mirror.com/docs/datasets/en/stream
 def official_example():
     dataset = load_dataset("ethz/food101", split="validation")
     dataset = dataset.to_iterable_dataset()

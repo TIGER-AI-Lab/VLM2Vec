@@ -11,6 +11,115 @@ N24News:
     dataset_split: test
     image_root: image-tasks/
     eval_type: local
+HatefulMemes:
+    dataset_parser: image_cls
+    dataset_name: HatefulMemes
+    dataset_split: test
+    image_root: image-tasks/
+    eval_type: local
+VOC2007:
+    dataset_parser: image_cls
+    dataset_name: VOC2007
+    dataset_split: test
+    image_root: image-tasks/
+    eval_type: local
+SUN397:
+    dataset_parser: image_cls
+    dataset_name: SUN397
+    dataset_split: test
+    image_root: image-tasks/
+    eval_type: local
+Place365:
+    dataset_parser: image_cls
+    dataset_name: Place365
+    dataset_split: test
+    image_root: image-tasks/
+    eval_type: local
+ImageNet-A:
+    dataset_parser: image_cls
+    dataset_name: ImageNet-A
+    dataset_split: test
+    image_root: image-tasks/
+    eval_type: local
+ImageNet-R:
+    dataset_parser: image_cls
+    dataset_name: ImageNet-R
+    dataset_split: test
+    image_root: image-tasks/
+    eval_type: local
+ObjectNet:
+    dataset_parser: image_cls
+    dataset_name: ObjectNet
+    dataset_split: test
+    image_root: image-tasks/
+    eval_type: local
+Country211:
+    dataset_parser: image_cls
+    dataset_name: Country211
+    dataset_split: test
+    image_root: image-tasks/
+    eval_type: local
+# QA
+OK-VQA:
+    dataset_parser: image_qa
+    dataset_name: OK-VQA
+    dataset_split: test
+    image_root: image-tasks/
+    eval_type: local
+A-OKVQA:
+    dataset_parser: image_qa
+    dataset_name: A-OKVQA
+    dataset_split: test
+    image_root: image-tasks/
+    eval_type: local
+DocVQA:
+    dataset_parser: image_qa
+    dataset_name: DocVQA
+    dataset_split: test
+    image_root: image-tasks/
+    eval_type: local
+InfographicsVQA:
+    dataset_parser: image_qa
+    dataset_name: InfographicsVQA
+    dataset_split: test
+    image_root: image-tasks/
+    eval_type: local
+ChartQA:
+    dataset_parser: image_qa
+    dataset_name: ChartQA
+    dataset_split: test
+    image_root: image-tasks/
+    eval_type: local
+Visual7W:
+    dataset_parser: image_qa
+    dataset_name: Visual7W
+    dataset_split: test
+    image_root: image-tasks/
+    eval_type: local
+ScienceQA:
+    dataset_parser: image_qa
+    dataset_name: ScienceQA
+    dataset_split: test
+    image_root: image-tasks/
+    eval_type: local
+VizWiz:
+    dataset_parser: image_qa
+    dataset_name: VizWiz
+    dataset_split: test
+    image_root: image-tasks/
+    eval_type: local
+GQA:
+    dataset_parser: image_qa
+    dataset_name: GQA
+    dataset_split: test
+    image_root: image-tasks/
+    eval_type: local
+TextVQA:
+    dataset_parser: image_qa
+    dataset_name: TextVQA
+    dataset_split: test
+    image_root: image-tasks/
+    eval_type: local
 # RET i -> t
 MSCOCO_i2t:
     dataset_parser: image_i2t

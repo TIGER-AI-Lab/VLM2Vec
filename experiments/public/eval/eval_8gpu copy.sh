@@ -23,10 +23,10 @@ OUTPUT_BASEDIR=exps/vlm2vec
 # Format: "MODEL_NAME;BASE_OUTPUT_PATH"
 declare -a MODEL_SPECS
 MODEL_SPECS+=( "VLM2Vec/VLM2Vec-V2.0;qwen2_vl;$OUTPUT_BASEDIR/VLM2Vec-V2.0-Qwen2VL-2B" )
-# MODEL_SPECS+=( "Alibaba-NLP/gme-Qwen2-VL-2B-Instruct;gme;$OUTPUT_BASEDIR/gme-Qwen2-VL-2B-Instruct" )
-# MODEL_SPECS+=( "Alibaba-NLP/gme-Qwen2-VL-7B-Instruct;gme;$OUTPUT_BASEDIR/gme-Qwen2-VL-7B-Instruct" )
-# MODEL_SPECS+=( "code-kunkun/LamRA-Ret;lamra;$OUTPUT_BASEDIR/LamRA-Ret" )
-# MODEL_SPECS+=( "vidore/colpali-v1.3;colpali;$OUTPUT_BASEDIR/colpali-v1.3" )
+MODEL_SPECS+=( "Alibaba-NLP/gme-Qwen2-VL-2B-Instruct;gme;$OUTPUT_BASEDIR/gme-Qwen2-VL-2B-Instruct" )
+MODEL_SPECS+=( "Alibaba-NLP/gme-Qwen2-VL-7B-Instruct;gme;$OUTPUT_BASEDIR/gme-Qwen2-VL-7B-Instruct" )
+MODEL_SPECS+=( "code-kunkun/LamRA-Ret;lamra;$OUTPUT_BASEDIR/LamRA-Ret" )
+MODEL_SPECS+=( "vidore/colpali-v1.3;colpali;$OUTPUT_BASEDIR/colpali-v1.3" )
 #MODEL_SPECS+=( "royokong/e5-v;llava_next;$OUTPUT_BASEDIR/e5-v" )
 #MODEL_SPECS+=( "src/model/vlm_backbone/internvideo2/;internvideo2;$OUTPUT_BASEDIR/internvideo2" )
 #MODEL_SPECS+=( "code-kunkun/LamRA-Ret-Qwen2.5VL-7b;lamra-qwen25;$OUTPUT_BASEDIR/gme-Qwen2-VL-7B-Instruct" )  # not ready

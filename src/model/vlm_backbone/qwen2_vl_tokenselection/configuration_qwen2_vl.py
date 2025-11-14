@@ -79,7 +79,7 @@ class Qwen2VLConfig(PretrainedConfig):
     This is the configuration class to store the configuration of a [`Qwen2VLModel`]. It is used to instantiate a
     Qwen2-VL model according to the specified arguments, defining the model architecture. Instantiating a configuration
     with the defaults will yield a similar configuration to that of
-    Qwen2-VL-7B-Instruct [Qwen/Qwen2-VL-7B-Instruct](https://huggingface.co/Qwen/Qwen2-VL-7B-Instruct).
+    Qwen2-VL-7B-Instruct [Qwen/Qwen2-VL-7B-Instruct](https://hf-mirror.com/Qwen/Qwen2-VL-7B-Instruct).
 
     Configuration objects inherit from [`PretrainedConfig`] and can be used to control the model outputs. Read the
     documentation from [`PretrainedConfig`] for more information.

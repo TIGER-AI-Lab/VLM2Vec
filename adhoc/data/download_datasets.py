@@ -164,7 +164,7 @@ def clone_hf_dataset(repo_id: str, output_path: str):
         repo_id (str): The Hugging Face repository ID (e.g., "vidore/esg_reports_human_labeled_v2").
         output_path (str): The local path where the repository should be cloned.
     """
-    repo_url = f"https://huggingface.co/datasets/{repo_id}"
+    repo_url = f"https://hf-mirror.com/datasets/{repo_id}"
     
     # Ensure the parent directory exists
     os.makedirs(os.path.dirname(output_path), exist_ok=True)

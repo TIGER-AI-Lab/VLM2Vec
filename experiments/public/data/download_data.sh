@@ -12,15 +12,15 @@ mkdir -p "$DATA_BASEDIR"
 pushd "$DATA_BASEDIR"
 
 # 2.1 Download image data and unzip
-git clone https://huggingface.co/datasets/TIGER-Lab/MMEB-train
+git clone https://hf-mirror.com/datasets/TIGER-Lab/MMEB-train
 pushd MMEB-train
 python unzip_file.py
 popd
 
 # 2.2 Download LLaVA-Hound video data
-sudo apt-get install -y git-lfs
-git clone https://huggingface.co/datasets/ShareGPTVideo/train_video_and_instruction/ video
-pushd video/
+# sudo apt-get install -y git-lfs
+# git clone https://hf-mirror.com/datasets/ShareGPTVideo/train_video_and_instruction/ video
+# pushd video/
 
 pushd train_300k/
 for f in *.tar.gz; do tar -xzvf "$f"; done
@@ -42,7 +42,7 @@ DATA_BASEDIR=data/vlm2vec_eval
 mkdir -p "$DATA_BASEDIR"
 pushd "$DATA_BASEDIR"
 
-git clone https://huggingface.co/datasets/TIGER-Lab/MMEB-V2 .
+git clone https://hf-mirror.com/datasets/TIGER-Lab/MMEB-V2 .
 pushd image-tasks/
 tar -xzvf mmeb_v1.tar.gz
 mv MMEB/* .
