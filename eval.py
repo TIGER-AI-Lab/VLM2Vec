@@ -22,7 +22,6 @@ from datasets.distributed import split_dataset_by_node
 from src.arguments import ModelArguments, DataArguments, TrainingArguments
 from src.data.collator.eval_collator import MultimodalEvalDataCollator
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, generate_cand_dataset
-# from src.utils.eval_utils import RankingMetrics
 from src.utils.eval_utils.metrics import RankingMetrics
 from src.model.model import MMEBModel
 from src.model.processor import get_backbone_name, load_processor, COLPALI
