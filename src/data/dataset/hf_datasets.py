@@ -20,7 +20,7 @@ from datasets.info import DatasetInfo
 from datasets.splits import NamedSplit
 from datasets.utils.py_utils import Literal
 
-from src.utils import print_master
+from src.utils.basic_utils import print_master
 
 logger = logging.get_logger(__name__)
 

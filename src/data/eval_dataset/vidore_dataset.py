@@ -1,16 +1,16 @@
 import os
 
-from src.data.dataset_hf_path import EVAL_DATASET_HF_PATH
+from src.constant.dataset_hf_path import EVAL_DATASET_HF_PATH
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook, RESOLUTION_MAPPING, ImageVideoInstance
-from src.data.utils.dataset_utils import load_hf_dataset, sample_dataset, load_qrels_mapping
+from src.utils.dataset_utils import load_hf_dataset, sample_dataset, load_qrels_mapping
 from src.model.processor import process_input_text
-from src.utils import print_master
+from src.utils.basic_utils import print_master
 
-# TASK_INST_QRY = "Find a document image that matches the given query:"
-# TASK_INST_TGT = "Understand the content of the provided document image."
+TASK_INST_QRY = "Find a document image that matches the given query:"
+TASK_INST_TGT = "Understand the content of the provided document image."
 # ColPali models use no prompts
-TASK_INST_QRY = ""
-TASK_INST_TGT = ""
+# TASK_INST_QRY = ""
+# TASK_INST_TGT = ""
 
 @add_metainfo_hook
 def data_prepare(batch_dict, **kwargs):

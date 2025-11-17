@@ -9,7 +9,7 @@ from torch.jit import isinstance
 from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, MULTIMODAL_FEATURES, \
     RESOLUTION_MAPPING
 from src.model.processor import PHI3V, VLM_IMAGE_TOKENS
-from src.utils import print_master, print_rank
+from src.utils.basic_utils import print_master, print_rank
 from torch.utils.data import Dataset
 
 def process_image(image, resolution, max_dim=1344):
@@ -106,7 +106,7 @@ def load_mmeb_dataset(model_args, data_args, training_args, *args, **kwargs):
         remove_columns.append('neg_image_path')
     dataset = dataset.map(lambda x:
                           data_prepare(x, **kwargs), batched=True, batch_size=2048,
-                          remove_columns=remove_columns, drop_last_batch=True)
+                          remove_columns=remove_columns, drop_last_batch=False)
     # dataset = dataset._resolve_features()
     # features = _infer_features_from_batch(dataset._head()) # not working: {ArrowInvalid}ArrowInvalid('Could not convert <PIL.Image.Image image mode=RGB size=128x128 at 0x7F7C794E9BD0> with type Image: did not recognize Python value type when inferring an Arrow data type')
     dataset = dataset.cast(MULTIMODAL_FEATURES)

@@ -1,7 +1,7 @@
 from src.arguments import ModelArguments, DataArguments
 from src.model.model import MMEBModel
 from src.model.processor import load_processor, QWEN2_VL, VLM_IMAGE_TOKENS, Qwen2_VL_process_fn
-from src.utils import batch_to_device
+from src.utils.basic_utils import batch_to_device
 from PIL import Image
 import torch
 

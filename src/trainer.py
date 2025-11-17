@@ -48,8 +48,8 @@ from transformers.utils import (
     ADAPTER_WEIGHTS_NAME, ADAPTER_SAFE_WEIGHTS_NAME
 )
 
-from src.utils import batch_to_device
-from src.utils import print_master, print_rank
+from src.utils.basic_utils import batch_to_device
+from src.utils.basic_utils import print_master, print_rank
 
 if is_apex_available():
     from apex import amp
@@ -671,12 +671,12 @@ class GradCacheLateProcessTrainer(MMEBTrainer):
         queries, targets = inputs
         queries = batch_to_device(queries, model.device)
         targets = batch_to_device(targets, model.device)
-        queries, targets = {'qry': queries}, {'tgt': targets}
 
-        _distributed = self.args.local_rank > -1
+        _distributed = dist.is_initialized() and dist.get_world_size() > 1
         if _distributed:
+            gc_queries, gc_targets = {'qry': queries}, {'tgt': targets}
             self.gc.models = [model, model]
-            loss = self.gc(queries, targets, no_sync_except_last=_distributed)
+            loss = self.gc(gc_queries, gc_targets, no_sync_except_last=True)
         else:
             loss = model(queries, targets)
         return loss / self._dist_loss_scale_factor

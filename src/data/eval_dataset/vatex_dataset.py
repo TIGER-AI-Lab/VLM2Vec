@@ -1,9 +1,9 @@
 import os
 
-from src.data.dataset_hf_path import EVAL_DATASET_HF_PATH
+from src.constant.dataset_hf_path import EVAL_DATASET_HF_PATH
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook, RESOLUTION_MAPPING, ImageVideoInstance
-from src.data.utils.dataset_utils import load_hf_dataset, sample_dataset
-from src.data.utils.vision_utils import save_frames, process_video_frames
+from src.utils.dataset_utils import load_hf_dataset, sample_dataset
+from src.utils.vision_utils.vision_utils import save_frames, process_video_frames
 from src.model.processor import process_input_text
 
 

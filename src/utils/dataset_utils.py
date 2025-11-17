@@ -1,8 +1,7 @@
-import sys
-
 import datasets
 from datasets import load_dataset
-from src.utils import print_rank
+from src.utils.basic_utils import print_rank
+import os
 
 
 def sample_dataset(dataset, **kwargs):
@@ -56,9 +55,29 @@ def load_hf_dataset(hf_path):
         return load_dataset(repo)
 
 
+def load_local_hf_dataset(dataset_path: str, subset: str = None, split: str = None):
+    """
+    Loads a Hugging Face dataset from local Parquet files.
+    Args:
+        dataset_path (str): The base path to the dataset directory
+        subset (str, optional): The name of the subdirectory containing the data files (e.g., "corpus").
+        split (str, optional): Which split of the data to load (e.g., "train", "test").
+    Returns: Dataset or DatasetDict: The loaded dataset.
+    """
+    if subset and split:
+        dataset = datasets.load_dataset(dataset_path, subset, split=split)
+    elif subset:
+        dataset = datasets.load_dataset(dataset_path, subset)
+    elif split:
+        dataset = datasets.load_dataset(dataset_path, split=split)
+    else:
+        dataset = datasets.load_dataset(dataset_path)
+    return dataset
+
+
 def load_hf_dataset_multiple_subset(hf_path, subset_names):
     """
-    Load and concatenate multiple subsets from a Hugging Face dataset.
+    Load and concatenate multiple subsets from a Hugging Face dataset (e.g. MVBench)
     """
     repo, _, split = hf_path
     subsets = []

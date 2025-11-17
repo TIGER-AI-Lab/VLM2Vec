@@ -1,22 +1,18 @@
 import shutil
-import sys
 
-import datasets
-from datasets import load_dataset
 import imageio
 
-from src.data.dataset_hf_path import EVAL_DATASET_HF_PATH
+from src.constant.dataset_hf_path import EVAL_DATASET_HF_PATH
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook
-from src.data.utils.dataset_utils import load_hf_dataset_multiple_subset, sample_dataset
-from src.data.utils.vision_utils import process_video_frames, qa_template
+from src.utils.dataset_utils import load_hf_dataset_multiple_subset, sample_dataset
+from src.utils.vision_utils.vision_utils import process_video_frames, qa_template
 from src.model.processor import VLM_VIDEO_TOKENS
 import os
 from PIL import Image
 import numpy as np
-from decord import VideoReader, cpu
 import cv2
 from decord import VideoReader, cpu
-from torchvision.transforms.functional import InterpolationMode
+
 
 def process_query(query, prompt, video_token=''):
     if prompt:
@@ -182,11 +178,9 @@ def load_mvbench_dataset(model_args, data_args, *args, **kwargs):
     dataset = load_hf_dataset_multiple_subset(EVAL_DATASET_HF_PATH[kwargs['dataset_name']], 
                                               subset_meta.keys())
     dataset = sample_dataset(dataset, **kwargs)
-
-    kwargs['dataset_name'] = DATASET_PARSER_NAME
     kwargs['model_backbone'] = model_args.model_backbone
     kwargs['image_resolution'] = data_args.image_resolution
-    kwargs['global_dataset_name'] = DATASET_PARSER_NAME
+    kwargs['global_dataset_name'] = kwargs['dataset_name'] if kwargs['dataset_name'] else DATASET_PARSER_NAME
 
     dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True,
                           batch_size=256, num_proc=4,
