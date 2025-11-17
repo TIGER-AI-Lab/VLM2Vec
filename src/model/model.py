@@ -285,29 +285,88 @@ class MMEBModel(nn.Module):
     def save(self, output_dir: str):
         self.encoder.save_pretrained(output_dir)
 
-    def forward(self, qry: Dict[str, Tensor] = None, tgt: Dict[str, Tensor] = None, *args, **kwargs):
-        qry_reps = self.encode_input(qry) if qry else None  # (bsz_per_device, dim)
-        tgt_reps = self.encode_input(tgt) if tgt else None # (bsz_per_device, dim)
+    # def forward(self, qry: Dict[str, Tensor] = None, tgt: Dict[str, Tensor] = None, *args, **kwargs):
+    #     qry_reps = self.encode_input(qry) if qry else None  # (bsz_per_device, dim)
+    #     tgt_reps = self.encode_input(tgt) if tgt else None # (bsz_per_device, dim)
+
+    #     if qry_reps is None or tgt_reps is None:
+    #         return {"qry_reps": qry_reps, "tgt_reps": tgt_reps}
+
+    #     if self.is_ddp:
+    #         all_qry_reps = self._dist_gather_tensor(qry_reps)
+    #         all_tgt_reps = self._dist_gather_tensor(tgt_reps)
+    #     else:
+    #         all_qry_reps = qry_reps
+    #         all_tgt_reps = tgt_reps
+
+    #     scores = self.compute_similarity(all_qry_reps, all_tgt_reps)
+    #     scores = scores.view(all_qry_reps.size(0), -1)
+    #     target = torch.arange(scores.size(0), device=scores.device, dtype=torch.long)
+    #     target = target * (all_qry_reps.size(0) // all_tgt_reps.size(0))
+    #     loss = self.cross_entropy(scores / self.temperature, target)
+    #     if self.is_ddp:
+    #         loss = loss * self.world_size
+
+    #     return loss
+    def forward(self, qry=None, tgt=None, neg=None, *args, **kwargs):
+        """
+        qry: query inputs (text+image)
+        tgt: positive target inputs (text)
+        neg: explicit negative inputs (text)
+        """
+        qry_reps = self.encode_input(qry) if qry else None
+        tgt_reps = self.encode_input(tgt) if tgt else None
+        neg_reps = self.encode_input(neg) if neg else None
 
         if qry_reps is None or tgt_reps is None:
-            return {"qry_reps": qry_reps, "tgt_reps": tgt_reps}
+            return {"qry_reps": qry_reps, "tgt_reps": tgt_reps, "neg_reps": neg_reps}
 
+        # DDP gather if needed
         if self.is_ddp:
             all_qry_reps = self._dist_gather_tensor(qry_reps)
             all_tgt_reps = self._dist_gather_tensor(tgt_reps)
+            all_neg_reps = self._dist_gather_tensor(neg_reps) if neg_reps is not None else None
         else:
             all_qry_reps = qry_reps
             all_tgt_reps = tgt_reps
+            all_neg_reps = neg_reps
 
-        scores = self.compute_similarity(all_qry_reps, all_tgt_reps)
-        scores = scores.view(all_qry_reps.size(0), -1)
-        target = torch.arange(scores.size(0), device=scores.device, dtype=torch.long)
-        target = target * (all_qry_reps.size(0) // all_tgt_reps.size(0))
+        # ----------------------
+        # Explicit positive & negative
+        # ----------------------
+        pos_scores = self.compute_similarity(all_qry_reps, all_tgt_reps)  # (B, 1)
+        if all_neg_reps is not None:
+            neg_scores = self.compute_similarity(all_qry_reps, all_neg_reps)  # (B, N_explicit)
+            scores = torch.cat([pos_scores, neg_scores], dim=1)
+        else:
+            scores = pos_scores
+
+        # ----------------------
+        # Implicit negatives (batch negatives)
+        # ----------------------
+        # batch 内其他正样本也作为负样本
+        batch_size = all_qry_reps.size(0)
+        if batch_size > 1:
+            # (B, B) similarity between queries and all positives
+            batch_sim = self.compute_similarity(all_qry_reps, all_tgt_reps)  # (B, B)
+            # 排除自己的正样本 (diagonal)
+            mask = torch.eye(batch_size, dtype=torch.bool, device=batch_sim.device)
+            implicit_neg_scores = batch_sim.masked_select(~mask).view(batch_size, batch_size - 1)  # (B, B-1)
+            scores = torch.cat([scores, implicit_neg_scores], dim=1)
+
+        # ----------------------
+        # 构建 target (正样本在第0列)
+        # ----------------------
+        target = torch.zeros(scores.size(0), dtype=torch.long, device=scores.device)
+
+        # cross entropy loss
         loss = self.cross_entropy(scores / self.temperature, target)
         if self.is_ddp:
             loss = loss * self.world_size
 
-        return loss
+        return {"loss": loss, "scores": scores}
+
+
 
     def _dist_gather_tensor(self, t: Tensor):
         t = t.contiguous()

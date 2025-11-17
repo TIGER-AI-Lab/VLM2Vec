@@ -75,6 +75,11 @@ def smart_resize(
     #     raise ValueError(
     #         f"absolute aspect ratio must be smaller than 200, got {max(height, width) / min(height, width)}"
     #     )
+    if max_pixels is None:
+        max_pixels = 14 * 14 * 4 * 1280  # ✅ 避免 None 报错
+    if min_pixels is None:
+        min_pixels = 56*56
+    
     if height < factor or width < factor or max(height, width) / min(height, width) > 200:
         # extreme cases, resize to a square
         height = width = max(factor, height, width)

@@ -311,6 +311,7 @@ def Qwen2_VL_process_fn(model_inputs: dict, processor: Qwen2VLProcessor, max_len
         if images is None or (type(images)==list and any(i is None for i in images)):
             # all images must be valid
             inputs = processor(text=[text], images=None, return_tensors="np", max_length=max_length, truncation=True)
+            
             input_id = inputs["input_ids"].squeeze().tolist()
             if isinstance(input_id, int):
                 # in case of empty string, only BOS is included
@@ -339,7 +340,10 @@ def Qwen2_VL_process_fn(model_inputs: dict, processor: Qwen2VLProcessor, max_len
                     raise NotImplementedError(f"No visual token found ({vlm_image_token} or {vlm_video_token}) in the text: {text}")
             except Exception as e:
                 for i in images:
-                    print(i.filename)
+                    if hasattr(i, "filename") and i.filename is not None:
+                        print(i.filename)
+                    else:
+                        print("Image source unknown or already loaded")
                 raise e
             input_ids.append(inputs["input_ids"].squeeze().tolist())
             if 'pixel_values' in inputs:

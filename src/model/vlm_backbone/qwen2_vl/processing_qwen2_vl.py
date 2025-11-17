@@ -157,7 +157,8 @@ class Qwen2VLProcessor(ProcessorMixin):
             for i in range(len(text)):
                 while self.image_token in text[i]:
                     text[i] = text[i].replace(
-                        self.image_token, "<|placeholder|>" * (image_grid_thw[index].prod() // merge_length), 1
+                        # self.image_token, "<|placeholder|>" * (image_grid_thw[index].prod() // merge_length), 1
+                        self.image_token, "<|placeholder|>" * (image_grid_thw[0].prod() // merge_length), 1
                     )
                     index += 1
                 text[i] = text[i].replace("<|placeholder|>", self.image_token)

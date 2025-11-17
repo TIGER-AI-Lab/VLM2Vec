@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from transformers import TrainingArguments
-from typing import List
+from typing import List, Optional
 
 
 @dataclass
@@ -30,6 +30,12 @@ class ModelArguments:
 
 @dataclass
 class DataArguments:
+    dataset_json: str = field(default=None, metadata={"help": "JSON dataset path"})
+    eval_dataset_json: Optional[str] = field(
+        default='/public/home/wangby2025/plusLab/data/vg/test_sampled_ratio.json', 
+        metadata={"help": "JSON evaluation dataset path. Default is test_sampled_ratio.json"}
+    )
+    num_negatives: int = field(default=5, metadata={"help": "number of negative samples per query"})
     dataset_config: str = field(default=None, metadata={"help": "yaml file with dataset configuration"})
     data_basedir: str = field(default=None, metadata={"help": "Expect an absolute path to the base directory of all datasets. If set, it will be prepended to each dataset path"})
     dataset_name: str = field(default=None, metadata={"help": "huggingface dataset name"})
@@ -61,6 +67,7 @@ class TrainingArguments(TrainingArguments):
     gc_p_chunk_size: int = field(default=2, metadata={"help": "target side subset size"})
     interleave_stopping_strategy: str = field(default="all_exhausted", metadata={"help": "all_exhausted or first_exhausted"})
     interleave_batch_size: float = field(default=0, metadata={"help": "Specify mini-batch size to interleave data from multi-sources, 0/None means random sampling by examples, 1 means full batch."})
+    per_device_train_batch_size: int = field(default=8, metadata={"help": "batch size per device"})
 
 @dataclass
 class MTEBArguments:

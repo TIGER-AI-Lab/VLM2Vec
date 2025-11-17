@@ -181,26 +181,74 @@ class MultimodalDataCollator:
         return inputs
 
 
-    def __call__(self, examples):
+    # def __call__(self, examples):
+    #     """
+    #     :param examples: 'query_text', 'query_image_path', 'pos_text', 'pos_image_path', 'neg_text', 'neg_image_path'
+    #     """
+    #     qry_inputs = self._get_batch_inputs(examples, "query_text", "query_image")
+    #     pos_inputs = self._get_batch_inputs(examples, "pos_text", "pos_image")
+    #     neg_inputs = self._get_batch_inputs(examples, "neg_text", "neg_image")
+    #     bs = len(qry_inputs['text'])
+    #     assert bs > 0, 'An empty batch'
+    #     # pad batch to batch_size to avoid hanging in distributed training
+    #     if self.batch_size is not None and bs < self.batch_size:
+    #         raise RuntimeError(f"Expect batch size {self.batch_size}, but got batch size of {bs}")
+    #         pass
+    #     #process_fn = process_vlm_inputs_fns[self.training_args.model_backbone]
+    #     process_fn = process_vlm_inputs_fns[self.model_args.model_backbone]
+
+    #     processed_qry_inputs = process_fn(qry_inputs, processor=self.processor, max_length=self.data_args.max_len)
+    #     processed_pos_inputs = process_fn(pos_inputs, processor=self.processor, max_length=self.data_args.max_len)
+    #     processed_qry_inputs['text'] = [e['query_text'] for e in examples]
+    #     processed_pos_inputs['text'] = [e['pos_text'] for e in examples]
+    #     processed_qry_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
+    #     processed_pos_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
+
+    #     # print_rank(f"\t\tQry collator: processed_qry_inputs['input_ids'].shape={processed_qry_inputs['input_ids'].shape}\t\tPos collator: processed_pos_inputs['input_ids'].shape={processed_pos_inputs['input_ids'].shape}")
+    #     return processed_qry_inputs, processed_pos_inputs
+   def __call__(self, examples):
         """
-        :param examples: 'query_text', 'query_image_path', 'pos_text', 'pos_image_path', 'neg_text', 'neg_image_path'
+        :param examples: 'query_text', 'query_image', 'pos_text', 'neg_text'
         """
+        # Step 1: Load query inputs
         qry_inputs = self._get_batch_inputs(examples, "query_text", "query_image")
-        pos_inputs = self._get_batch_inputs(examples, "pos_text", "pos_image")
-        neg_inputs = self._get_batch_inputs(examples, "neg_text", "neg_image")
-        bs = len(qry_inputs['text'])
-        assert bs > 0, 'An empty batch'
-        # pad batch to batch_size to avoid hanging in distributed training
-        if self.batch_size is not None and bs < self.batch_size:
-            raise RuntimeError(f"Expect batch size {self.batch_size}, but got batch size of {bs}")
-            pass
-        process_fn = process_vlm_inputs_fns[self.training_args.model_backbone]
+
+        # Step 2: Load raw positive/negative texts (no images!)
+        pos_texts = [e['pos_text'] for e in examples]
+        neg_texts_list = [e['neg_text'] for e in examples]  # list of lists
+
+        # Step 3: Prepare processor inputs
+        # Positive: combine query text + pos text, but only query image is used
+        pos_combined_texts = [f"{q} {p}" for q, p in zip(qry_inputs['text'], pos_texts)]
+        pos_inputs_for_processor = {
+            'text': pos_combined_texts,
+            'images': qry_inputs['images']  # only query image
+        }
+
+        # Negative: combine query text + each negative text, images are None
+        neg_combined_texts = []
+        for q_text, neg_list in zip(qry_inputs['text'], neg_texts_list):
+            for n_text in neg_list:
+                neg_combined_texts.append(f"{q_text} {n_text}")
+
+        neg_inputs_for_processor = {
+            'text': neg_combined_texts,
+            'images': [None] * len(neg_combined_texts)  # no images for negatives
+        }
+
+        # Step 4: Process all inputs
+        process_fn = process_vlm_inputs_fns[self.model_args.model_backbone]
         processed_qry_inputs = process_fn(qry_inputs, processor=self.processor, max_length=self.data_args.max_len)
-        processed_pos_inputs = process_fn(pos_inputs, processor=self.processor, max_length=self.data_args.max_len)
-        processed_qry_inputs['text'] = [e['query_text'] for e in examples]
-        processed_pos_inputs['text'] = [e['pos_text'] for e in examples]
+        processed_pos_inputs = process_fn(pos_inputs_for_processor, processor=self.processor, max_length=self.data_args.max_len)
+        processed_neg_inputs = process_fn(neg_inputs_for_processor, processor=self.processor, max_length=self.data_args.max_len)
+
+        # Step 5: Metadata
+        processed_qry_inputs['text'] = qry_inputs['text']
+        processed_pos_inputs['text'] = pos_combined_texts
+        processed_neg_inputs['text'] = neg_combined_texts
+
         processed_qry_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
         processed_pos_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
+        processed_neg_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
 
-        # print_rank(f"\t\tQry collator: processed_qry_inputs['input_ids'].shape={processed_qry_inputs['input_ids'].shape}\t\tPos collator: processed_pos_inputs['input_ids'].shape={processed_pos_inputs['input_ids'].shape}")
-        return processed_qry_inputs, processed_pos_inputs
+        return processed_qry_inputs, processed_pos_inputs, processed_neg_inputs
