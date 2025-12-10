@@ -18,7 +18,7 @@ def process_query(query, prompt, image_token):
 
 
 @add_metainfo_hook
-def data_prepare(batch_dict, *args, **kwargs):
+def data_prepare_v5(batch_dict, *args, **kwargs):
     model_backbone = kwargs['model_backbone']
     image_resolution = kwargs['image_resolution']
     batch_size = len(batch_dict['query'])
@@ -30,7 +30,7 @@ def data_prepare(batch_dict, *args, **kwargs):
         # query = process_query(query, prompt=prompt, image_token=VLM_IMAGE_TOKENS[model_backbone])
         query_texts.append(query)
         pos_texts.append(answer)
-        neg_texts.append("")
+        neg_texts.append([])
         if isinstance(image, Image.Image):
             # BC, datasets==2.21.0
             image_bytes = image_to_bytes(image)
@@ -41,9 +41,11 @@ def data_prepare(batch_dict, *args, **kwargs):
             path = image['path']
         else:
             raise ValueError(f"Unsupported image type: {type(image)}")
-        query_images.append({"bytes": [image_bytes], "paths": [path], "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)]})
-        pos_images.append(None)
-        neg_images.append(None)
+        default_res = RESOLUTION_MAPPING.get(image_resolution, [224, 224])
+        if default_res is None: default_res = [224, 224]
+        query_images.append({"bytes": [image_bytes], "paths": [path], "resolutions": [default_res]})
+        pos_images.append({'bytes': [b''], 'paths': [''], 'resolutions': [[224, 224]]})
+        neg_images.append([{'bytes': [b''], 'paths': [''], 'resolutions': [[224, 224]]}])
     if len(query_texts) == 0:
         print('something went wrong')
     # print_rank(f"global_dataset_name={kwargs.get('global_dataset_name', DATASET_PARSER_NAME)}, batch_size={batch_size}, processed_batch_size={len(query_texts)}")
@@ -81,9 +83,9 @@ def load_vidore_dataset(model_args, data_args, training_args, *args, **kwargs):
         subset_name = kwargs.get("subset_name", None)
         kwargs['global_dataset_name'] = f'{DATASET_PARSER_NAME}/{subset_name}'
     # dataset = dataset.shuffle(buffer_size=8192, seed=training_args.seed)
-    dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True, batch_size=128,
+    dataset = dataset.map(lambda x: data_prepare_v5(x, **kwargs), batched=True, batch_size=128,
                           remove_columns=['image', 'image_filename', 'query', 'answer', 'source', 'options', 'page', 'model', 'prompt', 'answer_type'],
-                          drop_last_batch = True)
+                          drop_last_batch = True, features=MULTIMODAL_FEATURES)
     # dataset = dataset._resolve_features()
     # features = _infer_features_from_batch(dataset._head()) # not working: {ArrowInvalid}ArrowInvalid('Could not convert <PIL.Image.Image image mode=RGB size=128x128 at 0x7F7C794E9BD0> with type Image: did not recognize Python value type when inferring an Arrow data type')
     dataset = dataset.cast(MULTIMODAL_FEATURES)

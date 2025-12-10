@@ -17,7 +17,7 @@ class ModelArguments:
     lora_r: int = field(default=16, metadata={"help": "lora r"})
     lora_alpha: int = field(default=64, metadata={"help": "lora alpha"})
     lora_dropout: float = field(default=0.1, metadata={"help": "lora dropout"})
-    lora_target_modules: str = field(default="qkv_proj,o_proj,gate_up_proj,down_proj,k_proj,q_proj,out_proj,v_proj", metadata={"help": "lora target modules"})
+    lora_target_modules: str = field(default="qkv_proj,o_proj,gate_up_proj,down_proj,k_proj,q_proj,out_proj,v_proj,gate_proj,up_proj", metadata={"help": "lora target modules"})
     num_crops: int = field(default=16, metadata={"help": "number of crops used in image encoder"})
     uigraph_use: bool = field(default=False, metadata={"help": "Enable ui graph for token selection"})
     uigraph_diff: int = field(default=1, metadata={"help": "Pixel difference used for constructing ui graph for token selection"})
@@ -60,7 +60,9 @@ class TrainingArguments(TrainingArguments):
     gc_q_chunk_size: int = field(default=2, metadata={"help": "query side subset size"})
     gc_p_chunk_size: int = field(default=2, metadata={"help": "target side subset size"})
     interleave_stopping_strategy: str = field(default="all_exhausted", metadata={"help": "all_exhausted or first_exhausted"})
-    interleave_batch_size: float = field(default=0, metadata={"help": "Specify mini-batch size to interleave data from multi-sources, 0/None means random sampling by examples, 1 means full batch."})
+    homogeneous_batch_size_per_device: float = field(default=0, metadata={"help": "Specify number of consecutive samples from the same dataset PER DEVICE. 0/None means random mixing."})
+    interleave_batch_size: float = field(default=0, metadata={"help": "[DEPRECATED] Use `homogeneous_batch_size_per_device`."})
+
 
 @dataclass
 class MTEBArguments:

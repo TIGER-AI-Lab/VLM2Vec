@@ -19,20 +19,20 @@ MULTIMODAL_FEATURES = Features(**{
     "query_image": {
         "paths": Sequence(Value(dtype='string')),  # List of image paths (frames)
         "bytes": Sequence(Value(dtype='binary')),  # List of pre-saved image bytes
-        "resolutions": Sequence(Sequence(Value(dtype='int32'), length=2))  # List of [width, height] pairs
+        "resolutions": Sequence(Sequence(Value(dtype='int64'), length=2))  # List of [width, height] pairs
     },
     "pos_text": Value(dtype='string'),
     "pos_image": {
         "paths": Sequence(Value(dtype='string')),
         "bytes": Sequence(Value(dtype='binary')),
-        "resolutions": Sequence(Sequence(Value(dtype='int32'), length=2))
+        "resolutions": Sequence(Sequence(Value(dtype='int64'), length=2))
     },
-    "neg_text": Value(dtype='string'),
-    "neg_image": {
+    "neg_text": Sequence(Value(dtype='string')),
+    "neg_image": Sequence({
         "paths": Sequence(Value(dtype='string')),
         "bytes": Sequence(Value(dtype='binary')),
-        "resolutions": Sequence(Sequence(Value(dtype='int32'), length=2))
-    },
+        "resolutions": Sequence(Sequence(Value(dtype='int64'), length=2))
+    }),
     "global_dataset_name": Value(dtype='string'),
 })
 
@@ -91,6 +91,12 @@ def add_metainfo_hook(f):
         batch_data = f(*args, **kwargs)
         # append common metadata
         batch_size = len(batch_data['query_text'])
+        
+        # DEBUG: Validate column lengths
+        for k, v in batch_data.items():
+            if len(v) != batch_size:
+                print(f"[add_metainfo_hook] CRITICAL ERROR: Column '{k}' has length {len(v)}, expected {batch_size}")
+        
         global_dataset_name = kwargs.get("global_dataset_name", "None")
         batch_data['global_dataset_name'] = [global_dataset_name] * batch_size
         return batch_data
