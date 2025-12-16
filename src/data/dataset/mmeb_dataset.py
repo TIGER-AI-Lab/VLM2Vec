@@ -6,8 +6,7 @@ import os
 from datasets.features.image import image_to_bytes
 
 from torch.jit import isinstance
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, MULTIMODAL_FEATURES, \
-    RESOLUTION_MAPPING
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, MULTIMODAL_FEATURES, RESOLUTION_MAPPING
 from src.model.processor import PHI3V, VLM_IMAGE_TOKENS
 from src.utils.basic_utils import print_master, print_rank
 from torch.utils.data import Dataset
@@ -45,34 +44,67 @@ def get_image_bytes_and_path(img_path, image_dir, model_backbone, image_resoluti
 
 
 @add_metainfo_hook
-def data_prepare(batch_dict, *args, **kwargs):
+def data_prepare_v4(batch_dict, *args, **kwargs):
     image_dir = kwargs['image_dir']
     model_backbone = kwargs['model_backbone']
     image_resolution = kwargs['image_resolution']
 
     batch_size = len(batch_dict['qry'])
     query_texts, query_images, pos_texts, pos_images, neg_texts, neg_images = [], [], [], [], [], []
+    
+    # Helper for resolution
+    def get_res(res_name):
+        r = RESOLUTION_MAPPING.get(res_name, [224, 224])
+        return r if r is not None else [224, 224]
+
     for qry_text, qry_image_path, pos_text, pos_image_path, neg_text, neg_image_path in \
         zip(batch_dict['qry'], batch_dict['qry_image_path'],
             batch_dict['pos_text'], batch_dict['pos_image_path'],
             batch_dict.get('neg_text', [''] * batch_size), batch_dict.get('neg_image_path', [None] * batch_size)):
+        
         if (not qry_text and not qry_image_path) or (not pos_text and not pos_image_path):
-            print("empty inputs")
+            # print("empty inputs")
             continue
+            
         if model_backbone != PHI3V:
             qry_text = qry_text.replace(VLM_IMAGE_TOKENS[PHI3V], VLM_IMAGE_TOKENS[model_backbone])
             pos_text = pos_text.replace(VLM_IMAGE_TOKENS[PHI3V], VLM_IMAGE_TOKENS[model_backbone])
             neg_text = neg_text.replace(VLM_IMAGE_TOKENS[PHI3V], VLM_IMAGE_TOKENS[model_backbone]) if neg_text else ''
+            
         query_texts.append(qry_text)
         pos_texts.append(pos_text)
-        neg_texts.append(neg_text)
-        # 20240227 defer image loading and transforming to data-loader to avoid repeatedly Serialization/Deserialization of PIL Images
-        qry_image = {"bytes": [None], "paths": [os.path.join(image_dir, qry_image_path) if qry_image_path else None], "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)]}
-        pos_image = {"bytes": [None], "paths": [os.path.join(image_dir, pos_image_path) if pos_image_path else None], "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)]}
-        neg_image = {"bytes": [None], "paths": [os.path.join(image_dir, neg_image_path) if neg_image_path else None], "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)]}
+        
+        # Negative Text: List[String]
+        if neg_text:
+            neg_texts.append([neg_text])
+        else:
+            neg_texts.append([])
+
+        # Images
+        qry_res = get_res(image_resolution)
+        pos_res = get_res(image_resolution)
+        neg_res = get_res(image_resolution)
+
+        qry_image = {"bytes": [None], "paths": [os.path.join(image_dir, qry_image_path) if qry_image_path else None], "resolutions": [qry_res]}
+        pos_image = {"bytes": [None], "paths": [os.path.join(image_dir, pos_image_path) if pos_image_path else None], "resolutions": [pos_res]}
+        
         query_images.append(qry_image)
         pos_images.append(pos_image)
-        neg_images.append(neg_image)
+        
+        # Negative Image: List[Struct]
+        if neg_image_path:
+            neg_image_struct = {"bytes": [None], "paths": [os.path.join(image_dir, neg_image_path)], "resolutions": [neg_res]}
+            neg_images.append([neg_image_struct])
+        else:
+            # Dummy negative to satisfy schema if needed, or empty list
+            # Since schema allows empty list for Sequence, let's try []
+            # But to be safe with Type inference, maybe Dummy?
+            # Let's use [] first as it is logically correct. If it fails, use Dummy.
+            # Actually, since we pass features=MULTIMODAL_FEATURES, [] should work.
+            # BUT wait, earlier I used Dummy for everything else. Let's match consistency.
+            # Use Dummy Negative.
+            neg_images.append([{'bytes': [b''], 'paths': [''], 'resolutions': [[224, 224]]}])
+
     if len(query_texts) == 0:
         print('something went wrong')
     # print_rank(f"global_dataset_name={kwargs.get('global_dataset_name', DATASET_PARSER_NAME)}, batch_size={batch_size}, processed_batch_size={len(query_texts)}")
@@ -101,12 +133,13 @@ def load_mmeb_dataset(model_args, data_args, training_args, *args, **kwargs):
     kwargs['model_backbone'] = model_args.model_backbone
     kwargs['image_resolution'] = data_args.image_resolution
     kwargs['global_dataset_name'] = f'{DATASET_PARSER_NAME}/{subset_name}'
-    remove_columns = ['qry', 'qry_image_path', 'pos_image_path']
-    if 'neg_image_path' in column_names:
-        remove_columns.append('neg_image_path')
+    
+    # Remove all original columns to prevent length mismatch if filtering occurs
+    remove_columns = dataset.column_names
+    
     dataset = dataset.map(lambda x:
-                          data_prepare(x, **kwargs), batched=True, batch_size=2048,
-                          remove_columns=remove_columns, drop_last_batch=False)
+                          data_prepare_v4(x, **kwargs), batched=True, batch_size=2048,
+                          remove_columns=remove_columns, drop_last_batch=False, features=MULTIMODAL_FEATURES)
     # dataset = dataset._resolve_features()
     # features = _infer_features_from_batch(dataset._head()) # not working: {ArrowInvalid}ArrowInvalid('Could not convert <PIL.Image.Image image mode=RGB size=128x128 at 0x7F7C794E9BD0> with type Image: did not recognize Python value type when inferring an Arrow data type')
     dataset = dataset.cast(MULTIMODAL_FEATURES)

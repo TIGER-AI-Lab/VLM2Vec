@@ -327,3 +327,8 @@ class MMEBModel(nn.Module):
 
     def compute_similarity(self, q_reps, p_reps):
         return torch.matmul(q_reps, p_reps.transpose(0, 1))
+
+    def gradient_checkpointing_enable(self, gradient_checkpointing_kwargs=None):
+        self.encoder.gradient_checkpointing_enable(gradient_checkpointing_kwargs=gradient_checkpointing_kwargs)
+        if hasattr(self.encoder, "enable_input_require_grads"):
+            self.encoder.enable_input_require_grads()

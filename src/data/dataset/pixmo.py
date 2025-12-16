@@ -14,7 +14,7 @@ from src.model.processor import VLM_IMAGE_TOKENS
 QUERY_INSTRUCTION = "Retrieve documents that best answer the following query: "
 TARGET_INSTRUCTION = "Generate an embedding for the following document, in the format of images: "
 @add_metainfo_hook
-def data_prepare(batch_dict, *args, **kwargs):
+def data_prepare_v3(batch_dict, *args, **kwargs):
     model_backbone = kwargs['model_backbone']
     image_resolution = kwargs['image_resolution']
     image_dir = kwargs['image_dir']
@@ -22,12 +22,15 @@ def data_prepare(batch_dict, *args, **kwargs):
     for query, doc_id, neg_doc_ids in zip(batch_dict['query_text'], batch_dict['positive_document_ids'], batch_dict['negative_document_ids']):
         query = QUERY_INSTRUCTION + query
         query_texts.append(query)
-        query_images.append(None)
+        # Use [None] pattern for empty query image
+        query_images.append({'bytes': [None], 'paths': [None], 'resolutions': [[224, 224]]})
         pos_texts.append(TARGET_INSTRUCTION + VLM_IMAGE_TOKENS[model_backbone])
         path = os.path.join(image_dir, f"{doc_id[0]}.png")
-        pos_images.append({"bytes": [None], "paths": [path], "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)]})
-        neg_texts.append('')
-        neg_images.append(None)
+        default_res = RESOLUTION_MAPPING.get(image_resolution, [224, 224])
+        if default_res is None: default_res = [224, 224]
+        pos_images.append({"bytes": [None], "paths": [path], "resolutions": [default_res]})
+        neg_texts.append([])
+        neg_images.append([{'bytes': [b''], 'paths': [''], 'resolutions': [[224, 224]]}])
     if len(query_texts) == 0:
         print('something went wrong')
     return {"query_text": query_texts, "query_image": query_images,
@@ -54,9 +57,10 @@ def load_pixmo_dataset(model_args, data_args, training_args, *args, **kwargs):
     kwargs['model_backbone'] = model_args.model_backbone
     kwargs['image_resolution'] = data_args.image_resolution
     kwargs['global_dataset_name'] = f'{DATASET_PARSER_NAME}/{dataset_name}'
-    dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True, batch_size=128,
+    kwargs['image_dir'] = kwargs.get('image_dir', getattr(data_args, 'image_dir', None)) # Ensure image_dir is passed
+    dataset = dataset.map(lambda x: data_prepare_v3(x, **kwargs), batched=True, batch_size=128,
                           remove_columns=['query_text', 'positive_document_ids'],
-                          drop_last_batch = True)
-    dataset = dataset.cast(MULTIMODAL_FEATURES)
+                          drop_last_batch = True, features=MULTIMODAL_FEATURES)
+    # dataset = dataset.cast(MULTIMODAL_FEATURES)
     setattr(dataset, 'num_rows', num_rows)
     return dataset

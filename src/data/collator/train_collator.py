@@ -150,11 +150,17 @@ class MultimodalDataCollator:
                             image = None
                         elif bytes is not None:
                             # vidore, image inputs are already bytes
-                            image = Image.open(io.BytesIO(bytes))
+                            if bytes == b'':
+                                image = None
+                            else:
+                                image = Image.open(io.BytesIO(bytes))
                         elif path is not None:
                             # mmeb/video datasets, lazy image loading and processing
-                            with Image.open(path) as img:
-                                image = img.convert("RGB")
+                            if path == '':
+                                image = None
+                            else:
+                                with Image.open(path) as img:
+                                    image = img.convert("RGB")
                         else:
                             print_rank(f"\n{'=' * 50}\nsomething went wrong with a data point from {example['global_dataset_name']}, neither bytes or path is given. \n\t\tquery_text: {example['query_text']}")
                         if not self.data_args.resize_use_processor and image is not None and image_resolution:
