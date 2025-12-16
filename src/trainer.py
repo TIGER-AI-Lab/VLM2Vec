@@ -18,7 +18,7 @@ import math
 
 from src.data.collator.train_collator import split_vlm_inputs, get_dense_rep, split_and_process_vlm_inputs
 from src.model.model import MMEBModel
-from src.loss import SimpleContrastiveLoss, DistributedContrastiveLoss
+from src.loss import SimpleContrastiveLoss, DistributedContrastiveLoss, InExampleContrastiveLoss, LossRouter
 from src.grad_cache.grad_cache import GradCache
 from torch.utils.data import DataLoader, Dataset, IterableDataset, RandomSampler, SequentialSampler
 

@@ -1,5 +1,5 @@
 from itertools import repeat
-from typing import Optional
+from typing import Optional, List
 from torch.jit import isinstance
 
 import logging
@@ -180,14 +180,66 @@ class MultimodalDataCollator:
         inputs = {'text': texts, 'images': visual_inputs}
         return inputs
 
+    def _get_loss_types(self, batch: List[dict]) -> List[str]:
+        return [
+            example.get("loss_type", "distributed_inbatch_contrastive") if example else "distributed_inbatch_contrastive"
+            for example in batch
+        ]
+
+    @staticmethod
+    def _normalize_text_list(value) -> List[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [v for v in value if isinstance(v, str) and v.strip()]
+        if isinstance(value, str):
+            value = value.strip()
+            return [value] if value else []
+        return []
+
+    def _expand_target_inputs(self, base_inputs: dict, batch: List[dict], loss_types: List[str]):
+        texts, images = [], []
+        choice_counts = []
+        for idx, (base_text, base_image) in enumerate(zip(base_inputs['text'], base_inputs['images'])):
+            loss_type = loss_types[idx]
+            expanded_texts = [base_text]
+            expanded_images = [base_image]
+            if loss_type == "inexample_contrastive":
+                neg_texts = self._normalize_text_list(batch[idx].get("neg_text") if batch[idx] else None)
+                if neg_texts:
+                    expanded_texts.extend(neg_texts)
+                    expanded_images.extend([None] * len(neg_texts))
+                else:
+                    loss_types[idx] = "distributed_inbatch_contrastive"
+                    loss_type = loss_types[idx]
+            if loss_type == "inexample_contrastive":
+                texts.extend(expanded_texts)
+                images.extend(expanded_images)
+                choice_counts.append(len(expanded_texts))
+            else:
+                texts.append(base_text)
+                images.append(base_image)
+                choice_counts.append(1)
+        return {'text': texts, 'images': images}, choice_counts
+
+    @staticmethod
+    def _compute_choice_starts(choice_counts: List[int]) -> List[int]:
+        starts = []
+        offset = 0
+        for count in choice_counts:
+            starts.append(offset)
+            offset += count
+        return starts
 
     def __call__(self, examples):
         """
         :param examples: 'query_text', 'query_image_path', 'pos_text', 'pos_image_path', 'neg_text', 'neg_image_path'
         """
         qry_inputs = self._get_batch_inputs(examples, "query_text", "query_image")
-        pos_inputs = self._get_batch_inputs(examples, "pos_text", "pos_image")
-        neg_inputs = self._get_batch_inputs(examples, "neg_text", "neg_image")
+        base_pos_inputs = self._get_batch_inputs(examples, "pos_text", "pos_image")
+        loss_types = self._get_loss_types(examples)
+        pos_inputs, choice_counts = self._expand_target_inputs(base_pos_inputs, examples, loss_types)
+        choice_starts = self._compute_choice_starts(choice_counts)
         bs = len(qry_inputs['text'])
         assert bs > 0, 'An empty batch'
         # pad batch to batch_size to avoid hanging in distributed training
@@ -201,6 +253,10 @@ class MultimodalDataCollator:
         processed_pos_inputs['text'] = [e['pos_text'] for e in examples]
         processed_qry_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
         processed_pos_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
+        processed_qry_inputs['loss_type'] = loss_types
+        processed_pos_inputs['loss_type'] = loss_types
+        processed_pos_inputs['choice_counts'] = choice_counts
+        processed_pos_inputs['choice_starts'] = choice_starts
 
         # print_rank(f"\t\tQry collator: processed_qry_inputs['input_ids'].shape={processed_qry_inputs['input_ids'].shape}\t\tPos collator: processed_pos_inputs['input_ids'].shape={processed_pos_inputs['input_ids'].shape}")
         return processed_qry_inputs, processed_pos_inputs

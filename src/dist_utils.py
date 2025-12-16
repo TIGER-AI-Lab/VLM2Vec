@@ -69,6 +69,38 @@ def barrier():
         dist.barrier()
 
 
+def distributed_breakpoint(stacklevel: int = 1):
+    """
+    Drop rank 0 into pdb at the requested stack level (1=direct caller) and pause other ranks.
+    Increase stacklevel to skip helper wrappers.
+    """
+    import inspect
+    import pdb
+
+    stacklevel = max(1, stacklevel)
+    frame = inspect.currentframe().f_back  # start from direct caller
+    for _ in range(stacklevel - 1):
+        if frame is None:
+            break
+        frame = frame.f_back
+    target_frame = frame
+
+    def _enter_debugger():
+        debugger = pdb.Pdb()
+        debugger.reset()
+        debugger.interaction(target_frame, None)
+
+    if not dist.is_initialized():
+        _enter_debugger()
+        return
+
+    if dist.get_rank() == 0:
+        _enter_debugger()
+        barrier()
+    else:
+        barrier()
+
+
 @torch.no_grad()
 def varsize_gather_nograd(x: torch.Tensor):
     """gather tensors of different sizes along the first dimension"""
