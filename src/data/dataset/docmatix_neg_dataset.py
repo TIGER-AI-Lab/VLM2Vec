@@ -90,18 +90,18 @@ def data_prepare(batch_dict, *args, **kwargs):
             "pos_text": pos_texts, "pos_image": pos_images,
             "neg_text": neg_texts, "neg_image": neg_images}
 
-def corpus_prepare(batch_dict, *args, **kwargs):
+def corpus_prepare(batch_dict, indices, *args, **kwargs):
     image_resolution, model_backbone = kwargs['image_resolution'], kwargs['model_backbone']
     image_dir = kwargs['image_dir']
     batch_size = len(batch_dict['texts'])
+    os.makedirs(image_dir, exist_ok=True)
 
     cand_texts, cand_images, dataset_infos = [], [], []
-    for example_idx, images in enumerate(batch_dict['images']):
+    for example_idx, images in zip(indices, batch_dict['images']):
         image_paths = []
         for image_idx, image in enumerate(images):
             image_path = f'{image_dir}/{example_idx}_{image_idx}.png'
             if not os.path.exists(image_path):
-                os.makedirs(image_dir, exist_ok=True)
                 image.save(image_path)
             image_paths.append(image_path)
         cand_texts.append([process_query("", prompt="", image_token=VLM_IMAGE_TOKENS[model_backbone])])
@@ -158,7 +158,8 @@ def load_docmatix_neg_dataset(model_args, data_args, training_args, *args, **kwa
         subset_name = kwargs.get("subset_name", None)
         kwargs['global_dataset_name'] = f'{DATASET_PARSER_NAME}/{subset_name}'
     # dataset = dataset.shuffle(buffer_size=8192, seed=training_args.seed)
-    corpus = corpus.map(lambda x: corpus_prepare(x, **kwargs), batched=True, batch_size=2048, num_proc=8,
+    corpus = corpus.map(lambda x, idx: corpus_prepare(x, idx, **kwargs), batched=True, batch_size=2048, num_proc=8,
+                        with_indices=True,
                         remove_columns=['images', 'texts'],
                         drop_last_batch=False, load_from_cache_file=False)
     dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True, batch_size=2048,
