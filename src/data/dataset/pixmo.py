@@ -6,15 +6,16 @@ import os
 
 
 from torch.jit import isinstance
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, MULTIMODAL_FEATURES, \
-    RESOLUTION_MAPPING
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, MULTIMODAL_FEATURES, \
+    RESOLUTION_MAPPING, ImageVideoInstance
 from src.model.processor import VLM_IMAGE_TOKENS
 
 
 QUERY_INSTRUCTION = "Retrieve documents that best answer the following query: "
 TARGET_INSTRUCTION = "Generate an embedding for the following document, in the format of images: "
 @add_metainfo_hook
-def data_prepare_v3(batch_dict, *args, **kwargs):
+@convert_neg_fields
+def data_prepare(batch_dict, *args, **kwargs):
     model_backbone = kwargs['model_backbone']
     image_resolution = kwargs['image_resolution']
     image_dir = kwargs['image_dir']
@@ -22,15 +23,20 @@ def data_prepare_v3(batch_dict, *args, **kwargs):
     for query, doc_id, neg_doc_ids in zip(batch_dict['query_text'], batch_dict['positive_document_ids'], batch_dict['negative_document_ids']):
         query = QUERY_INSTRUCTION + query
         query_texts.append(query)
-        # Use [None] pattern for empty query image
-        query_images.append({'bytes': [None], 'paths': [None], 'resolutions': [[224, 224]]})
+        query_images.append(ImageVideoInstance(
+            bytes=[None],
+            paths=[None],
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+        ).to_dict())
         pos_texts.append(TARGET_INSTRUCTION + VLM_IMAGE_TOKENS[model_backbone])
         path = os.path.join(image_dir, f"{doc_id[0]}.png")
-        default_res = RESOLUTION_MAPPING.get(image_resolution, [224, 224])
-        if default_res is None: default_res = [224, 224]
-        pos_images.append({"bytes": [None], "paths": [path], "resolutions": [default_res]})
-        neg_texts.append([])
-        neg_images.append([{'bytes': [b''], 'paths': [''], 'resolutions': [[224, 224]]}])
+        pos_images.append({"bytes": [None], "paths": [path], "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)]})
+        neg_texts.append('')
+        neg_images.append(ImageVideoInstance(
+            bytes=[None],
+            paths=[None],
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+        ).to_dict())
     if len(query_texts) == 0:
         print('something went wrong')
     return {"query_text": query_texts, "query_image": query_images,

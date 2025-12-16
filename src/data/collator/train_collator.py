@@ -186,66 +186,90 @@ class MultimodalDataCollator:
         inputs = {'text': texts, 'images': visual_inputs}
         return inputs
 
-    def _get_loss_types(self, batch: List[dict]) -> List[str]:
-        return [
-            example.get("loss_type", "distributed_inbatch_contrastive") if example else "distributed_inbatch_contrastive"
-            for example in batch
-        ]
-
-    @staticmethod
-    def _normalize_text_list(value) -> List[str]:
-        if value is None:
-            return []
-        if isinstance(value, list):
-            return [v for v in value if isinstance(v, str) and v.strip()]
-        if isinstance(value, str):
-            value = value.strip()
-            return [value] if value else []
-        return []
-
-    def _expand_target_inputs(self, base_inputs: dict, batch: List[dict], loss_types: List[str]):
-        texts, images = [], []
-        choice_counts = []
-        for idx, (base_text, base_image) in enumerate(zip(base_inputs['text'], base_inputs['images'])):
-            loss_type = loss_types[idx]
-            expanded_texts = [base_text]
-            expanded_images = [base_image]
-            if loss_type == "inexample_contrastive":
-                neg_texts = self._normalize_text_list(batch[idx].get("neg_text") if batch[idx] else None)
-                if neg_texts:
-                    expanded_texts.extend(neg_texts)
-                    expanded_images.extend([None] * len(neg_texts))
-                else:
-                    loss_types[idx] = "distributed_inbatch_contrastive"
-                    loss_type = loss_types[idx]
-            if loss_type == "inexample_contrastive":
-                texts.extend(expanded_texts)
-                images.extend(expanded_images)
-                choice_counts.append(len(expanded_texts))
+    def _get_negative_inputs(self, batch, text_keyname, image_keyname):
+        # Keep nested structure: list of lists for each example
+        all_texts, all_visual_inputs = [], []
+        for example in batch:
+            # @ruimeng filter invalid data examples here may lead to fail to sync across devices (unequal batch size)
+            # use dummy input for now
+            if example is None or not example:
+                dummy_texts, dummy_visual_inputs = [], []
+                all_texts.append(dummy_texts)
+                all_visual_inputs.append(dummy_visual_inputs)
             else:
-                texts.append(base_text)
-                images.append(base_image)
-                choice_counts.append(1)
-        return {'text': texts, 'images': images}, choice_counts
+                text_list, raw_images_list = example[text_keyname], example[image_keyname]
 
+                assert len(text_list) == len(raw_images_list), f"Example {example.get('global_dataset_name', 'unknown')} has mismatched text/image lengths"
+
+                example_texts, example_visual_inputs = [], []
+                for text, raw_images in zip(text_list, raw_images_list):
+                    visual_input = []
+                    if type(raw_images) == dict:
+                        assert 'resolutions' in raw_images, "we need len(raw_images['resolutions']) to determine the number of images, set it a list of None of for cases that no resizing is needed"
+                        num_images = len(raw_images['resolutions'])
+                        for image_idx in range(num_images):
+                            bytes = raw_images['bytes'][image_idx] if 'bytes' in raw_images else None
+                            path = raw_images['paths'][image_idx] if 'paths' in raw_images else None
+                            image_resolution = raw_images['resolutions'][image_idx] if 'resolutions' in raw_images else None
+                            if bytes is None and ((path is None) or (not path)):
+                                image = None
+                            elif bytes is not None:
+                                # vidore, image inputs are already bytes
+                                image = Image.open(io.BytesIO(bytes))
+                            elif (path is not None) and (path):
+                                # mmeb/video datasets, lazy image loading and processing
+                                with Image.open(path) as img:
+                                    image = img.convert("RGB")
+                            else:
+                                print_rank(f"\n{'=' * 50}\nsomething went wrong with a data point from {example['global_dataset_name']}, neither bytes or path is given. \n\t\tquery_text: {example['query_text']}")
+                            if not self.data_args.resize_use_processor and image is not None and image_resolution:
+                                image = image.resize(image_resolution)
+                            if image is not None and (self.data_args.image_decay_factor is not None and image_resolution is None):
+                                assert image_resolution is None, "image_resolution is conflicting with image_decay_factor"
+                                assert self.model_args.model_backbone in [QWEN2_VL, QWEN2_5_VL, QWEN2_VL_TOKENSELECTION, QWEN2_5_VL_TOKENSELECTION], "image_decay_factor is only supported for Qwen models"
+                                # TODO: this is a hacky way to decay image resolution, need to be refactored
+                                max_pixels = max(self.data_args.resize_min_pixels, self.data_args.resize_max_pixels * self.data_args.image_decay_factor ** (num_images - image_idx))
+                                width, height = image.size
+                                resized_height, resized_width = smart_resize(
+                                    height,
+                                    width,
+                                    min_pixels=self.data_args.resize_min_pixels,
+                                    max_pixels=max_pixels,
+                                )
+                                image = image.resize((resized_width, resized_height))  
+                            visual_input.append(image)
+                    example_texts.append(text)
+                    example_visual_inputs.append(visual_input)
+                all_texts.append(example_texts)
+                all_visual_inputs.append(example_visual_inputs)
+        inputs = {'text': all_texts, 'images': all_visual_inputs}
+        return inputs
+
+    # Check if negatives exist and are non-empty
     @staticmethod
-    def _compute_choice_starts(choice_counts: List[int]) -> List[int]:
-        starts = []
-        offset = 0
-        for count in choice_counts:
-            starts.append(offset)
-            offset += count
-        return starts
+    def has_valid_negatives(example):
+        neg_text_list = example.get('neg_text', [])
+        if not neg_text_list:  # Empty list
+            return False
+        # Check if all texts are empty strings or nested empty lists
+        for text in neg_text_list:
+            if isinstance(text, list[str]):
+                # Handle nested list case (list of list of strings)
+                if text and any(t.strip() for t in text if isinstance(t, str)):
+                    return True
+            elif isinstance(text, str) and text.strip():
+                # Handle simple string case
+                return True
+        return False
+
 
     def __call__(self, examples):
         """
         :param examples: 'query_text', 'query_image_path', 'pos_text', 'pos_image_path', 'neg_text', 'neg_image_path'
         """
         qry_inputs = self._get_batch_inputs(examples, "query_text", "query_image")
-        base_pos_inputs = self._get_batch_inputs(examples, "pos_text", "pos_image")
-        loss_types = self._get_loss_types(examples)
-        pos_inputs, choice_counts = self._expand_target_inputs(base_pos_inputs, examples, loss_types)
-        choice_starts = self._compute_choice_starts(choice_counts)
+        pos_inputs = self._get_batch_inputs(examples, "pos_text", "pos_image")
+
         bs = len(qry_inputs['text'])
         assert bs > 0, 'An empty batch'
         # pad batch to batch_size to avoid hanging in distributed training
@@ -254,15 +278,70 @@ class MultimodalDataCollator:
             pass
         process_fn = process_vlm_inputs_fns[self.training_args.model_backbone]
         processed_qry_inputs = process_fn(qry_inputs, processor=self.processor, max_length=self.data_args.max_len)
-        processed_pos_inputs = process_fn(pos_inputs, processor=self.processor, max_length=self.data_args.max_len)
         processed_qry_inputs['text'] = [e['query_text'] for e in examples]
-        processed_pos_inputs['text'] = [e['pos_text'] for e in examples]
         processed_qry_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
-        processed_pos_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
-        processed_qry_inputs['loss_type'] = loss_types
-        processed_pos_inputs['loss_type'] = loss_types
-        processed_pos_inputs['choice_counts'] = choice_counts
-        processed_pos_inputs['choice_starts'] = choice_starts
 
-        # print_rank(f"\t\tQry collator: processed_qry_inputs['input_ids'].shape={processed_qry_inputs['input_ids'].shape}\t\tPos collator: processed_pos_inputs['input_ids'].shape={processed_pos_inputs['input_ids'].shape}")
-        return processed_qry_inputs, processed_pos_inputs
+        # Check if any example has valid negatives (cache results to avoid double computation)
+        valid_negatives_cache = [self.has_valid_negatives(example) for example in examples]
+        has_negatives = any(valid_negatives_cache)
+
+        # Create processed_tgt_inputs when negatives exist
+        if has_negatives:
+            neg_inputs = self._get_negative_inputs(examples, "neg_text", "neg_image")
+            # Create target inputs combining positives and negatives
+            tgt_texts, tgt_images = [], []
+            max_row_length = 0
+            
+            # First pass: collect all texts and images, find max_row_length
+            for i, example in enumerate(examples):
+                # Start with 1 positive
+                row_texts = [pos_inputs['text'][i]]
+                row_images = [pos_inputs['images'][i]]
+                
+                # Add negatives for this example if they exist (use cached result)
+                if valid_negatives_cache[i]:
+                    example_neg_texts = neg_inputs['text'][i]  # Get negatives for this specific example
+                    example_neg_images = neg_inputs['images'][i]
+                    
+                    # Add safety check for mismatched lengths
+                    assert len(example_neg_texts) == len(example_neg_images), f"Example {i} has mismatched neg text/image lengths"
+
+                    # Add all available negatives for this example
+                    for neg_text, neg_image in zip(example_neg_texts, example_neg_images):
+                        row_texts.append(neg_text)
+                        row_images.append(neg_image)
+
+                max_row_length = max(max_row_length, len(row_texts))
+                tgt_texts.append(row_texts)
+                tgt_images.append(row_images)
+            
+            padded_tgt_texts, padded_tgt_images = [], []
+            
+            for row_texts, row_images in zip(tgt_texts, tgt_images):
+                # Pad or truncate to max_row_length
+                assert len(row_texts) <= max_row_length, f"row_texts length {len(row_texts)} exceeds max_row_length {max_row_length}"
+                # Pad with empty strings and None images
+                row_texts.extend([''] * (max_row_length - len(row_texts)))
+                row_images.extend([None] * (max_row_length - len(row_images)))
+                
+                padded_tgt_texts.extend(row_texts)
+                padded_tgt_images.extend(row_images)
+            
+            # Process the combined target inputs
+            tgt_inputs = {'text': padded_tgt_texts, 'images': padded_tgt_images}
+            processed_tgt_inputs = process_fn(tgt_inputs, processor=self.processor, max_length=self.data_args.max_len)
+            processed_tgt_inputs['text'] = padded_tgt_texts
+            processed_tgt_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples for _ in range(max_row_length)]
+            
+        else:
+            processed_tgt_inputs = process_fn(pos_inputs, processor=self.processor, max_length=self.data_args.max_len)
+            processed_tgt_inputs['text'] = [e['pos_text'] for e in examples]
+            processed_tgt_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
+
+        print_rank(f"\t\tQry collator: processed_qry_inputs['input_ids'].shape={processed_qry_inputs['input_ids'].shape}\t\tPos collator: processed_pos_inputs['input_ids'].shape={processed_tgt_inputs['input_ids'].shape}")
+        from collections import Counter
+        counter_by_source = Counter([e["global_dataset_name"] for e in examples])
+        for dname, count in counter_by_source.items():
+            print_rank(f"\t\tdataset_name={dname}, count={count}")
+
+        return processed_qry_inputs, processed_tgt_inputs

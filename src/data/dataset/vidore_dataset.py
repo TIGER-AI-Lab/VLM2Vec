@@ -4,8 +4,8 @@ from datasets.features.image import image_to_bytes
 import io
 
 from torch.jit import isinstance
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, MULTIMODAL_FEATURES, \
-    RESOLUTION_MAPPING
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, ImageVideoInstance, \
+    MULTIMODAL_FEATURES, RESOLUTION_MAPPING
 from src.model.processor import VLM_IMAGE_TOKENS
 
 
@@ -18,7 +18,8 @@ def process_query(query, prompt, image_token):
 
 
 @add_metainfo_hook
-def data_prepare_v5(batch_dict, *args, **kwargs):
+@convert_neg_fields
+def data_prepare(batch_dict, *args, **kwargs):
     model_backbone = kwargs['model_backbone']
     image_resolution = kwargs['image_resolution']
     batch_size = len(batch_dict['query'])
@@ -41,11 +42,17 @@ def data_prepare_v5(batch_dict, *args, **kwargs):
             path = image['path']
         else:
             raise ValueError(f"Unsupported image type: {type(image)}")
-        default_res = RESOLUTION_MAPPING.get(image_resolution, [224, 224])
-        if default_res is None: default_res = [224, 224]
-        query_images.append({"bytes": [image_bytes], "paths": [path], "resolutions": [default_res]})
-        pos_images.append({'bytes': [b''], 'paths': [''], 'resolutions': [[224, 224]]})
-        neg_images.append([{'bytes': [b''], 'paths': [''], 'resolutions': [[224, 224]]}])
+        query_images.append({"bytes": [image_bytes], "paths": [path], "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)]})
+        pos_images.append(ImageVideoInstance(
+            bytes=[None],
+            paths=[None],
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+        ).to_dict())
+        neg_images.append(ImageVideoInstance(
+            bytes=[None],
+            paths=[None],
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+        ).to_dict())
     if len(query_texts) == 0:
         print('something went wrong')
     # print_rank(f"global_dataset_name={kwargs.get('global_dataset_name', DATASET_PARSER_NAME)}, batch_size={batch_size}, processed_batch_size={len(query_texts)}")

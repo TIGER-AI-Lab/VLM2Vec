@@ -9,7 +9,7 @@ from collections import defaultdict
 
 import datasets
 import numpy as np
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, RESOLUTION_MAPPING, ImageVideoInstance
 from src.prompt.base_prompt import AutoPrompt
 from src.utils.text_utils.normalize_text import normalize
 
@@ -129,8 +129,9 @@ CLUSTER_NAME2LABELS = {
 }
 
 @add_metainfo_hook
+@convert_neg_fields
 def data_prepare(examples, dataset_name, data_format,
-                 query_prompt='', doc_prompt='', num_hardneg=0,
+                 query_prompt='', doc_prompt='',
                  **kwargs):
     '''
     data_type=against_text: sample multiple texts of different labels as negatives
@@ -138,6 +139,7 @@ def data_prepare(examples, dataset_name, data_format,
     '''
     contexts, queries, pos_docs, neg_docs = [], [], [], []
     data_type = kwargs.get("data_type", "default")  # against_text or against_label
+    num_hardneg = kwargs.get("num_hardneg", 0)
 
     ex = json.loads(examples['text'][0])
     title_field_name = [l for l in ["title", "headline"] if l in ex][0]
@@ -220,9 +222,14 @@ def data_prepare(examples, dataset_name, data_format,
     #     return_dict['neg_docs'] = neg_docs
     #     return_dict['neg_contexts'] = contexts
     batch_len = len(queries)
-    return_dict =  {"query_text": queries, "query_image": [None]*batch_len,
-                   "pos_text": pos_docs, "pos_image": [None]*batch_len,
-                   "neg_text": neg_docs if neg_docs else [None]*batch_len, "neg_image": [None]*batch_len}
+    empty_image = ImageVideoInstance(
+        bytes=[None],
+        paths=[None],
+        resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+    ).to_dict()
+    return_dict =  {"query_text": queries, "query_image": [empty_image]*batch_len,
+                   "pos_text": pos_docs, "pos_image": [empty_image]*batch_len,
+                   "neg_text": neg_docs if neg_docs else [None]*batch_len, "neg_image": [empty_image]*batch_len}
     return return_dict
 
 DATASET_PARSER_NAME = "mteb_cluster"
@@ -262,8 +269,7 @@ def load_mteb_cluster(model_args, data_args, training_args,
     #     batch_size = 1024 * 256
     else:
         batch_size = 1024*8
-    num_hardneg = kwargs.get("num_hardneg", data_args.num_hardneg)
-    dataset = dataset.map(lambda x: data_prepare(x, num_hardneg=num_hardneg,
+    dataset = dataset.map(lambda x: data_prepare(x,
                                                  dataset_name=dataset_name, data_format=data_format,
                                                  query_prompt=query_prompt, doc_prompt=doc_prompt,
                                                  **kwargs),

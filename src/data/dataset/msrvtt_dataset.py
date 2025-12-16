@@ -1,8 +1,8 @@
 import os
 
 from datasets import load_dataset
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, MULTIMODAL_FEATURES, \
-    RESOLUTION_MAPPING
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, MULTIMODAL_FEATURES, \
+    RESOLUTION_MAPPING, ImageVideoInstance
 from src.utils.vision_utils.vision_utils import save_frames, load_frames, sample_frames
 from src.utils.dataset_utils import sample_dataset
 from src.model.processor import process_input_text
@@ -10,6 +10,7 @@ from src.model.processor import process_input_text
 TASK_INST_QRY = "Find a video that contains the following visual content:"
 TASK_INST_TGT = "Understand the content of the provided video."
 @add_metainfo_hook
+@convert_neg_fields
 def data_prepare(batch_dict, *args, **kwargs):
 
     image_resolution, model_backbone = kwargs['image_resolution'], kwargs['model_backbone']
@@ -22,7 +23,11 @@ def data_prepare(batch_dict, *args, **kwargs):
             zip(batch_dict['video_id'], batch_dict['video'], batch_dict['caption'])):
 
         query_texts.append(process_input_text(TASK_INST_QRY, model_backbone, text=caption[0]))
-        query_images.append(None)
+        query_images.append(ImageVideoInstance(
+            bytes=[None],
+            paths=[None],
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+        ).to_dict())
 
         video_path = os.path.join(video_root, video_path)
         frame_dir = os.path.join(frame_root, video_name)
@@ -33,7 +38,11 @@ def data_prepare(batch_dict, *args, **kwargs):
         pos_texts.append(process_input_text(TASK_INST_TGT, model_backbone, add_video_token=True))
         pos_images.append({"bytes": [None] * num_frames, "paths": video_frame_paths,
                             "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)] * num_frames})
-        neg_images.append(None)
+        neg_images.append(ImageVideoInstance(
+            bytes=[None],
+            paths=[None],
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+        ).to_dict())
         neg_texts.append(None)
     return {"query_text": query_texts, "query_image": query_images,
             "pos_text": pos_texts, "pos_image": pos_images,

@@ -162,7 +162,6 @@ class MultimodalEvalDataCollator:
                             if not self.data_args.resize_use_processor and image is not None and image_resolution:
                                 image = image.resize(image_resolution)
                             if image is not None and (image_resolution is not None and self.data_args.image_decay_factor is not None):
-                                assert image_resolution is None, "image_resolution is conflicting with image_decay_factor"
                                 assert self.model_args.model_backbone in [QWEN2_VL, QWEN2_5_VL, QWEN2_VL_TOKENSELECTION, QWEN2_5_VL_TOKENSELECTION], "image_decay_factor is only supported for Qwen models"
                                 # TODO: this is a hacky way to decay image resolution, need to be refactored
                                 max_pixels = max(self.data_args.resize_min_pixels, self.data_args.resize_max_pixels * self.data_args.image_decay_factor ** (num_images - image_idx))

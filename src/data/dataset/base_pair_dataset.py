@@ -1,3 +1,4 @@
+import pyarrow as pa
 from abc import ABCMeta, abstractmethod
 from functools import wraps
 from datasets import Features, Value, Sequence
@@ -13,28 +14,29 @@ from datasets import Features, Value, Sequence
 #     "global_dataset_name": Value(dtype='string', id=None),
 # })
 
+arrow_schema = pa.schema([
+    pa.field("query_text", pa.string()),
+    pa.field("query_image", pa.struct([
+        pa.field("paths", pa.list_(pa.string())),
+        pa.field("bytes", pa.list_(pa.binary())),
+        pa.field("resolutions", pa.list_(pa.list_(pa.int32(), 2))),
+    ])),
+    pa.field("pos_text", pa.string()),
+    pa.field("pos_image", pa.struct([
+        pa.field("paths", pa.list_(pa.string())),
+        pa.field("bytes", pa.list_(pa.binary())),
+        pa.field("resolutions", pa.list_(pa.list_(pa.int32(), 2))),
+    ])),
+    pa.field("neg_text", pa.list_(pa.string())),
+    pa.field("neg_image", pa.list_(pa.struct([
+        pa.field("paths", pa.list_(pa.string())),
+        pa.field("bytes", pa.list_(pa.binary())),
+        pa.field("resolutions", pa.list_(pa.list_(pa.int32(), 2))),
+    ]))),
+    pa.field("global_dataset_name", pa.string()),
+])
 
-MULTIMODAL_FEATURES = Features(**{
-    "query_text": Value(dtype='string'),
-    "query_image": {
-        "paths": Sequence(Value(dtype='string')),  # List of image paths (frames)
-        "bytes": Sequence(Value(dtype='binary')),  # List of pre-saved image bytes
-        "resolutions": Sequence(Sequence(Value(dtype='int64'), length=2))  # List of [width, height] pairs
-    },
-    "pos_text": Value(dtype='string'),
-    "pos_image": {
-        "paths": Sequence(Value(dtype='string')),
-        "bytes": Sequence(Value(dtype='binary')),
-        "resolutions": Sequence(Sequence(Value(dtype='int64'), length=2))
-    },
-    "neg_text": Sequence(Value(dtype='string')),
-    "neg_image": Sequence({
-        "paths": Sequence(Value(dtype='string')),
-        "bytes": Sequence(Value(dtype='binary')),
-        "resolutions": Sequence(Sequence(Value(dtype='int64'), length=2))
-    }),
-    "global_dataset_name": Value(dtype='string'),
-})
+MULTIMODAL_FEATURES = Features.from_arrow_schema(arrow_schema)
 
 RESOLUTION_MAPPING = {
     "high": (1344, 1344),
@@ -102,3 +104,52 @@ def add_metainfo_hook(f):
         return batch_data
 
     return wrapper
+
+def convert_neg_fields(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        out = fn(*args, **kwargs)
+        assert isinstance(out, dict), f"Expected output to be a dict, but got {type(out)}"
+        # helpers
+        def is_nested_list_str(x):
+            return isinstance(x, list) and all(isinstance(e, list) and all(isinstance(s, str) for s in e) for e in x)
+
+        def is_list_str(x):
+            return isinstance(x, list) and all(isinstance(s, str) for s in x)
+
+        def is_nested_list_dict(x):
+            return isinstance(x, list) and all(isinstance(e, list) and all(isinstance(d, dict) for d in e) for e in x)
+
+        def is_list_dict(x):
+            return isinstance(x, list) and all(isinstance(d, dict) for d in x)
+
+        # neg_text: make list[list[str]]
+        if "neg_text" in out and not is_nested_list_str(out["neg_text"]):
+            if is_list_str(out["neg_text"]):
+                out["neg_text"] = [[s] for s in out["neg_text"]]
+
+        # neg_image: make list[list[dict]]
+        if "neg_image" in out and not is_nested_list_dict(out["neg_image"]):
+            if is_list_dict(out["neg_image"]):
+                out["neg_image"] = [[d] for d in out["neg_image"]]
+
+        return out
+    return wrapper
+
+class ImageVideoInstance:
+    """
+    len(bytes) == len(path) == len(resolution) == 1: image
+    len(bytes) == len(path) == len(resolution) > 1: multi-image / video
+    """
+    def __init__(self, bytes, paths, resolutions):
+        assert len(bytes) == len(paths) == len(resolutions)
+        self.bytes = bytes
+        self.paths = paths
+        self.resolutions = resolutions
+
+    def to_dict(self):
+        return {
+            "bytes": self.bytes,
+            "paths": self.paths,
+            "resolutions": self.resolutions,
+        }

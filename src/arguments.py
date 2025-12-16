@@ -45,8 +45,7 @@ class DataArguments:
     resize_min_pixels: int = field(default=28*28*4, metadata={"help": "The min pixels of the image to resize the image. This is only works when `--resize_use_processor true`."})
     resize_max_pixels: int = field(default=28*28*1280, metadata={"help": "The max pixels of the image to resize the image. This is only works when `--resize_use_processor true`."})
     image_decay_factor: float = field(default=None, metadata={"help": "The image decay factor for resizing temporal images"})
-    num_hardneg: int = field(default=0, metadata={"help": "hard negative number"})
-
+    chunk_size: int = field(default=32, metadata={"help": "Cluster sizes in metis. Only used when `--homogeneous_sampling` is true."})
 
 @dataclass
 class TrainingArguments(TrainingArguments):
@@ -57,12 +56,15 @@ class TrainingArguments(TrainingArguments):
     logging_steps: int = field(default=1, metadata={"help": "logging steps"})
     num_train_epochs: int = field(default=1, metadata={"help": "number of training epochs"})
     grad_cache: bool = field(default=False, metadata={"help": "Use gradient cache update"})
-    gc_q_chunk_size: int = field(default=2, metadata={"help": "query side subset size"})
-    gc_p_chunk_size: int = field(default=2, metadata={"help": "target side subset size"})
+    gc_q_chunk_size: int = field(default=2, metadata={"help": "query side subset size. Should be power of 2."})
+    gc_p_chunk_size: int = field(default=2, metadata={"help": "target side subset size. Should be power of 2."})
+    interleave_datasets: bool = field(default=True, metadata={"help": "interleave datasets, if true, will interleave datasets in each batch"})
+    homogeneous_sampling: bool = field(default=False, metadata={"help": "Use homogeneous sampling"})
     interleave_stopping_strategy: str = field(default="all_exhausted", metadata={"help": "all_exhausted or first_exhausted"})
     homogeneous_batch_size_per_device: float = field(default=0, metadata={"help": "Specify number of consecutive samples from the same dataset PER DEVICE. 0/None means random mixing."})
     interleave_batch_size: float = field(default=0, metadata={"help": "[DEPRECATED] Use `homogeneous_batch_size_per_device`."})
 
+    gc_dynamic_limit: int = field(default=125, metadata={"help": "gc_chunk default limit - (128, 125) sized matrices works for Qwen2b. gc_dynamic_limit would be 125 and gc_p|q_chunk_size would be 128"})
 
 @dataclass
 class MTEBArguments:

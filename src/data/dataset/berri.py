@@ -10,19 +10,20 @@ import random
 import datasets
 import numpy as np
 
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, RESOLUTION_MAPPING, ImageVideoInstance
 from src.prompt.base_prompt import AutoPrompt
 from src.utils.text_utils.normalize_text import normalize
 
 SEP = ':\t'
 @add_metainfo_hook
+@convert_neg_fields
 def data_prepare(examples,
-                 dataset_name='berri',
-                 num_hardneg=0, add_prompt_ratio=1.0,
+                 dataset_name='berri', add_prompt_ratio=1.0,
                  query_prompt='', doc_prompt='', **kwargs):
     contexts, queries, docs = [], [], []
     neg_contexts, neg_docs = [], []
     dataset_names = []
+    num_hardneg = kwargs.get("num_hardneg", 0)
     for data_idx, text in enumerate(examples['text']):
         try:
             example = json.loads(text)
@@ -74,9 +75,14 @@ def data_prepare(examples,
             raise e
 
     batch_len = len(queries)
-    return_dict = {"query_text": queries, "query_image": [None]*batch_len,
-                   "pos_text": docs, "pos_image": [None]*batch_len,
-                   "neg_text": neg_docs if neg_docs else [None]*batch_len, "neg_image": [None]*batch_len}
+    empty_image = ImageVideoInstance(
+        bytes=[None],
+        paths=[None],
+        resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+    ).to_dict()
+    return_dict = {"query_text": queries, "query_image": [empty_image]*batch_len,
+                   "pos_text": docs, "pos_image": [empty_image]*batch_len,
+                   "neg_text": neg_docs if neg_docs else [None]*batch_len, "neg_image": [empty_image]*batch_len}
     return return_dict
 
 
@@ -108,8 +114,7 @@ def load_berri(model_args, data_args, training_args,
     num_shards = training_args.dataloader_num_workers if training_args.dataloader_num_workers > 0 else 1
     dataset = dataset.to_iterable_dataset(num_shards=num_shards)  # convert to IterableDataset and multiple shards
 
-    num_hardneg = kwargs.get("num_hardneg", data_args.num_hardneg)
-    dataset = dataset.map(lambda x: data_prepare(x, num_hardneg=num_hardneg,
+    dataset = dataset.map(lambda x: data_prepare(x,
                                                  add_prompt_ratio=add_prompt_ratio,
                                                  query_prompt=query_prompt, doc_prompt=doc_prompt,
                                                  **kwargs),

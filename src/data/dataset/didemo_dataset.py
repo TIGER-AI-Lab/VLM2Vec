@@ -1,8 +1,8 @@
 import os
 
 from datasets import load_dataset
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, MULTIMODAL_FEATURES, \
-    RESOLUTION_MAPPING
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, MULTIMODAL_FEATURES, \
+    RESOLUTION_MAPPING, ImageVideoInstance
 from src.utils.vision_utils.vision_utils import save_frames, load_frames, sample_frames
 from src.utils.dataset_utils import sample_dataset
 from src.model.processor import process_input_text
@@ -17,6 +17,7 @@ VIDEO_EXTENSIONS = [
 ]
 
 @add_metainfo_hook
+@convert_neg_fields
 def data_prepare(batch_dict, *args, **kwargs):
     image_resolution, model_backbone = kwargs['image_resolution'], kwargs['model_backbone']
     num_frames, max_frames_saved = kwargs['num_frames'], kwargs['max_frames_saved']
@@ -26,7 +27,11 @@ def data_prepare(batch_dict, *args, **kwargs):
     query_texts, query_images, pos_texts, pos_images, neg_texts, neg_images = [], [], [], [], [], []
     for video_path, caption in zip(batch_dict['video'], batch_dict['caption']):
         query_texts.append(process_input_text(TASK_INST_QRY, model_backbone, text=caption))
-        query_images.append(None)
+        query_images.append(ImageVideoInstance(
+            bytes=[None],
+            paths=[None],
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+        ).to_dict())
 
         video_name = os.path.splitext(os.path.basename(video_path))[0]
         video_path = os.path.join(video_root, os.path.basename(video_path))
@@ -45,9 +50,17 @@ def data_prepare(batch_dict, *args, **kwargs):
         except Exception as e:
             query_texts[-1] = None
             pos_texts.append(None)
-            pos_images.append(None)
+            pos_images.append(ImageVideoInstance(
+            bytes=[None],
+            paths=[None],
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+        ).to_dict())
             neg_texts.append(None)
-            neg_images.append(None)
+            neg_images.append(ImageVideoInstance(
+            bytes=[None],
+            paths=[None],
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+        ).to_dict())
             # assert False
             continue
         video_frame_paths = load_frames(frame_dir)
@@ -57,7 +70,11 @@ def data_prepare(batch_dict, *args, **kwargs):
         pos_images.append({"bytes": [None] * num_frames, "paths": video_frame_paths,
                              "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)] * num_frames})
         neg_texts.append(None)
-        neg_images.append(None)
+        neg_images.append(ImageVideoInstance(
+            bytes=[None],
+            paths=[None],
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+        ).to_dict())
 
     return {"query_text": query_texts, "query_image": query_images,
             "pos_text": pos_texts, "pos_image": pos_images,

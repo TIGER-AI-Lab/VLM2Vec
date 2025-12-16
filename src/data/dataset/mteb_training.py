@@ -11,7 +11,7 @@ import numpy as np
 import random
 import datasets
 
-from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook
+from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, RESOLUTION_MAPPING, ImageVideoInstance
 from src.prompt.base_prompt import AutoPrompt
 from src.utils.text_utils.normalize_text import normalize
 from src.prompt.sfr import CLASSIFICATION_NAME2LABELS
@@ -20,8 +20,9 @@ from src.utils.text_utils.basic_utils import print_master
 SEP = '\t'
 
 @add_metainfo_hook
+@convert_neg_fields
 def data_prepare(examples, dataset_name,
-                 query_prompt='', doc_prompt='', num_hardneg=0,
+                 query_prompt='', doc_prompt='',
                  local_load=False, **kwargs):
     """
     data_type=against_text is only applicable for classification where a label is assigned as target
@@ -31,6 +32,7 @@ def data_prepare(examples, dataset_name,
     ex_ids = []
     all_labels = CLASSIFICATION_NAME2LABELS[dataset_name] if dataset_name in CLASSIFICATION_NAME2LABELS else []
     data_type = kwargs.get("data_type", "default")  # legacy
+    num_hardneg = kwargs.get("num_hardneg", 0)
 
     # in case of against_text mode, we first gather examples by labels
     label2texts, label2negtexts = defaultdict(list), defaultdict(list)
@@ -110,9 +112,14 @@ def data_prepare(examples, dataset_name,
     #     return_dict['neg_docs'] = neg_docs
     #     return_dict['neg_contexts'] = contexts
     batch_len = len(queries)
-    return_dict = {"query_text": queries, "query_image": [None] * batch_len,
-                   "pos_text": pos_docs, "pos_image": [None] * batch_len,
-                   "neg_text": neg_docs if neg_docs else [None] * batch_len, "neg_image": [None] * batch_len}
+    empty_image = ImageVideoInstance(
+        bytes=[None],
+        paths=[None],
+        resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+    ).to_dict()
+    return_dict = {"query_text": queries, "query_image": [empty_image] * batch_len,
+                   "pos_text": pos_docs, "pos_image": [empty_image] * batch_len,
+                   "neg_text": neg_docs if neg_docs else [None] * batch_len, "neg_image": [empty_image] * batch_len}
     return return_dict
 
 DATASET_PARSER_NAME = "mteb_training"
@@ -158,8 +165,7 @@ def load_mteb_training(model_args, data_args, training_args, dataset_name,
     # large batch size will cause HF.datasets fail to return Feature, then the whole dataset will be ignored
     # buffer_size = 1024 * 100 if "amazonreviews" in dataset_name.lower() else 1024 * 64
     # batch_size = 1024 * 80 if "amazonreviews" in dataset_name.lower() else 1024 * 32
-    num_hardneg = kwargs.get("num_hardneg", data_args.num_hardneg)
-    dataset = dataset.map(lambda x: data_prepare(x, num_hardneg=num_hardneg,
+    dataset = dataset.map(lambda x: data_prepare(x,
                                                  dataset_name=dataset_name,
                                                  query_prompt=query_prompt, doc_prompt=doc_prompt,
                                                  local_load=os.path.isfile(file_path),
