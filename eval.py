@@ -22,12 +22,11 @@ from datasets.distributed import split_dataset_by_node
 from src.arguments import ModelArguments, DataArguments, TrainingArguments
 from src.data.collator.eval_collator import MultimodalEvalDataCollator
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, generate_cand_dataset
-from src.eval_utils.metrics import RankingMetrics
+from src.utils.eval_utils.metrics import RankingMetrics
 from src.model.model import MMEBModel
 from src.model.processor import get_backbone_name, load_processor, COLPALI
-from src.utils import batch_to_device, print_rank, print_master
-import multiprocessing
-from multiprocessing import Pool, cpu_count
+from src.utils.basic_utils import batch_to_device, print_rank, print_master
+
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -219,17 +218,25 @@ def main():
                     if data_args.data_basedir and task_config.get(key):
                         task_config[key] = os.path.join(data_args.data_basedir, task_config[key])
 
-            full_eval_qry_dataset, corpus = AutoEvalPairDataset.instantiate(model_args=model_args, data_args=data_args, **task_config)
-            full_eval_cand_dataset = generate_cand_dataset(full_eval_qry_dataset, corpus)
-            eval_qry_dataset, eval_cand_dataset = full_eval_qry_dataset, full_eval_cand_dataset
-            # Pad datasets to be divisible by world_size before splitting
-            if dist.is_initialized():
-                padded_qry_dataset, _ = pad_dataset_to_divisible(full_eval_qry_dataset, world_size)
-                padded_cand_dataset, _ = pad_dataset_to_divisible(full_eval_cand_dataset, world_size)
-                eval_qry_dataset = split_dataset_by_node(padded_qry_dataset, rank=local_rank, world_size=world_size)
-                eval_cand_dataset = split_dataset_by_node(padded_cand_dataset, rank=local_rank, world_size=world_size)
-            else:
-                padded_qry_dataset, padded_cand_dataset = full_eval_qry_dataset, full_eval_cand_dataset
+            try:
+                full_eval_qry_dataset, corpus = AutoEvalPairDataset.instantiate(model_args=model_args, data_args=data_args, **task_config)
+                full_eval_cand_dataset = generate_cand_dataset(full_eval_qry_dataset, corpus)
+                eval_qry_dataset, eval_cand_dataset = full_eval_qry_dataset, full_eval_cand_dataset
+                # Pad datasets to be divisible by world_size before splitting
+                if dist.is_initialized():
+                    padded_qry_dataset, _ = pad_dataset_to_divisible(full_eval_qry_dataset, world_size)
+                    padded_cand_dataset, _ = pad_dataset_to_divisible(full_eval_cand_dataset, world_size)
+                    eval_qry_dataset = split_dataset_by_node(padded_qry_dataset, rank=local_rank, world_size=world_size)
+                    eval_cand_dataset = split_dataset_by_node(padded_cand_dataset, rank=local_rank, world_size=world_size)
+                else:
+                    padded_qry_dataset, padded_cand_dataset = full_eval_qry_dataset, full_eval_cand_dataset
+            except Exception as e:
+                print_master(f"Failed to load dataset {dataset_name}, skipping {dataset_name}")
+                import traceback
+                traceback.print_exc()
+                print_master(e)
+                raise e
+                continue
 
         # --- 1. Compute Query Embeddings ---
         if do_query:

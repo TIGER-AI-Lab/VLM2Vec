@@ -1,6 +1,5 @@
 import os
 import re
-import cv2
 import subprocess
 import math
 
@@ -15,7 +14,8 @@ from torchvision.datasets.folder import IMG_EXTENSIONS, pil_loader
 from torchvision.io import write_video
 from torchvision.utils import save_image
 
-from . import video_transforms
+from src.utils.vision_utils import video_transforms
+
 
 VID_EXTENSIONS = (".mp4", ".avi", ".mov", ".mkv")
 IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png")

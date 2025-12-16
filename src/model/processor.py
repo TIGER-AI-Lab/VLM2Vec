@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 import torch
 import numpy as np
-from src.utils import print_master
+from src.utils.basic_utils import print_master
 
 from src.model.baseline_backbone.llava_next import LlavaNextForConditionalGeneration
 from src.model.baseline_backbone.phi3_v.modeling_phi3_v import Phi3VForCausalLM
@@ -520,11 +520,62 @@ def InternVL_process_fn(model_inputs: dict, processor, max_length=None):
 
 def ColPali_process_fn(model_inputs: dict, processor, max_length=None):
     texts, images = model_inputs['text'], model_inputs['images']
-    if images is None or all(i is None for i in images):
-        inputs = processor.process_queries(texts)
+    
+    input_ids_batch = []
+    attention_mask_batch = []
+    pixel_values_batch = []
+
+    for text, image in zip(texts, images):
+        if image is not None:
+            inputs = processor.process_images([image])
+            pixel_values_batch.append(inputs['pixel_values'])
+        else:
+            inputs = processor.process_queries([text])
+            pixel_values_batch.append(None)
+
+        input_ids_batch.append(inputs['input_ids'].squeeze().tolist())
+        attention_mask_batch.append(inputs['attention_mask'].squeeze().tolist())
+
+    # Pad input_ids and attention_mask
+    padded_text_inputs = processor.tokenizer.pad(
+        {'input_ids': input_ids_batch, 'attention_mask': attention_mask_batch},
+        return_tensors="pt"
+    )
+    
+    final_input_ids = padded_text_inputs['input_ids']
+    final_attention_mask = padded_text_inputs['attention_mask']
+
+    # Handle pixel_values
+    if any(pv is not None for pv in pixel_values_batch):
+        # Find a representative shape for pixel_values
+        representative_pv_shape = None
+        for pv in pixel_values_batch:
+            if pv is not None:
+                representative_pv_shape = pv.shape
+                break
+        
+        processed_pixel_values = []
+        for pv in pixel_values_batch:
+            if pv is None:
+                # Create a zero tensor of the representative shape
+                processed_pixel_values.append(torch.zeros(representative_pv_shape))
+            else:
+                processed_pixel_values.append(pv)
+        final_pixel_values = torch.cat(processed_pixel_values)
     else:
-        inputs = processor.process_images(images)
-    return inputs
+        # No images in the batch at all
+        batch_size = len(texts)
+        # SigLIP expects 3 channels (RGB) and a square image of 448x448 based on the error (1024 patches = 32x32 patches, with patch_size=14, 32*14=448)
+        default_channels = 3
+        default_height = 448
+        default_width = 448
+        final_pixel_values = torch.zeros(batch_size, default_channels, default_height, default_width)
+
+    return {
+        'input_ids': final_input_ids,
+        'attention_mask': final_attention_mask,
+        'pixel_values': final_pixel_values,
+    }
 
 
 def InternVideo2_process_fn(model_inputs: dict, processor, max_length=None):

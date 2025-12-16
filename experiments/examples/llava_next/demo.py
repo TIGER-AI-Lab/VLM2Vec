@@ -1,6 +1,6 @@
 from src.model import MMEBModel
 from src.arguments import ModelArguments
-from src.utils import load_processor
+from src.utils.basic_utils import load_processor
 
 import torch
 from transformers import HfArgumentParser, AutoProcessor

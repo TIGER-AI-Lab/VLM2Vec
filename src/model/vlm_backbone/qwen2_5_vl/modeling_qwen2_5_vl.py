@@ -49,7 +49,7 @@ from transformers.utils import (
     replace_return_docstrings,
 )
 
-from src.utils import print_rank
+from src.utils.basic_utils import print_rank
 from .configuration_qwen2_5_vl import Qwen2_5_VLConfig, Qwen2_5_VLVisionConfig
 
 
