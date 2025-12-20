@@ -1,6 +1,7 @@
 from datasets import load_dataset
 from PIL import Image
 from datasets.features.image import image_to_bytes
+from pathlib import Path
 import io, os, random
 
 from src.data.dataset.base_pair_dataset import AutoPairDataset, add_metainfo_hook, convert_neg_fields, ImageVideoInstance, \
@@ -24,7 +25,7 @@ def data_prepare(batch_dict, *args, **kwargs):
     model_backbone = kwargs['model_backbone']
     image_resolution = kwargs['image_resolution']
     batch_size = len(batch_dict['query_id'])
-    image_dir = kwargs['image_dir']
+    image_dir = Path(kwargs['image_dir'])
     num_hardneg = kwargs.get("num_hardneg", 0)
     answer_key = 'answer' if 'answer' in batch_dict else 'answers'
 
@@ -68,10 +69,10 @@ def data_prepare(batch_dict, *args, **kwargs):
 
         pos_image_paths = []
         for corpus_id in pos_image_ids:
-            image_path = f'{image_dir}/{corpus_id}.png'
+            image_path = image_dir / f'{corpus_id}.png'
             if not os.path.exists(image_path):
                 raise FileNotFoundError(f'Image path {image_path} not found.')
-            pos_image_paths.append(image_path)
+            pos_image_paths.append(str(image_path))
 
         pos_images.append(ImageVideoInstance(
             bytes=[None] * len(pos_image_paths),
@@ -81,12 +82,12 @@ def data_prepare(batch_dict, *args, **kwargs):
 
         neg_image = []
         for corpus_id in neg_image_ids:
-            image_path = f'{image_dir}/{corpus_id}.png' if corpus_id else ''
+            image_path = image_dir / f'{corpus_id}.png' if corpus_id else ''
             if corpus_id and not os.path.exists(image_path):
                 raise FileNotFoundError(f'Image path {image_path} not found.')
             neg_image.append(ImageVideoInstance(
                 bytes=[None],
-                paths=[image_path],
+                paths=[str(image_path)],
                 resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
             ).to_dict())
         neg_images.append(neg_image)
@@ -100,21 +101,22 @@ def data_prepare(batch_dict, *args, **kwargs):
 
 def corpus_prepare(batch_dict, *args, **kwargs):
     image_resolution, model_backbone = kwargs['image_resolution'], kwargs['model_backbone']
-    image_dir = kwargs['image_dir']
+    image_dir = Path(kwargs['image_dir'])
     batch_size = len(batch_dict['docid'])
 
+    if image_dir.is_dir() is False:
+        os.makedirs(image_dir, exist_ok=True)
     cand_texts, cand_images, dataset_infos = [], [], []
     for corpus_id, text, image, title in \
         zip(batch_dict['docid'], batch_dict.get('text', [''] * batch_size), batch_dict['image'], batch_dict.get('title', [''] * batch_size)):
-        image_path = f'{image_dir}/{corpus_id}.png'
+        image_path = image_dir / f'{corpus_id}.png'
         if not os.path.exists(image_path):
-            os.makedirs(image_dir, exist_ok=True)
             image.save(image_path)
         text = (((title + " ") if title else "") + (text if text else "")).strip()
         cand_texts.append([process_query(text, prompt="", image_token=VLM_IMAGE_TOKENS[model_backbone])])
         cand_images.append([ImageVideoInstance(
             bytes=[None],
-            paths=[image_path],
+            paths=[str(image_path)],
             resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
         ).to_dict()])
         dataset_infos.append({
@@ -150,10 +152,6 @@ def load_vidore_neg_dataset(model_args, data_args, training_args, *args, **kwarg
         dataset = dataset.select(range(num_rows))
     num_rows = dataset.num_rows
 
-    num_shards = training_args.dataloader_num_workers if training_args.dataloader_num_workers > 0 else 1
-    dataset = dataset.to_iterable_dataset(num_shards=num_shards)  # convert to IterableDataset and multiple shards
-    # corpus = corpus.to_iterable_dataset(num_shards=num_shards)
-
     kwargs['model_backbone'] = model_args.model_backbone
     kwargs['image_resolution'] = data_args.image_resolution
     if dataset_name:
@@ -161,20 +159,23 @@ def load_vidore_neg_dataset(model_args, data_args, training_args, *args, **kwarg
     else:
         subset_name = kwargs.get("subset_name", None)
         kwargs['global_dataset_name'] = f'{DATASET_PARSER_NAME}/{subset_name}'
-    # dataset = dataset.shuffle(buffer_size=8192, seed=training_args.seed)
+
     remove_columns = ['docid', 'image', 'text', 'source']
     remove_columns = [c for c in remove_columns if c in corpus.column_names]
     corpus = corpus.map(lambda x: corpus_prepare(x, **kwargs), batched=True, batch_size=2048, num_proc=8,
                         remove_columns=remove_columns,
-                        drop_last_batch=False, load_from_cache_file=False)
+                        drop_last_batch=False, load_from_cache_file=True)
     remove_columns = ['query_id', 'query_text', 'query_image', 'positive_document_ids', 'negative_document_ids', 'answer', 'source']
     remove_columns = [c for c in remove_columns if c in dataset.column_names]
-    dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True, batch_size=2048,
-                          remove_columns=remove_columns,
-                          drop_last_batch = True)
+    dataset = dataset.map(
+        lambda x: data_prepare(x, **kwargs),
+        batched=True,
+        batch_size=2048,
+        remove_columns=remove_columns,
+        drop_last_batch=True,
+    )
     # dataset = dataset._resolve_features()
     # features = _infer_features_from_batch(dataset._head()) # not working: {ArrowInvalid}ArrowInvalid('Could not convert <PIL.Image.Image image mode=RGB size=128x128 at 0x7F7C794E9BD0> with type Image: did not recognize Python value type when inferring an Arrow data type')
     dataset = dataset.cast(MULTIMODAL_FEATURES)
-    setattr(dataset, 'num_rows', num_rows)
     # print_master(f"Loaded {DATASET_PARSER_NAME}/{dataset_name} dataset with {num_rows} samples")
     return dataset

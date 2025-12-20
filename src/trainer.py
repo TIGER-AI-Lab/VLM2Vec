@@ -17,7 +17,7 @@ import math
 
 from src.data.collator.train_collator import split_vlm_inputs, get_dense_rep, split_and_process_vlm_inputs
 from src.model.model import MMEBModel
-from src.loss import SimpleContrastiveLoss, DistributedContrastiveLoss, InExampleContrastiveLoss, LossRouter
+from src.loss import SimpleContrastiveLoss, DistributedContrastiveLoss, InExampleContrastiveLoss
 from src.grad_cache.grad_cache import GradCache
 from torch.utils.data import DataLoader, Dataset, IterableDataset, RandomSampler, SequentialSampler
 
@@ -141,7 +141,8 @@ class MMEBTrainer(Trainer):
         if not isinstance(train_dataset, torch.utils.data.IterableDataset):
             dataloader_params["sampler"] = self._get_train_sampler()
             dataloader_params["drop_last"] = self.args.dataloader_drop_last
-            dataloader_params["worker_init_fn"] = seed_worker
+            # HF seed_worker expects (worker_id, num_workers, rank); wrap to match PyTorch worker_init_fn signature.
+            dataloader_params["worker_init_fn"] = lambda worker_id: seed_worker(worker_id, self.args.dataloader_num_workers, self.args.process_index)
             dataloader_params["prefetch_factor"] = self.args.dataloader_prefetch_factor
         else:
             dataloader_params["sampler"] = None

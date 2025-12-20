@@ -338,10 +338,10 @@ class MultimodalDataCollator:
             processed_tgt_inputs['text'] = [e['pos_text'] for e in examples]
             processed_tgt_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
 
-        print_rank(f"\t\tQry collator: processed_qry_inputs['input_ids'].shape={processed_qry_inputs['input_ids'].shape}\t\tPos collator: processed_pos_inputs['input_ids'].shape={processed_tgt_inputs['input_ids'].shape}")
-        from collections import Counter
-        counter_by_source = Counter([e["global_dataset_name"] for e in examples])
-        for dname, count in counter_by_source.items():
-            print_rank(f"\t\tdataset_name={dname}, count={count}")
+        # print_rank(f"\t\tQry collator: processed_qry_inputs['input_ids'].shape={processed_qry_inputs['input_ids'].shape}\t\tPos collator: processed_pos_inputs['input_ids'].shape={processed_tgt_inputs['input_ids'].shape}")
+        # from collections import Counter
+        # counter_by_source = Counter([e["global_dataset_name"] for e in examples])
+        # for dname, count in counter_by_source.items():
+        #     print_rank(f"\t\tdataset_name={dname}, count={count}")
 
         return processed_qry_inputs, processed_tgt_inputs

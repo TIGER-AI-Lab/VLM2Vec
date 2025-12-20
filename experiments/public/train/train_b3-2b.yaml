@@ -3,7 +3,7 @@ ImageNet_1K:
     dataset_name: VLM2Vec/B3-2b
     subset_name: ImageNet_1K
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 100000
     weight: 1
 
@@ -12,7 +12,7 @@ N24News:
     dataset_name: VLM2Vec/B3-2b
     subset_name: N24News
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 50000
     weight: 1
 
@@ -21,7 +21,7 @@ HatefulMemes:
     dataset_name: VLM2Vec/B3-2b
     subset_name: HatefulMemes
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 10000
     weight: 0.5
 
@@ -30,7 +30,7 @@ VOC2007:
     dataset_name: VLM2Vec/B3-2b
     subset_name: VOC2007
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 10000
     weight: 0.5
 
@@ -39,7 +39,7 @@ SUN397:
     dataset_name: VLM2Vec/B3-2b
     subset_name: SUN397
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 20000
     weight: 0.5
 
@@ -48,7 +48,7 @@ OK-VQA:
     dataset_name: VLM2Vec/B3-2b
     subset_name: OK-VQA
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 10000
     weight: 0.5
 
@@ -57,7 +57,7 @@ A-OKVQA:
     dataset_name: VLM2Vec/B3-2b
     subset_name: A-OKVQA
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 20000
     weight: 0.5
 
@@ -66,7 +66,7 @@ DocVQA:
     dataset_name: VLM2Vec/B3-2b
     subset_name: DocVQA
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 40000
     weight: 1
 
@@ -75,7 +75,7 @@ InfographicsVQA:
     dataset_name: VLM2Vec/B3-2b
     subset_name: InfographicsVQA
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 25000
     weight: 0.5
 
@@ -84,7 +84,7 @@ ChartQA:
     dataset_name: VLM2Vec/B3-2b
     subset_name: ChartQA
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 28000
     weight: 0.5
 
@@ -93,7 +93,7 @@ Visual7W:
     dataset_name: VLM2Vec/B3-2b
     subset_name: Visual7W
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 70000
     weight: 1
 
@@ -102,7 +102,7 @@ VisDial:
     dataset_name: VLM2Vec/B3-2b
     subset_name: VisDial
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 130000
     weight: 1
 
@@ -111,7 +111,7 @@ CIRR:
     dataset_name: VLM2Vec/B3-2b
     subset_name: CIRR
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 30000
     weight: 0.5
 
@@ -120,7 +120,7 @@ VisualNews_t2i:
     dataset_name: VLM2Vec/B3-2b
     subset_name: VisualNews_t2i
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 100000
     weight: 1
 
@@ -129,7 +129,7 @@ VisualNews_i2t:
     dataset_name: VLM2Vec/B3-2b
     subset_name: VisualNews_i2t
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 100000
     weight: 1
 
@@ -138,7 +138,7 @@ MSCOCO_t2i:
     dataset_name: VLM2Vec/B3-2b
     subset_name: MSCOCO_t2i
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 100000
     weight: 1
 
@@ -147,7 +147,7 @@ MSCOCO_i2t:
     dataset_name: VLM2Vec/B3-2b
     subset_name: MSCOCO_i2t
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 120000
     weight: 1
 
@@ -156,7 +156,7 @@ NIGHTS:
     dataset_name: VLM2Vec/B3-2b
     subset_name: NIGHTS
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 20000
     weight: 0.5
 
@@ -165,7 +165,7 @@ WebQA:
     dataset_name: VLM2Vec/B3-2b
     subset_name: WebQA
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 20000
     weight: 0.5
 
@@ -174,6 +174,6 @@ MSCOCO:
     dataset_name: VLM2Vec/B3-2b
     subset_name: MSCOCO
     dataset_split: train
-    image_dir: vlm2vec_train/MMEB-train/image
+    image_dir: vlm2vec_train/MMEB-train/
     num_sample_per_subset: 100000
     weight: 1

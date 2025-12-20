@@ -109,28 +109,23 @@ def load_mmeb_neg_dataset(model_args, data_args, training_args, *args, **kwargs)
         dataset = dataset.select(range(num_rows))
     num_rows = dataset.num_rows
 
-    num_shards = training_args.dataloader_num_workers if training_args.dataloader_num_workers > 0 else 1
-    dataset = dataset.to_iterable_dataset(num_shards=num_shards)  # convert to IterableDataset and multiple shards
-    
-
     kwargs['model_backbone'] = model_args.model_backbone
     kwargs['image_resolution'] = data_args.image_resolution
     kwargs['global_dataset_name'] = f'{DATASET_PARSER_NAME}/{subset_name}'
-    remove_columns = ['qry', 'qry_image_path', 'pos_image_path']
+    remove_columns = ['qry', 'qry_image_path', 'pos_text', 'pos_image_path', 'neg_text']
     if 'neg_image_path' in column_names:
         remove_columns.append('neg_image_path')
     
     # Use batched processing like MMEB
-    dataset = dataset.map(lambda x: data_prepare(x, **kwargs), 
-                         batched=True, 
-                         batch_size=2048,
-                         remove_columns=remove_columns, 
-                         drop_last_batch=True)
+    dataset = dataset.map(
+        lambda x: data_prepare(x, **kwargs),
+        batched=True,
+        batch_size=2048,
+        remove_columns=remove_columns,
+        drop_last_batch=False,  # keep final partial batches
+    )
     
     dataset = dataset.cast(MULTIMODAL_FEATURES)
-    
     print_master(f"Loaded {DATASET_PARSER_NAME}/{subset_name} dataset with {num_rows} samples")
-
-    setattr(dataset, 'num_rows', num_rows)
 
     return dataset
