@@ -303,13 +303,12 @@ def Qwen2_VL_process_fn(model_inputs: dict, processor: Qwen2VLProcessor, max_len
     # TODO: set separate max_len for text/visual inputs, currently max_length is only applied to text-only data
     input_ids, pixel_values, image_grid_thw, pixel_values_videos, video_grid_thw = [], [], [], [], []
     texts, visual_inputs = model_inputs['text'], model_inputs['images']
-    image_exists = False
     vlm_image_token, vlm_video_token = VLM_IMAGE_TOKENS[QWEN2_VL], VLM_VIDEO_TOKENS[QWEN2_VL]
 
     # 1. iterate each pair and process, since processors do not support processing for mixed batch (contains data w/ and w/o visual inputs)
-    for text, images in zip(texts, visual_inputs):
-        if images is None or (type(images)==list and any(i is None for i in images)):
-            # all images must be valid
+    for text, visual_input in zip(texts, visual_inputs):
+        if not visual_input or (type(visual_input)==list and any(i is None for i in visual_input)):
+            # if text inputs only (all images must be valid)
             inputs = processor(text=[text], images=None, return_tensors="np", max_length=max_length, truncation=True)
             input_id = inputs["input_ids"].squeeze().tolist()
             if isinstance(input_id, int):
@@ -323,22 +322,22 @@ def Qwen2_VL_process_fn(model_inputs: dict, processor: Qwen2VLProcessor, max_len
         else:
             try:
                 if vlm_image_token in text:
-                    if isinstance(images, PIL.Image.Image):
+                    if isinstance(visual_input, PIL.Image.Image):
                         # images is a single image
-                        images = [images]
-                    for iid, image in enumerate(images):
+                        visual_input = [visual_input]
+                    for iid, image in enumerate(visual_input):
                         # rare case in MMEB eval: resize to 28*28 if either w or h is smaller than 28
                         if image.size[0] < 28 or image.size[1] < 28:
                             image = image.resize((56, 56))
-                            images[iid] = image
-                    inputs = processor(text=[text], images=images, return_tensors="np", max_length=None, truncation=False, input_data_format=ChannelDimension.LAST)
+                            visual_input[iid] = image
+                    inputs = processor(text=[text], images=visual_input, return_tensors="np", max_length=max_length, truncation=(max_length is not None), input_data_format=ChannelDimension.LAST)
                 elif vlm_video_token in text:
                     # TODO: check text/video data validity
-                    inputs = processor(text=[text], videos=[images], return_tensors="np", max_length=None, truncation=False, input_data_format=ChannelDimension.LAST)
+                    inputs = processor(text=[text], videos=[visual_input], return_tensors="np", max_length=max_length, truncation=(max_length is not None), input_data_format=ChannelDimension.LAST)
                 else:
                     raise NotImplementedError(f"No visual token found ({vlm_image_token} or {vlm_video_token}) in the text: {text}")
             except Exception as e:
-                for i in images:
+                for i in visual_input:
                     print(i.filename)
                 raise e
             input_ids.append(inputs["input_ids"].squeeze().tolist())

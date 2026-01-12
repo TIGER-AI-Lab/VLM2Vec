@@ -100,11 +100,11 @@ def load_vidore_dataset(model_args, data_args, **kwargs):
     kwargs['qrels_mapping'] = qrels_mapping
 
     corpus = corpus.map(lambda x: corpus_prepare(x, **kwargs), batched=True,
-                        batch_size=2048, num_proc=8,
+                        batch_size=2048, num_proc=1,
                         drop_last_batch=False, load_from_cache_file=False)
     corpus = corpus.select_columns(['cand_text', 'cand_image', 'dataset_infos'])
     dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True,
-                          batch_size=2048, num_proc=8,
+                          batch_size=2048, num_proc=1,
                           drop_last_batch=False, load_from_cache_file=False)
     dataset = dataset.select_columns(["query_text", "query_image", "cand_text", "cand_image", "dataset_infos"])
 

@@ -95,6 +95,7 @@ QVHighlight:
     dataset_name: QVHighlight
     video_root: ""
     clip_root: ""
+    frame_root: video-tasks/frames/video_mret/QVHighlight
     num_negative_clips: 9
     max_video_frames_saved: 64
     max_clip_frames_saved: 8
@@ -116,15 +117,6 @@ Charades-STA:
 MomentSeeker:
     dataset_parser: momentseeker
     dataset_name: MomentSeeker
-    video_root: ""
-    clip_root: ""
-    frame_root: video-tasks/frames/video_mret/MomentSeeker
-    num_negative_clips: 9
-    num_video_frames: 8
-    eval_type: local
-momentseeker_1k8:
-    dataset_parser: momentseeker
-    dataset_name: momentseeker_1k8
     video_root: ""
     clip_root: ""
     frame_root: video-tasks/frames/video_mret/MomentSeeker

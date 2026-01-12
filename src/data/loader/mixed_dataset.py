@@ -16,17 +16,24 @@ def init_mixed_dataset(dataset_config, model_args, data_args, training_args):
         print_master(f"\t\tDataset#{data_idx} (dataset_parser={dataset_config.get('dataset_parser', 'n/a')}): {global_dataset_name}, num_rows={train_dataset.num_rows}, prob={probs[data_idx] * 100.0}")
         train_datasets.append(train_dataset)
 
-    if training_args.interleave_batch_size and training_args.interleave_batch_size <= 1.0:
-        interleave_batch_size = training_args.per_device_train_batch_size * world_size * training_args.interleave_batch_size
+    # Handle Deprecation
+    if training_args.homogeneous_batch_size_per_device == 0 and training_args.interleave_batch_size != 0:
+        print_master("WARNING: `interleave_batch_size` is deprecated. Please use `homogeneous_batch_size_per_device`.")
+        training_args.homogeneous_batch_size_per_device = training_args.interleave_batch_size
+
+    if training_args.homogeneous_batch_size_per_device and training_args.homogeneous_batch_size_per_device <= 1.0:
+        interleave_batch_size = training_args.per_device_train_batch_size * world_size * training_args.homogeneous_batch_size_per_device
     else:
-        interleave_batch_size = training_args.interleave_batch_size
+        interleave_batch_size = training_args.homogeneous_batch_size_per_device * world_size
+
     total_num_rows = sum([d.num_rows for d in train_datasets])
     print_master(f"\nInitializing interleave datasets:"
                  f"\n\t\tworld_size={world_size}"
                  f"\n\t\ttotal num rows={total_num_rows}"
                  f"\n\t\tglobal batch size={training_args.per_device_train_batch_size * world_size}"
                  f"\n\t\testimated num step per epoch={total_num_rows/(training_args.per_device_train_batch_size * world_size)}"
-                 f"\n\t\tinterleave_batch_size={interleave_batch_size}"
+                 f"\n\t\thomogeneous_batch_size_per_device={training_args.homogeneous_batch_size_per_device}"
+                 f"\n\t\tinterleave_batch_size (global)={interleave_batch_size}"
                  )
     assert total_num_rows >= (training_args.per_device_train_batch_size * world_size), \
         f"total_num_rows(={total_num_rows}) must be greater than or equal to global batch size (={training_args.per_device_train_batch_size * world_size}), since the last batch will be dropped."
