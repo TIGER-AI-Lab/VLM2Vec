@@ -330,10 +330,10 @@ def Qwen2_VL_process_fn(model_inputs: dict, processor: Qwen2VLProcessor, max_len
                         if image.size[0] < 28 or image.size[1] < 28:
                             image = image.resize((56, 56))
                             visual_input[iid] = image
-                    inputs = processor(text=[text], images=visual_input, return_tensors="np", max_length=None, truncation=False, input_data_format=ChannelDimension.LAST)
+                    inputs = processor(text=[text], images=visual_input, return_tensors="np", max_length=max_length, truncation=(max_length is not None), input_data_format=ChannelDimension.LAST)
                 elif vlm_video_token in text:
                     # TODO: check text/video data validity
-                    inputs = processor(text=[text], videos=[visual_input], return_tensors="np", max_length=None, truncation=False, input_data_format=ChannelDimension.LAST)
+                    inputs = processor(text=[text], videos=[visual_input], return_tensors="np", max_length=max_length, truncation=(max_length is not None), input_data_format=ChannelDimension.LAST)
                 else:
                     raise NotImplementedError(f"No visual token found ({vlm_image_token} or {vlm_video_token}) in the text: {text}")
             except Exception as e:

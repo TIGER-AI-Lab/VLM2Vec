@@ -201,12 +201,13 @@ class MultimodalDataCollator:
             raise RuntimeError(f"Expect batch size {self.batch_size}, but got batch size of {bs}")
             pass
         process_fn = process_vlm_inputs_fns[self.training_args.model_backbone]
-        processed_qry_inputs = process_fn(qry_inputs, processor=self.processor, max_length=self.data_args.max_len)
-        processed_pos_inputs = process_fn(pos_inputs, processor=self.processor, max_length=self.data_args.max_len)
+        max_len = self.data_args.max_len if self.data_args.max_len != -1 else None
+        processed_qry_inputs = process_fn(qry_inputs, processor=self.processor, max_length=max_len)
+        processed_pos_inputs = process_fn(pos_inputs, processor=self.processor, max_length=max_len)
         processed_qry_inputs['text'] = [e['query_text'] for e in examples]
         processed_pos_inputs['text'] = [e['pos_text'] for e in examples]
         processed_qry_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
         processed_pos_inputs['global_dataset_name'] = [e['global_dataset_name'] for e in examples]
 
-        # print_rank(f"\t\tQry collator: processed_qry_inputs['input_ids'].shape={processed_qry_inputs['input_ids'].shape}\t\tPos collator: processed_pos_inputs['input_ids'].shape={processed_pos_inputs['input_ids'].shape}")
+        print_rank(f"\t\tQry collator: processed_qry_inputs['input_ids'].shape={processed_qry_inputs['input_ids'].shape}\t\tPos collator: processed_pos_inputs['input_ids'].shape={processed_pos_inputs['input_ids'].shape}")
         return processed_qry_inputs, processed_pos_inputs
