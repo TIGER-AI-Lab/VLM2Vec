@@ -1,0 +1,78 @@
+ViDoRe_arxivqa:
+    data_root: data/arxivqa_test_subsampled_beir
+    image_root: images/ViDoRe_arxivqa # Original uncompressed image path.
+ViDoRe_docvqa:
+    data_root: data/docvqa_test_subsampled_beir
+    image_root: images/ViDoRe_docvqa
+ViDoRe_infovqa:
+    data_root: data/infovqa_test_subsampled_beir
+    image_root: images/ViDoRe_infovqa
+ViDoRe_tabfquad:
+    data_root: data/tabfquad_test_subsampled_beir
+    image_root: images/ViDoRe_tabfquad
+ViDoRe_tatdqa:
+    data_root: data/tatdqa_test_beir
+    image_root: images/ViDoRe_tatdqa
+ViDoRe_shiftproject:
+    data_root: data/shiftproject_test_beir
+    image_root: images/ViDoRe_shiftproject
+ViDoRe_syntheticDocQA_artificial_intelligence:
+    data_root: data/syntheticDocQA_artificial_intelligence_test_beir
+    image_root: images/ViDoRe_syntheticDocQA_artificial_intelligence
+ViDoRe_syntheticDocQA_energy:
+    data_root: data/syntheticDocQA_energy_test_beir
+    image_root: images/ViDoRe_syntheticDocQA_energy
+ViDoRe_syntheticDocQA_government_reports:
+    data_root: data/syntheticDocQA_government_reports_test_beir
+    image_root: images/ViDoRe_syntheticDocQA_government_reports
+ViDoRe_syntheticDocQA_healthcare_industry:
+    data_root: data/syntheticDocQA_healthcare_industry_test_beir
+    image_root: images/ViDoRe_syntheticDocQA_healthcare_industry
+
+ViDoRe_esg_reports_human_labeled_v2:
+    data_root: data/esg_reports_human_labeled_v2
+    image_root: images/esg_reports_human_labeled_v2
+ViDoRe_biomedical_lectures_v2:
+    data_root: data/biomedical_lectures_v2
+    image_root: images/biomedical_lectures_v2
+    query_subset: english
+ViDoRe_biomedical_lectures_v2_multilingual:
+    data_root: data/biomedical_lectures_v2
+    image_root: images/biomedical_lectures_v2
+ViDoRe_economics_reports_v2:
+    data_root: data/economics_reports_v2
+    image_root: images/economics_reports_v2
+    query_subset: english
+ViDoRe_economics_reports_v2_multilingual:
+    data_root: data/economics_reports_v2
+    image_root: images/economics_reports_v2
+ViDoRe_esg_reports_v2:
+    data_root: data/esg_reports_v2
+    image_root: images/esg_reports_v2
+    query_subset: english
+ViDoRe_esg_reports_v2_multilingual:
+    data_root: data/esg_reports_v2
+    image_root: images/esg_reports_v2
+
+
+# VisRAG_ArxivQA:
+#     data_root: data/VisRAG-Ret-Test-ArxivQA
+# VisRAG_ChartQA:
+#     data_root: data/VisRAG-Ret-Test-ChartQA
+# VisRAG_MP-DocVQA:
+#     data_root: data/VisRAG-Ret-Test-MP-DocVQA
+# VisRAG_SlideVQA:
+#     data_root: data/VisRAG-Ret-Test-SlideVQA
+# VisRAG_InfoVQA:
+#     data_root: data/VisRAG-Ret-Test-InfoVQA
+# VisRAG_PlotQA:
+#     data_root: data/VisRAG-Ret-Test-PlotQA
+
+# ViDoSeek-page:
+#     data_root: data/ViDoSeek-page
+# ViDoSeek-doc:
+#     data_root: data/ViDoSeek
+# MMLongBench-doc:
+#     data_root: data/MMLongBench-doc
+# MMLongBench-page:
+#     data_root: data/MMLongBench
