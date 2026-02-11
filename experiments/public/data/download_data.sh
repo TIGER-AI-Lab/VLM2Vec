@@ -70,4 +70,15 @@ tar -xzvf video_ret.tar.gz -C video_ret
 cat video_qa.tar.gz-0{0..4} | tar -xzv
 popd
 
+# GUI tasks
+mkdir gui-tasks
+pushd gui-tasks
+wget https://huggingface.co/datasets/iMeanAI/GAE-Bench/resolve/main/images_zip/GUIAct.zip
+unzip GUIAct.zip
+rm GUIAct.zip
+wget https://huggingface.co/datasets/iMeanAI/GAE-Bench/resolve/main/images_zip/Mind2Web.zip
+unzip Mind2Web.zip
+rm Mind2Web.zip
+popd
+
 popd

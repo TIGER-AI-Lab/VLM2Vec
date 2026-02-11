@@ -70,4 +70,14 @@ EVAL_DATASET_HF_PATH = {
     # "ViDoRe_economics_reports_v2":("vidore/synthetic_economics_macro_economy_2024_filtered_v1.0", None, "test"),
     # "ViDoRe_economics_reports_v2_multilingual":("vidore/synthetic_economics_macro_economy_2024_filtered_v1.0_multilingual", None, "test"),
     # "ViDoRe_esg_reports_human_labeled_v2":("vidore/esg_reports_human_labeled_v2", None, "test"),
+
+    # GAE-Bench
+    "GAE-GUIAct_q2t": ("VLM2Vec/GAE-GUIAct", None, "q2t"),
+    "GAE-GUIAct_q2s": ("VLM2Vec/GAE-GUIAct", None, "q2s"),
+    "GAE-GUIAct_s2s": ("VLM2Vec/GAE-GUIAct", None, "s2s"),
+    "GAE-GUIAct_t2s": ("VLM2Vec/GAE-GUIAct", None, "t2s"),
+    "GAE-Mind2Web_q2t": ("VLM2Vec/GAE-Mind2Web", None, "q2t"),
+    "GAE-Mind2Web_q2s": ("VLM2Vec/GAE-Mind2Web", None, "q2s"),
+    "GAE-Mind2Web_s2s": ("VLM2Vec/GAE-Mind2Web", None, "s2s"),
+    "GAE-Mind2Web_t2s": ("VLM2Vec/GAE-Mind2Web", None, "t2s"),
 }
