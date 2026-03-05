@@ -665,10 +665,12 @@ def process_input_text(instruction, model_backbone, text=None, add_video_token=F
         prompt = prompt + " " + text
     if add_video_token:
         video_token = VLM_VIDEO_TOKENS[model_backbone]
-        prompt = video_token + " " + prompt
+        if video_token not in prompt:
+            prompt = video_token + " " + prompt
     if add_image_token:
         image_token = VLM_IMAGE_TOKENS[model_backbone]
-        prompt = image_token + " " + prompt
+        if image_token not in prompt:
+            prompt = image_token + " " + prompt
 
     return prompt
 

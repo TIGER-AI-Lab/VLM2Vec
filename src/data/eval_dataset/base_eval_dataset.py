@@ -126,7 +126,8 @@ def generate_cand_dataset(dataset, corpus):
     cand_rows = []
     all_cand_name = set()
     for row in dataset:
-        assert len(row["cand_text"]) == len(row["cand_image"]) == len(row["dataset_infos"]["cand_names"])
+        assert len(row["cand_text"]) == len(row["cand_image"]) == len(row["dataset_infos"]["cand_names"]), \
+            f"Unmatched num of candidates: cand_text: {len(row["cand_text"])}, cand_image: {len(row["cand_image"])}, dataset_infos: {len(row["dataset_infos"]["cand_names"])}"
         for cand_text, cand_image, cand_name in zip(row["cand_text"], row["cand_image"], row["dataset_infos"]["cand_names"]):
             if cand_name not in all_cand_name:
                 cand_rows.append({

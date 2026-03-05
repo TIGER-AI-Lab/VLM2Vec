@@ -246,7 +246,7 @@ def load_frames(frames_dir, filter_func=None):
         ext = os.path.splitext(frame_name)[-1].lower()
         if ext.lower() in IMAGE_EXTENSIONS:
             if filter_func is None or filter_func(frame_name):
-                image_path = f"{frames_dir}/{frame_name}"
+                image_path = os.path.join(frames_dir, frame_name)
                 results.append(image_path)
     return results
 

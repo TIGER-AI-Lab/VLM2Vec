@@ -33,3 +33,7 @@ from .image_i2i_vg_dataset import load_image_i2i_vg_dataset
 # VisDoc
 from .vidore_dataset import load_vidore_dataset
 from .visrag_dataset import load_visrag_dataset
+
+# cross modal retrieval
+from .ti2v_dataset import load_ti2v_dataset
+from .t2iv_dataset import load_t2iv_dataset
