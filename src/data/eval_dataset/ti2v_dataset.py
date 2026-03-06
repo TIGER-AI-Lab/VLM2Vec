@@ -2,6 +2,7 @@ import os
 import sys
 
 from datasets import load_dataset
+from src.utils.basic_utils import print_rank, print_master
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook, RESOLUTION_MAPPING, ImageVideoInstance
 from src.model.processor import process_input_text
 from src.utils.vision_utils.vision_utils import save_frames, process_video_frames
@@ -64,7 +65,6 @@ def data_prepare(batch_dict, *args, **kwargs):
             "label_name": id,
         })
 
-    print
     return {
         "query_text": query_texts, "query_image": query_images, 
         "cand_text": cand_texts, "cand_image": cand_images,
@@ -84,7 +84,7 @@ def load_ti2v_dataset(model_args, data_args, *args, **kwargs):
         num_sample_per_subset = int(num_sample_per_subset)
     if num_sample_per_subset < dataset.num_rows:
         dataset = dataset.select(range(num_sample_per_subset))
-        print(f"Subsample to {len(dataset)} samples")
+        print_master(f"Subsample to {len(dataset)} samples")
 
     kwargs['model_backbone'] = model_args.model_backbone
     kwargs['image_resolution'] = data_args.image_resolution

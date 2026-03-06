@@ -151,3 +151,27 @@ def generate_cand_dataset(dataset, corpus):
 
     cand_dataset = Dataset.from_list(cand_rows)
     return cand_dataset
+
+# ============== Cross Modality Utilities ==============
+MODALITY_EXT_MAPPING = {
+    'I': 'jpg',
+    'V': 'mp4', 
+    'A': 'wav'
+}
+
+MODALITY_INST_MAPPING = {
+    'T': "Find the text that best matches the given image and video.",
+    'I': "Find the image that best matches the given text: ",
+    'V': "Find the video that best matches the given text: ",
+    'A': "Find the audio that best matches the given text: "
+}
+
+def coco_filename(id):
+    return f'COCO_val2014_{str(id).zfill(12)}'
+
+def coco_filename_with_ext(id, modality='I'):
+    ext = MODALITY_EXT_MAPPING[modality] # default to jpg if modality not found
+    return f'{coco_filename(id)}.{ext}'
+
+def coco_id(filename):
+    return int(filename.split('_')[-1].split('.')[0])
