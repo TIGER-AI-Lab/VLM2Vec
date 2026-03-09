@@ -2,8 +2,9 @@ import os
 
 from datasets import load_dataset
 
+from src.constant.dataset_hflocal_path import EVAL_DATASET_HF_PATH as EVAL_DATASET_LOCAL_PATH
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook
-from src.utils.dataset_utils import sample_dataset
+from src.utils.dataset_utils import sample_dataset, load_hf_dataset
 from src.utils.vision_utils.vision_utils import process_video_frames, load_frames, qa_template
 from src.model.processor import VLM_VIDEO_TOKENS
 import datasets
@@ -91,9 +92,28 @@ DATASET_PARSER_NAME = "videommmu"
 DATASET_HF_PATH = "lmms-lab/VideoMMMU"
 @AutoEvalPairDataset.register(DATASET_PARSER_NAME)
 def load_videommmu_dataset(model_args, data_args, training_args, *args, **kwargs):
+    # 检查是否有本地路径配置
+    dataset_name = kwargs.get('dataset_name', DATASET_PARSER_NAME)
+    use_local = False
+    
+    if dataset_name in EVAL_DATASET_LOCAL_PATH:
+        local_path_info = EVAL_DATASET_LOCAL_PATH[dataset_name]
+        local_path = local_path_info[0]
+        if os.path.exists(local_path):
+            print(f"Loading {dataset_name} from local path: {local_path}")
+            use_local = True
+            base_path = local_path
+    
+    if not use_local:
+        print(f"Loading {dataset_name} from HuggingFace Hub: {DATASET_HF_PATH}")
+    
     subsets = []
     for subset_name in subset_names:
-        dataset = load_dataset(DATASET_HF_PATH, subset_name, split="test")
+        if use_local:
+            # 本地加载逻辑 - 根据实际本地数据集结构调整
+            dataset = load_dataset(base_path, subset_name, split="test")
+        else:
+            dataset = load_dataset(DATASET_HF_PATH, subset_name, split="test")
         new_column = [subset_name] * len(dataset)
         dataset = dataset.add_column("subset", new_column)
         subsets.append(dataset)

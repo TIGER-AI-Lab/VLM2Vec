@@ -1,6 +1,7 @@
 import os
 
 from src.constant.dataset_hf_path import EVAL_DATASET_HF_PATH
+from src.constant.dataset_hflocal_path import EVAL_DATASET_HF_PATH as EVAL_DATASET_LOCAL_PATH
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook, RESOLUTION_MAPPING, ImageVideoInstance
 from src.utils.dataset_utils import load_hf_dataset, sample_dataset
 from src.utils.vision_utils.vision_utils import save_frames, process_video_frames
@@ -25,8 +26,14 @@ def data_prepare(batch_dict, **kwargs):
 
         video_path = os.path.join(video_root, os.path.basename(video_path))
         frame_dir = os.path.join(frame_root, video_name)
-        save_frames(video_path=video_path, frame_dir=frame_dir, max_frames_saved=max_frames_saved)
-        video_frame_paths = process_video_frames(frame_dir, num_frames=num_frames)
+        if os.path.exists(frame_dir):
+            video_frame_paths = process_video_frames(frame_dir, num_frames=num_frames)
+        elif os.path.exists(video_path):
+            save_frames(video_path=video_path, frame_dir=frame_dir, max_frames_saved=max_frames_saved)
+            video_frame_paths = process_video_frames(frame_dir, num_frames=num_frames)
+        else:
+            print(f"Skipping missing video and frames: {video_path}")
+            continue
 
         cand_texts.append([process_input_text(TASK_INST_TGT, model_backbone, add_video_token=True)])
         cand_images.append([ImageVideoInstance(
@@ -48,7 +55,21 @@ DATASET_PARSER_NAME = "youcook2"
 # slightly less than the official one: https://github.com/antoine77340/MIL-NCE_HowTo100M/blob/master/csv/validation_youcook.csv?plain=1
 @AutoEvalPairDataset.register(DATASET_PARSER_NAME)
 def load_youcook2_dataset(model_args, data_args, **kwargs):
-    dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[kwargs['dataset_name']])
+    dataset_name = kwargs['dataset_name']
+    
+    # 优先使用本地路径
+    if dataset_name in EVAL_DATASET_LOCAL_PATH:
+        local_path_info = EVAL_DATASET_LOCAL_PATH[dataset_name]
+        local_path = local_path_info[0]
+        if os.path.exists(local_path):
+            print(f"Loading {dataset_name} from local path: {local_path}")
+            dataset = load_hf_dataset(local_path_info + ("local",))
+        else:
+            print(f"Local path {local_path} not found, falling back to HuggingFace Hub")
+            dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[dataset_name])
+    else:
+        dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[dataset_name])
+    
     dataset = sample_dataset(dataset, **kwargs)
 
     kwargs['model_backbone'] = model_args.model_backbone

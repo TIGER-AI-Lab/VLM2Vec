@@ -2,6 +2,7 @@ import os
 
 from datasets import Dataset
 from src.constant.dataset_hf_path import EVAL_DATASET_HF_PATH
+from src.constant.dataset_hflocal_path import EVAL_DATASET_HF_PATH as EVAL_DATASET_LOCAL_PATH
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook, RESOLUTION_MAPPING, ImageVideoInstance
 from src.utils.dataset_utils import load_hf_dataset, sample_dataset
 from src.data.eval_dataset.video_classification_utils import VIDEOCLS_LABEL_MAPPING, DATASET_INSTRUCTION
@@ -48,7 +49,20 @@ DATASET_PARSER_NAME = "video_classification"
 @AutoEvalPairDataset.register(DATASET_PARSER_NAME)
 def load_video_class_dataset(model_args, data_args, **kwargs):
     dataset_name = kwargs['dataset_name']
-    dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[dataset_name])
+    
+    # 优先使用本地路径
+    if dataset_name in EVAL_DATASET_LOCAL_PATH:
+        local_path_info = EVAL_DATASET_LOCAL_PATH[dataset_name]
+        local_path = local_path_info[0]
+        if os.path.exists(local_path):
+            print(f"Loading {dataset_name} from local path: {local_path}")
+            dataset = load_hf_dataset((local_path, local_path_info[1], local_path_info[2], "local"))
+        else:
+            print(f"Local path {local_path} not found, falling back to HuggingFace Hub")
+            dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[dataset_name])
+    else:
+        dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[dataset_name])
+    
     dataset = sample_dataset(dataset, **kwargs)
 
     kwargs['model_backbone'] = model_args.model_backbone

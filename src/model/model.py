@@ -2,16 +2,17 @@ from typing import Dict
 import torch
 import torch.distributed as dist
 from torch import nn, Tensor
-from transformers import PreTrainedModel, AutoModelForCausalLM, AutoConfig
+import torch.nn.functional as F
+import numpy as np
+from transformers import PreTrainedModel, AutoModel, AutoModelForCausalLM, AutoConfig
 from peft import LoraConfig, get_peft_model, PeftModel
-from src.model.processor import QWEN2_5_VL_TOKENSELECTION
-from src.arguments import ModelArguments, TrainingArguments
-from src.model.processor import LLAVA_NEXT, QWEN2_VL, PHI3V, get_backbone_name, print_master, QWEN2_5_VL, \
-    backbone2model, QWEN2_VL_TOKENSELECTION, QWEN2_5_VL_TOKENSELECTION, E5_V
 
-from src.arguments import ModelArguments
-from src.model.processor import LLAVA_NEXT, QWEN2_VL, PHI3V, get_backbone_name, print_master, QWEN2_5_VL, INTERNVIDEO2, \
-    QWEN2_VL_TOKENSELECTION, backbone2model, GME, VLM_IMAGE_TOKENS, LamRA, LamRA_QWEN2_5, COLPALI
+from src.arguments import ModelArguments, TrainingArguments
+from src.model.processor import (
+    LLAVA_NEXT, QWEN2_VL, PHI3V, get_backbone_name, print_master, QWEN2_5_VL,
+    backbone2model, QWEN2_VL_TOKENSELECTION, QWEN2_5_VL_TOKENSELECTION, E5_V,
+    INTERNVIDEO2, GME, VLM_IMAGE_TOKENS, LamRA, LamRA_QWEN2_5, COLPALI, QWEN2_5_OMNI, NVOMNIEMBED
+)
 from src.model.baseline_backbone.colpali import ColPali
 from src.model.baseline_backbone.gme.gme_inference import GmeQwen2VL
 from src.model.baseline_backbone.lamra.lamra_inference import LamRAQwen2VL
@@ -21,29 +22,43 @@ from src.model.baseline_backbone.llava_next import LlavaNextForConditionalGenera
 
 from transformers import modeling_utils
 if not hasattr(modeling_utils, "ALL_PARALLEL_STYLES") or modeling_utils.ALL_PARALLEL_STYLES is None:
-    modeling_utils.ALL_PARALLEL_STYLES = ["tp", "none", "colwise", 'rowwise']
+    modeling_utils.ALL_PARALLEL_STYLES = ["tp", "none", "colwise", "rowwise"]
 
 
 class MMEBModel(nn.Module):
     TRANSFORMER_CLS = AutoModelForCausalLM
 
-    def __init__(self,
-                 encoder: PreTrainedModel,
-                 pooling: str = 'last',
-                 normalize: bool = False,
-                 temperature: float = 0.02,
-                 ):
+    def __init__(
+        self,
+        encoder: PreTrainedModel,
+        pooling: str = "last",
+        normalize: bool = False,
+        temperature: float = 0.02,
+    ):
         super().__init__()
         self.config = encoder.config
         self.encoder = encoder
-        self.pooling = pooling
+        self.pooling = pooling          # <-- string mode
         self.normalize = normalize
         self.temperature = temperature
-        self.cross_entropy = nn.CrossEntropyLoss(reduction='mean')
+        self.cross_entropy = nn.CrossEntropyLoss(reduction="mean")
         self.is_ddp = dist.is_initialized()
         if self.is_ddp:
             self.process_rank = dist.get_rank()
             self.world_size = dist.get_world_size()
+
+        # inside MMEBModel.__init__(...)
+        self.rep_dim = (
+            getattr(self.config, "hidden_size", None)
+            or getattr(self.config, "d_model", None)
+            or getattr(self.config, "embed_dim", None)
+            or getattr(getattr(self.encoder, "config", None), "hidden_size", None)
+            or getattr(getattr(getattr(self.encoder, "model", None), "config", None), "hidden_size", None)
+        )
+
+        if self.rep_dim is None or int(self.rep_dim) <= 0:
+            raise ValueError(f"Cannot infer rep_dim from config. Got rep_dim={self.rep_dim}")
+        self.rep_dim = int(self.rep_dim)
 
     @property
     def device(self):
@@ -52,81 +67,356 @@ class MMEBModel(nn.Module):
         except StopIteration:
             return torch.device("cpu")
 
+    # ----------------------------
+    # Pooling (string mode)
+    # ----------------------------
+    def _pooling(self, hidden_states: torch.Tensor, attention_mask: torch.Tensor = None) -> torch.Tensor:
+        """
+        hidden_states: (B, L, D)
+        attention_mask: (B, L) with 1 for valid tokens, 0 for pads
+        self.pooling is a STRING mode: 'last' | 'mean' | 'cls'
+        """
+        if attention_mask is not None:
+            if not isinstance(attention_mask, torch.Tensor):
+                attention_mask = torch.tensor(attention_mask, dtype=torch.long, device=hidden_states.device)
+            else:
+                attention_mask = attention_mask.to(hidden_states.device).long()
+
+        mode = getattr(self, "pooling", "last")  # string config
+
+        if mode == "eos":
+            mode = "last"
+
+        if mode == "cls":
+            reps = hidden_states[:, 0]  # (B, D)
+
+        elif mode == "mean":
+            if attention_mask is None:
+                reps = hidden_states.mean(dim=1)
+            else:
+                mask = attention_mask.unsqueeze(-1).type_as(hidden_states)  # (B, L, 1)
+                reps = (hidden_states * mask).sum(dim=1) / mask.sum(dim=1).clamp_min(1e-6)
+
+        elif mode == "last":
+            if attention_mask is None:
+                reps = hidden_states[:, -1]
+            else:
+                last_idx = attention_mask.sum(dim=1) - 1  # (B,)
+                last_idx = last_idx.clamp_min(0)
+                reps = hidden_states[
+                    torch.arange(hidden_states.size(0), device=hidden_states.device),
+                    last_idx
+                ]
+        else:
+            raise ValueError(f"Unknown pooling mode: {mode}. Expected one of ['last','mean','cls'].")
+
+        if getattr(self, "normalize", False):
+            reps = torch.nn.functional.normalize(reps, p=2, dim=-1)
+
+        return reps
+
+    # ----------------------------
+    # Encode Input
+    # ----------------------------
     def encode_input(self, input):
-        if getattr(self, "model_backbone", None) == INTERNVIDEO2:
-            if "input_ids" in input.keys():
-                # text side
+        if input is None:
+            return None
+
+        backbone = getattr(self, "model_backbone", None)
+
+        # ===== INTERNVIDEO2 =====
+        if backbone == INTERNVIDEO2:
+            if "input_ids" in input:
                 text_output = self.encoder.get_text_encoder()(
                     input["input_ids"],
-                    attention_mask=input["attention_mask"],
+                    attention_mask=input.get("attention_mask", None),
                     return_dict=True,
                     mode="text",
                 )
                 text_embeds = text_output.last_hidden_state
                 pooled_text_embeds = text_embeds[:, 0]
                 pooled_output = self.encoder.text_proj(pooled_text_embeds)
-                pooled_output /= pooled_output.norm(dim=-1, keepdim=True)
+                pooled_output = pooled_output / pooled_output.norm(dim=-1, keepdim=True)
                 return pooled_output
             else:
                 _, vfeat = self.encoder.encode_vision(input["pixel_values"], test=True)
                 vfeat = self.encoder.vision_proj(vfeat)
-                vfeat /= vfeat.norm(dim=-1, keepdim=True)
+                vfeat = vfeat / vfeat.norm(dim=-1, keepdim=True)
                 return vfeat
-        elif getattr(self, "model_backbone", None) in [GME, LamRA, LamRA_QWEN2_5]:
-            # pooled_output = self.encoder(**input, return_dict=True, output_hidden_states=True)
-            texts = [text.replace(VLM_IMAGE_TOKENS[QWEN2_VL] + '\n', '') for text in input["texts"]] # we are actually passing video queries so this should not happen
+
+        # ===== GME / LamRA =====
+        elif backbone in [GME, LamRA, LamRA_QWEN2_5]:
+            texts = [t.replace(VLM_IMAGE_TOKENS[QWEN2_VL] + "\n", "") for t in input["texts"]]
             images = []
-            for imgs in input['images']:
-                # if multi images are given, select the middle frame only
+            for imgs in input["images"]:
                 if isinstance(imgs, list):
                     imgs = imgs[len(imgs) // 2]
-                    assert not isinstance(imgs, list) # make sure we have extracted the middle frame and it is no longer a list
-                    images.append(imgs)
-                else:
-                    images.append(imgs)
+                    assert not isinstance(imgs, list)
+                images.append(imgs)
             pooled_output = self.encoder.get_fused_embeddings(texts=texts, images=images)
             return pooled_output
-        elif getattr(self, "model_backbone", None) == COLPALI:
+
+        # ===== COLPALI =====
+        elif backbone == COLPALI:
             pooled_output = self.encoder(**input, return_dict=True, output_hidden_states=True)
             return pooled_output
-        elif getattr(self, "model_backbone", None) == LLAVA_NEXT:
-            input['pixel_values'] = input['pixel_values'].squeeze(dim=1)
-            input['image_sizes'] = input['image_sizes'].squeeze(dim=1)
-            hidden_states = self.encoder(**input, return_dict=True, output_hidden_states=True)
-            hidden_states = hidden_states.hidden_states[-1]
-            pooled_output = self._pooling(hidden_states, input['attention_mask'])
-            return pooled_output
-        else:
-            hidden_states = self.encoder(**input, return_dict=True, output_hidden_states=True)
-            hidden_states = hidden_states.hidden_states[-1]
-            pooled_output = self._pooling(hidden_states, input['attention_mask'])
-            return pooled_output
 
-    def _pooling(self, last_hidden_state, attention_mask):
-        if self.pooling == 'last' or self.pooling == 'eos':
-            left_padding = (attention_mask[:, -1].sum() == attention_mask.shape[0])
-            batch_size = last_hidden_state.shape[0]
-            if left_padding:
-                # Get the vectors at the last position
-                reps = last_hidden_state[torch.arange(batch_size), -1, :]
+        # ===== LLAVA_NEXT =====
+        elif backbone == LLAVA_NEXT:
+            input = dict(input)  # avoid in-place side effects
+            input["pixel_values"] = input["pixel_values"].squeeze(dim=1)
+            input["image_sizes"] = input["image_sizes"].squeeze(dim=1)
+            outputs = self.encoder(**input, return_dict=True, output_hidden_states=True, use_cache=False)
+            hidden_states = outputs.hidden_states[-1] if outputs.hidden_states is not None else outputs.last_hidden_state
+            attn_mask = input.get("attention_mask", None)
+            return self._pooling(hidden_states, attn_mask)
+
+        # ===== QWEN2.5 OMNI (Omni-Embed-Nemotron-3B) =====
+        elif backbone == QWEN2_5_OMNI:
+            # 1) 过滤掉调试字段（模型不认识）
+            EXTRA_KEYS = {"texts", "images", "audios"}
+            raw_input = input
+            model_input = {k: v for k, v in raw_input.items() if k not in EXTRA_KEYS}
+
+            # device follow model
+            dev = self.device
+
+            # 2) 强制把 input_ids / attention_mask 转成 LongTensor (AND move to device)
+            def _to_long_tensor(x, device=None):
+                if x is None:
+                    return None
+                if isinstance(x, torch.Tensor):
+                    x = x.long()
+                    return x.to(device) if device is not None else x
+                t = torch.tensor(x, dtype=torch.long)
+                return t.to(device) if device is not None else t
+
+            for k in ("input_ids", "attention_mask"):
+                if k in model_input:
+                    model_input[k] = _to_long_tensor(model_input[k], device=dev)
+
+            # 3) 音频字段命名对齐
+            # processor: input_features, audio_attention_mask, audio_feature_lengths
+            # model:     input_features, feature_attention_mask, audio_feature_lengths
+            if "audio_attention_mask" in model_input and "feature_attention_mask" not in model_input:
+                model_input["feature_attention_mask"] = model_input.pop("audio_attention_mask")
+
+            if "audio_values" in model_input and "input_features" not in model_input:
+                model_input["input_features"] = model_input.pop("audio_values")
+
+            # 清理冗余键
+            for k in ("audio_values", "audio_features", "audios"):
+                model_input.pop(k, None)
+
+            # 4) 检测模态
+            def _has_nonempty(container, key: str) -> bool:
+                if key not in container or container[key] is None:
+                    return False
+                v = container[key]
+                if isinstance(v, list):
+                    return not all(item is None for item in v)
+                return True
+
+            has_image = _has_nonempty(model_input, "pixel_values") or _has_nonempty(model_input, "image_grid_thw")
+            has_video = _has_nonempty(model_input, "pixel_values_videos") or _has_nonempty(model_input, "video_grid_thw")
+            has_audio = (
+                _has_nonempty(model_input, "input_features")
+                or _has_nonempty(model_input, "feature_attention_mask")
+                or _has_nonempty(model_input, "audio_feature_lengths")
+            )
+            has_multimodal = has_image or has_video or has_audio
+
+            def _pad_and_stack_3d(feats_list, pad_value=0.0):
+                # list[Tensor] with [128,T] or [1,128,T] -> Tensor [B,128,Tmax]
+                normed = []
+                Tmax = 0
+                for x in feats_list:
+                    if x is None:
+                        continue
+                    if not isinstance(x, torch.Tensor):
+                        x = torch.tensor(x)
+                    if x.dim() == 3 and x.size(0) == 1:
+                        x = x.squeeze(0)
+                    if x.dim() != 2:
+                        raise ValueError(f"input_features item must be [128,T] or [1,128,T], got {tuple(x.shape)}")
+                    Tmax = max(Tmax, x.size(-1))
+                    normed.append(x)
+                if len(normed) == 0:
+                    return None
+                out = []
+                for x in normed:
+                    pad_t = Tmax - x.size(-1)
+                    if pad_t > 0:
+                        x = F.pad(x, (0, pad_t), value=pad_value)
+                    out.append(x)
+                return torch.stack(out, dim=0)
+
+            def _pad_and_stack_2d(mask_list, pad_value=0):
+                # list[Tensor] with [T] or [1,T] -> Tensor [B,Tmax]
+                normed = []
+                Tmax = 0
+                for x in mask_list:
+                    if x is None:
+                        continue
+                    if not isinstance(x, torch.Tensor):
+                        x = torch.tensor(x)
+                    if x.dim() == 2 and x.size(0) == 1:
+                        x = x.squeeze(0)
+                    if x.dim() != 1:
+                        raise ValueError(f"feature_attention_mask item must be [T] or [1,T], got {tuple(x.shape)}")
+                    Tmax = max(Tmax, x.numel())
+                    normed.append(x)
+                if len(normed) == 0:
+                    return None
+                out = []
+                for x in normed:
+                    pad_t = Tmax - x.numel()
+                    if pad_t > 0:
+                        x = F.pad(x, (0, pad_t), value=pad_value)
+                    out.append(x)
+                return torch.stack(out, dim=0).long()
+
+            if "input_features" in model_input and isinstance(model_input["input_features"], list):
+                model_input["input_features"] = _pad_and_stack_3d(model_input["input_features"], pad_value=0.0)
+
+            if "feature_attention_mask" in model_input and isinstance(model_input["feature_attention_mask"], list):
+                model_input["feature_attention_mask"] = _pad_and_stack_2d(model_input["feature_attention_mask"], pad_value=0)
+
+            if "audio_feature_lengths" in model_input and isinstance(model_input["audio_feature_lengths"], list):
+                model_input["audio_feature_lengths"] = torch.tensor(model_input["audio_feature_lengths"], dtype=torch.long)
+
+            if "input_features" in model_input and isinstance(model_input["input_features"], torch.Tensor):
+                model_input["input_features"] = model_input["input_features"].to(dtype=torch.float32)
+            if "feature_attention_mask" in model_input and isinstance(model_input["feature_attention_mask"], torch.Tensor):
+                model_input["feature_attention_mask"] = model_input["feature_attention_mask"].to(dtype=torch.long)
+
+            # 4.1) Sanitize audio rows: drop zero-length rows to avoid Qwen2.5-Omni audio tower
+            # receiving empty sequences (can crash in avg_pool1d with length 0).
+            feats = model_input.get("input_features", None)
+            fam = model_input.get("feature_attention_mask", None)
+            if isinstance(feats, torch.Tensor) and isinstance(fam, torch.Tensor):
+                # Ensure feature/mask time dims are aligned.
+                if feats.dim() >= 3 and fam.dim() == 2:
+                    feat_t = feats.shape[-1]
+                    mask_t = fam.shape[-1]
+                    if feat_t != mask_t:
+                        min_t = min(feat_t, mask_t)
+                        feats = feats[..., :min_t]
+                        fam = fam[:, :min_t]
+
+                    if feats.shape[-1] == 0:
+                        model_input.pop("input_features", None)
+                        model_input.pop("feature_attention_mask", None)
+                        model_input.pop("audio_feature_lengths", None)
+                    else:
+                        audio_lens = fam.sum(dim=1)
+                        invalid_audio = audio_lens <= 0
+                        if torch.any(invalid_audio):
+                            feats = feats.clone()
+                            fam = fam.clone()
+                            feats[invalid_audio] = 0
+                            fam[invalid_audio] = 0
+                            valid_audio_rows = torch.nonzero(fam.sum(dim=1) > 0, as_tuple=False).squeeze(1)
+                            if valid_audio_rows.numel() == 0:
+                                model_input.pop("input_features", None)
+                                model_input.pop("feature_attention_mask", None)
+                                model_input.pop("audio_feature_lengths", None)
+                            else:
+                                model_input["input_features"] = feats.index_select(0, valid_audio_rows)
+                                model_input["feature_attention_mask"] = fam.index_select(0, valid_audio_rows)
+                                afl = model_input.get("audio_feature_lengths", None)
+                                if isinstance(afl, torch.Tensor) and afl.dim() > 0:
+                                    if afl.size(0) == fam.size(0):
+                                        model_input["audio_feature_lengths"] = afl.index_select(0, valid_audio_rows)
+                                    else:
+                                        model_input.pop("audio_feature_lengths", None)
+                        else:
+                            model_input["input_features"] = feats
+                            model_input["feature_attention_mask"] = fam
+
+            # Recompute modality flags after audio sanitization.
+            has_image = _has_nonempty(model_input, "pixel_values") or _has_nonempty(model_input, "image_grid_thw")
+            has_video = _has_nonempty(model_input, "pixel_values_videos") or _has_nonempty(model_input, "video_grid_thw")
+            has_audio = (
+                _has_nonempty(model_input, "input_features")
+                or _has_nonempty(model_input, "feature_attention_mask")
+                or _has_nonempty(model_input, "audio_feature_lengths")
+            )
+            has_multimodal = has_image or has_video or has_audio
+
+            # 5) forward
+            if has_multimodal:
+                outputs = self.encoder(
+                    **model_input,
+                    output_hidden_states=True,
+                    return_dict=True,
+                    use_cache=False,
+                )
+                attn_mask = model_input.get("attention_mask", None)
             else:
-                # Calculate last 1 position in the original tensor
-                eos_indices = attention_mask.sum(dim=1) - 1
-                # Get the vectors at the last 1 position of each attention mask
-                reps = last_hidden_state[
-                    torch.arange(batch_size, device=last_hidden_state.device), eos_indices]
-        else:
-            raise NotImplementedError
-        if self.normalize:
-            reps = torch.nn.functional.normalize(reps, p=2, dim=-1)
-        return reps
+                # 纯文本：只走 text-only encoder
+                visual_keys = {
+                    "pixel_values", "image_grid_thw",
+                    "pixel_values_videos", "video_grid_thw", "second_per_grid_ts",
+                    "input_features", "feature_attention_mask", "audio_feature_lengths",
+                    "audio_values", "audio_attention_mask", "audio_features", "audios",
+                }
+                text_only_input = {k: v for k, v in model_input.items() if k not in visual_keys}
 
+                # 防止 padding_side 不一致导致 flash_attn 对齐问题
+                for m in [self.encoder, getattr(self.encoder, "model", None)]:
+                    if m is None:
+                        continue
+                    if hasattr(m, "padding_side"):
+                        m.padding_side = "left"
+                    if hasattr(m, "config") and hasattr(m.config, "padding_side"):
+                        m.config.padding_side = "left"
+
+                outputs = self.encoder.model(
+                    **text_only_input,
+                    output_hidden_states=True,
+                    return_dict=True,
+                    use_cache=False,
+                )
+                attn_mask = text_only_input.get("attention_mask", None)
+
+            if hasattr(outputs, "embeddings") and outputs.embeddings is not None:
+                emb = outputs.embeddings
+                if getattr(self, "normalize", False):
+                    emb = F.normalize(emb, p=2, dim=-1)
+                return emb
+
+            hidden_states = outputs.hidden_states[-1] if getattr(outputs, "hidden_states", None) is not None else outputs.last_hidden_state
+
+            if attn_mask is not None:
+                if not isinstance(attn_mask, torch.Tensor):
+                    attn_mask = torch.tensor(attn_mask, dtype=torch.long, device=hidden_states.device)
+                else:
+                    attn_mask = attn_mask.to(hidden_states.device).long()
+
+            return self._pooling(hidden_states, attn_mask)
+
+        # ===== Fallback: all other HF backbones =====
+        else:
+            outputs = self.encoder(**input, return_dict=True, output_hidden_states=True, use_cache=False)
+            hidden_states = outputs.hidden_states[-1] if getattr(outputs, "hidden_states", None) is not None else outputs.last_hidden_state
+            attn_mask = input.get("attention_mask", None)
+            if attn_mask is not None:
+                if not isinstance(attn_mask, torch.Tensor):
+                    attn_mask = torch.tensor(attn_mask, dtype=torch.long, device=hidden_states.device)
+                else:
+                    attn_mask = attn_mask.to(hidden_states.device).long()
+            return self._pooling(hidden_states, attn_mask)
+
+    # ----------------------------
+    # Build / Load (keep your original)
+    # ----------------------------
     @classmethod
     def build(cls, model_args: ModelArguments, **kwargs):
         config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
         model_backbone = get_backbone_name(hf_config=config)
-        print_master(f'Loading backbone [{model_backbone}] from {model_args.model_name}')
-        # Loading the base model
+        print_master(f"Loading backbone [{model_backbone}] from {model_args.model_name}")
+
         if model_backbone == PHI3V:
             config._attn_implementation = "eager"
             config.padding_side = "right"
@@ -178,112 +468,169 @@ class MMEBModel(nn.Module):
         else:
             config.use_cache = False
             base_model = cls.TRANSFORMER_CLS.from_pretrained(
-                model_args.model_name, **kwargs, config=config,
+                model_args.model_name,
+                **kwargs,
+                config=config,
                 attn_implementation="flash_attention_2",
                 torch_dtype=torch.bfloat16,
-                trust_remote_code=True)
+                trust_remote_code=True,
+            )
 
         if model_args.lora:
-            print_master(f'Loading lora adapter from {base_model}')
+            print_master(f"Loading lora adapter from {base_model}")
             lora_config = LoraConfig(
                 r=model_args.lora_r,
                 lora_alpha=model_args.lora_alpha,
-                target_modules=model_args.lora_target_modules.split(','),
+                target_modules=model_args.lora_target_modules.split(","),
                 lora_dropout=model_args.lora_dropout,
                 init_lora_weights="gaussian",
                 use_dora=True,
-                inference_mode=False
+                inference_mode=False,
             )
-            lora_model = get_peft_model(base_model, lora_config)
+            if hasattr(base_model, "model") and base_model.model is not None:
+                base_model.model = get_peft_model(base_model.model, lora_config)
+            else:
+                base_model = get_peft_model(base_model, lora_config)
             model = cls(
-                encoder=lora_model,
+                encoder=base_model,
                 pooling=model_args.pooling,
                 normalize=model_args.normalize,
-                temperature=model_args.temperature
+                temperature=model_args.temperature,
             )
         else:
             model = cls(
                 encoder=base_model,
                 pooling=model_args.pooling,
                 normalize=model_args.normalize,
-                temperature=model_args.temperature
+                temperature=model_args.temperature,
             )
         return model
 
-
     @classmethod
     def load(cls, model_args: ModelArguments, is_trainable=True, **kwargs):
-        # Loading the base model
         model_name_or_path = model_args.checkpoint_path if model_args.checkpoint_path else model_args.model_name
-        config = AutoConfig.from_pretrained(model_name_or_path, trust_remote_code=True)
+        config_source = model_args.model_name if getattr(model_args, "lora", False) and model_args.checkpoint_path else model_name_or_path
+        config = AutoConfig.from_pretrained(config_source, trust_remote_code=True)
+
         if not hasattr(model_args, "model_backbone") or not model_args.model_backbone:
             model_backbone = get_backbone_name(hf_config=config, model_type=model_args.model_type)
-            setattr(model_args, 'model_backbone', model_backbone)
-        print_master(f'Loading backbone [{model_args.model_backbone}] from {model_name_or_path}')
-        if model_args.model_backbone in {LLAVA_NEXT, QWEN2_VL, QWEN2_5_VL, QWEN2_VL_TOKENSELECTION, QWEN2_5_VL_TOKENSELECTION, E5_V}:
+            setattr(model_args, "model_backbone", model_backbone)
+
+        print_master(f"Loading backbone [{model_args.model_backbone}] from {model_name_or_path}")
+
+        if model_args.model_backbone in {
+            LLAVA_NEXT, QWEN2_VL, QWEN2_5_VL, QWEN2_VL_TOKENSELECTION, QWEN2_5_VL_TOKENSELECTION, QWEN2_5_OMNI, E5_V
+        }:
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
-            config._attn_implementation = "flash_attention_2"
-            config.vision_config._attn_implementation = "flash_attention_2"
+            try:
+                config._attn_implementation = "flash_attention_2"
+                if hasattr(config, "vision_config"):
+                    config.vision_config._attn_implementation = "flash_attention_2"
+            except Exception as e:
+                print_master(f"Warning: Could not set flash_attention_2 for {model_args.model_backbone}: {e}")
+
             base_model = backbone2model[model_args.model_backbone].from_pretrained(
                 model_args.model_name,
                 torch_dtype=torch.bfloat16,
                 low_cpu_mem_usage=True,
-                config=config
+                config=config,
+                trust_remote_code=True,
+            )
+        elif model_args.model_backbone == NVOMNIEMBED:
+            config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
+            base_model = AutoModel.from_pretrained(
+                model_args.model_name,
+                torch_dtype=torch.bfloat16,
+                low_cpu_mem_usage=True,
+                config=config,
+                trust_remote_code=True,
             )
         elif model_args.model_backbone == PHI3V:
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config.use_cache = False
             config.padding_side = "right"
-            base_model = Phi3VForCausalLM.from_pretrained(model_args.model_name, **kwargs, config=config,
-                                                          torch_dtype=torch.bfloat16, trust_remote_code=True)
+            base_model = Phi3VForCausalLM.from_pretrained(
+                model_args.model_name, **kwargs, config=config, torch_dtype=torch.bfloat16, trust_remote_code=True
+            )
             base_model.padding_side = "right"
         elif model_args.model_backbone == INTERNVIDEO2:
-            print_master(f'Loading backbone [{model_args.model_backbone}] from {"src/model/vlm_backbone/internvideo2/"}')
-            config = AutoConfig.from_pretrained("src/model/vlm_backbone/internvideo2/",
-                                                trust_remote_code=True)
-            base_model = backbone2model[model_args.model_backbone].from_pretrained("src/model/vlm_backbone/internvideo2/", config=config,
-                                                                                   trust_remote_code=True)
+            print_master(f"Loading backbone [{model_args.model_backbone}] from {'src/model/vlm_backbone/internvideo2/'}")
+            config = AutoConfig.from_pretrained("src/model/vlm_backbone/internvideo2/", trust_remote_code=True)
+            base_model = backbone2model[model_args.model_backbone].from_pretrained(
+                "src/model/vlm_backbone/internvideo2/", config=config, trust_remote_code=True
+            )
         elif model_args.model_backbone == GME:
-            base_model = GmeQwen2VL(model_args.model_name, processor=kwargs['processor'])
-            setattr(base_model, 'config', config)
+            base_model = GmeQwen2VL(model_args.model_name, processor=kwargs["processor"])
+            setattr(base_model, "config", config)
         elif model_args.model_backbone == LamRA:
             base_model = LamRAQwen2VL(model_args.model_name)
-            setattr(base_model, 'config', config)
+            setattr(base_model, "config", config)
         elif model_args.model_backbone == LamRA_QWEN2_5:
             base_model = LamRAQwen25VL(model_args.model_name)
-            setattr(base_model, 'config', config)
+            setattr(base_model, "config", config)
         elif model_args.model_backbone == COLPALI:
             base_model = ColPali.from_pretrained(model_args.model_name)
-            setattr(base_model, 'config', config)
+            setattr(base_model, "config", config)
         else:
-            # Loading external base model from HF
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
             config.use_cache = False
             base_model = cls.TRANSFORMER_CLS.from_pretrained(
-                model_name_or_path, **kwargs, config=config,
-                torch_dtype=torch.bfloat16,
-                trust_remote_code=True)
+                model_name_or_path, **kwargs, config=config, torch_dtype=torch.bfloat16, trust_remote_code=True
+            )
 
-        # Building the model on top of the base
         if model_args.lora:
-            print_master(f'Loading LoRA from {model_name_or_path}')
+            print_master(f"Loading LoRA from {model_name_or_path}")
             lora_config = LoraConfig.from_pretrained(model_name_or_path)
-            lora_model = PeftModel.from_pretrained(base_model, model_name_or_path, config=lora_config, is_trainable=is_trainable)
-            lora_model.load_adapter(model_name_or_path, lora_model.active_adapter, is_trainable=is_trainable)
-            if not is_trainable:
-                lora_model = lora_model.merge_and_unload()
+            # Qwen2.5-Omni wrapper note:
+            #   OmniEmbedForConditionalGeneration.forward -> self.base_model(...)
+            # so LoRA must be attached to `base_model.base_model.model` (thinker.model),
+            # not only to wrapper attribute `base_model.model`.
+            if (
+                model_args.model_backbone == QWEN2_5_OMNI
+                and hasattr(base_model, "base_model")
+                and getattr(base_model.base_model, "model", None) is not None
+            ):
+                lora_model = PeftModel.from_pretrained(
+                    base_model.base_model.model, model_name_or_path, config=lora_config, is_trainable=is_trainable
+                )
+                lora_model.load_adapter(model_name_or_path, lora_model.active_adapter, is_trainable=is_trainable)
+                if not is_trainable:
+                    lora_model = lora_model.merge_and_unload()
+                base_model.base_model.model = lora_model
+                # Keep wrapper mirror attribute in sync for downstream checks.
+                if hasattr(base_model, "model"):
+                    base_model.model = lora_model
+                print_master("LoRA attached to qwen2_5_omni thinker.model.")
+                encoder = base_model
+            elif hasattr(base_model, "model") and base_model.model is not None:
+                lora_model = PeftModel.from_pretrained(
+                    base_model.model, model_name_or_path, config=lora_config, is_trainable=is_trainable
+                )
+                lora_model.load_adapter(model_name_or_path, lora_model.active_adapter, is_trainable=is_trainable)
+                if not is_trainable:
+                    lora_model = lora_model.merge_and_unload()
+                base_model.model = lora_model
+                encoder = base_model
+            else:
+                lora_model = PeftModel.from_pretrained(
+                    base_model, model_name_or_path, config=lora_config, is_trainable=is_trainable
+                )
+                lora_model.load_adapter(model_name_or_path, lora_model.active_adapter, is_trainable=is_trainable)
+                if not is_trainable:
+                    lora_model = lora_model.merge_and_unload()
+                encoder = lora_model
             model = cls(
-                encoder=lora_model,
+                encoder=encoder,
                 pooling=model_args.pooling,
                 normalize=model_args.normalize,
-                temperature=model_args.temperature
+                temperature=model_args.temperature,
             )
         else:
             model = cls(
                 encoder=base_model,
                 pooling=model_args.pooling,
                 normalize=model_args.normalize,
-                temperature=model_args.temperature
+                temperature=model_args.temperature,
             )
 
         model.model_backbone = model_args.model_backbone
@@ -292,9 +639,12 @@ class MMEBModel(nn.Module):
     def save(self, output_dir: str):
         self.encoder.save_pretrained(output_dir)
 
+    # ----------------------------
+    # Forward
+    # ----------------------------
     def forward(self, qry: Dict[str, Tensor] = None, tgt: Dict[str, Tensor] = None, *args, **kwargs):
-        qry_reps = self.encode_input(qry) if qry else None  # (bsz_per_device, dim)
-        tgt_reps = self.encode_input(tgt) if tgt else None # (bsz_per_device, dim)
+        qry_reps = self.encode_input(qry) if qry else None
+        tgt_reps = self.encode_input(tgt) if tgt else None
 
         if qry_reps is None or tgt_reps is None:
             return {"qry_reps": qry_reps, "tgt_reps": tgt_reps}
@@ -313,7 +663,6 @@ class MMEBModel(nn.Module):
         loss = self.cross_entropy(scores / self.temperature, target)
         if self.is_ddp:
             loss = loss * self.world_size
-
         return loss
 
     def _dist_gather_tensor(self, t: Tensor):

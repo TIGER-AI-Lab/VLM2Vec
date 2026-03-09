@@ -2,6 +2,8 @@ import os
 import sys
 
 from datasets import load_dataset
+from src.constant.dataset_hflocal_path import EVAL_DATASET_HF_PATH as EVAL_DATASET_LOCAL_PATH
+from src.utils.dataset_utils import load_hf_dataset
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook, RESOLUTION_MAPPING
 from src.model.processor import VLM_IMAGE_TOKENS
 from src.model.processor import process_input_text
@@ -13,8 +15,11 @@ def data_prepare(batch_dict, *args, **kwargs):
     image_root = kwargs['image_root']
 
     query_texts, query_images, cand_texts, cand_images, dataset_infos = [], [], [], [], []
+    n = len(batch_dict['qry_text'])
+    qry_insts = batch_dict['qry_inst'] if 'qry_inst' in batch_dict else [""] * n
+    tgt_insts = batch_dict['tgt_inst'] if 'tgt_inst' in batch_dict else [""] * n
     for qry_inst, qry_text, tgt_inst, tgt_captions, tgt_img_paths in (
-            zip(batch_dict['qry_inst'], batch_dict['qry_text'], batch_dict['tgt_inst'], batch_dict['tgt_text'], batch_dict['tgt_img_path'])):
+            zip(qry_insts, batch_dict['qry_text'], tgt_insts, batch_dict['tgt_text'], batch_dict['tgt_img_path'])):
         qry_inst = qry_inst.replace("<|image_1|>", VLM_IMAGE_TOKENS[model_backbone])
         query_text = qry_inst + ' ' + qry_text + '\n'
         if kwargs['dataset_name'] == 'VisDial':
@@ -22,6 +27,8 @@ def data_prepare(batch_dict, *args, **kwargs):
         query_texts.append([query_text])
         query_images.append([None])
 
+        tgt_captions = list(tgt_captions)
+        tgt_img_paths = list(tgt_img_paths)
         # subtle target side processing, to stay consistent with v1 eval
         if tgt_captions[0].strip():  # WebQA, EDIS have valid text inputs
             tgt_inst = tgt_inst.replace("<|image_1|>", "")
@@ -51,12 +58,23 @@ def data_prepare(batch_dict, *args, **kwargs):
 
 
 DATASET_PARSER_NAME = "image_t2i"
-DATASET_HF_PATH = "ziyjiang/MMEB_Test_Instruct"
+# DATASET_HF_PATH = "ziyjiang/MMEB_Test_Instruct"
+DATASET_HF_PATH = "/code/.cache/datasets/MMEB-v2_1/image-query"
 @AutoEvalPairDataset.register(DATASET_PARSER_NAME)
 def load_image_t2i_dataset(model_args, data_args, *args, **kwargs):
     dataset_name = kwargs["dataset_name"]
-
-    dataset = load_dataset(DATASET_HF_PATH, dataset_name, split="test")
+    
+    # Try to load from local path first, fallback to HF if not available
+    if dataset_name in EVAL_DATASET_LOCAL_PATH:
+        local_path, subset, split = EVAL_DATASET_LOCAL_PATH[dataset_name]
+        if os.path.exists(local_path):
+            print(f"Loading {dataset_name} from local path: {local_path}")
+            dataset = load_hf_dataset((local_path, subset, split, "local"))
+        else:
+            print(f"Local path {local_path} not found, falling back to HuggingFace Hub")
+            dataset = load_dataset(DATASET_HF_PATH, dataset_name, split="test")
+    else:
+        dataset = load_dataset(DATASET_HF_PATH, dataset_name, split="test")
     num_sample_per_subset = kwargs.get("num_sample_per_subset", sys.maxsize)
     if num_sample_per_subset is not None and type(num_sample_per_subset) is str and num_sample_per_subset.isdigit():
         num_sample_per_subset = int(num_sample_per_subset)

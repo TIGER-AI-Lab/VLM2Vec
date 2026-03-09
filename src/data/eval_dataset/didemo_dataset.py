@@ -1,6 +1,7 @@
 import os
 
 from src.constant.dataset_hf_path import EVAL_DATASET_HF_PATH
+from src.constant.dataset_hflocal_path import EVAL_DATASET_HF_PATH as EVAL_DATASET_LOCAL_PATH
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook, RESOLUTION_MAPPING, ImageVideoInstance
 from src.utils.dataset_utils import load_hf_dataset, sample_dataset
 from src.utils.vision_utils.vision_utils import save_frames, process_video_frames
@@ -48,7 +49,17 @@ def data_prepare(batch_dict, **kwargs):
 DATASET_PARSER_NAME = "didemo"
 @AutoEvalPairDataset.register(DATASET_PARSER_NAME)
 def load_didemo_dataset(model_args, data_args, **kwargs):
-    dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[kwargs['dataset_name']])
+    dataset_name = kwargs['dataset_name']
+    if dataset_name in EVAL_DATASET_LOCAL_PATH:
+        local_path_info = EVAL_DATASET_LOCAL_PATH[dataset_name]
+        if os.path.exists(local_path_info[0]):
+            print(f"Loading {dataset_name} from local path: {local_path_info[0]}")
+            dataset = load_hf_dataset(local_path_info + ("local",))
+        else:
+            print(f"Local path {local_path_info[0]} not found, falling back to HuggingFace Hub")
+            dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[dataset_name])
+    else:
+        dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[dataset_name])
     dataset = sample_dataset(dataset, **kwargs)
 
     kwargs['model_backbone'] = model_args.model_backbone

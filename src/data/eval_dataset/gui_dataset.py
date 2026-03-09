@@ -4,6 +4,7 @@ import os, ast
 
 from torch.jit import isinstance
 from src.data.dataset.gui_dataset import DATASET_PARSER_NAME
+from src.constant.dataset_hflocal_path import EVAL_DATASET_HF_PATH as EVAL_DATASET_LOCAL_PATH
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook, \
     RESOLUTION_MAPPING
 from src.model.processor import PHI3V, VLM_IMAGE_TOKENS
@@ -73,7 +74,22 @@ def load_gui_dataset(model_args, data_args, training_args, *args, **kwargs):
     dataset_name = kwargs.get("dataset_name", DATASET_PARSER_NAME)
     subset_name = kwargs.get("subset_name")
     dataset_split = kwargs.get("dataset_split", "limit_10_ood_test")
-    dataset = load_dataset(dataset_name, subset_name, split=f"{dataset_split}")
+    
+    # 检查是否有本地路径配置
+    full_dataset_name = f"{dataset_name}/{subset_name}" if subset_name else dataset_name
+    use_local = False
+    
+    if full_dataset_name in EVAL_DATASET_LOCAL_PATH:
+        local_path_info = EVAL_DATASET_LOCAL_PATH[full_dataset_name]
+        local_path = local_path_info[0]
+        if os.path.exists(local_path):
+            print(f"Loading {full_dataset_name} from local path: {local_path}")
+            use_local = True
+            dataset = load_dataset(local_path, subset_name, split=f"{dataset_split}")
+    
+    if not use_local:
+        print(f"Loading {full_dataset_name} from HuggingFace Hub")
+        dataset = load_dataset(dataset_name, subset_name, split=f"{dataset_split}")
     column_names = dataset.column_names
     num_sample_per_subset = kwargs.get("num_sample_per_subset", None)
     if num_sample_per_subset is not None and num_sample_per_subset < dataset.num_rows:

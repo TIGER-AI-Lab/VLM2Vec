@@ -1,0 +1,66 @@
+# CLS
+NSynth:
+    dataset_parser: audio_cls
+    dataset_name: NSynth
+    dataset_split: test
+    audio_root: audio-tasks/nsynth-1k
+    eval_type: local
+ESC-50:
+    dataset_parser: audio_cls
+    dataset_name: ESC-50
+    dataset_split: test
+    audio_root: audio-tasks/esc50
+    eval_type: local
+UrbanSound8K:
+    dataset_parser: audio_cls
+    dataset_name: UrbanSound8K
+    dataset_split: test
+    audio_root: audio-tasks/urbansound8k
+    eval_type: local
+SpeechCommands:
+    dataset_parser: audio_cls
+    dataset_name: SpeechCommands
+    dataset_split: test
+    audio_root: audio-tasks/speechcommand-1k
+    eval_type: local
+CREMA-D:
+    dataset_parser: audio_cls
+    dataset_name: CREMA-D
+    dataset_split: test
+    audio_root: audio-tasks/creamD
+    eval_type: local
+
+# RET
+SoundDescs:
+    dataset_parser: sounddescs_text_audio
+    dataset_name: SoundDescs
+    dataset_split: test
+    audio_root: audio-tasks/sounddescs-1k
+    eval_type: local
+Clotho:
+    dataset_parser: clotho_text_audio
+    dataset_name: Clotho
+    dataset_split: test
+    audio_root: audio-tasks/clotho/clotho
+    eval_type: global
+AVE:
+    dataset_parser: ave_retrieval  # audio -> video
+    dataset_name: AVE
+    dataset_split: test
+    audio_root: audio-tasks/AVE/AVE_Dataset/audios
+    video_root: audio-tasks/AVE/AVE_Dataset/AVE
+    frame_root: audio-tasks/AVE/AVE_Dataset/frames
+    num_frames: 8  
+    eval_type: local
+SpeechCOCO:
+    dataset_parser: audio_ret_speechcoco
+    dataset_name: SpeechCOCO
+    dataset_split: validation
+    audio_root: audio-tasks/speechcoco-1k
+    eval_type: global
+TUTSound:
+    dataset_parser: tutsound_audio_gnd
+    dataset_name: TUTSound
+    dataset_split: test
+    audio_root: audio-tasks/tutsound
+    eval_type: local

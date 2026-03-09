@@ -1,6 +1,7 @@
 """
 Based on datasets combine.py and iterable_dataset.py
 """
+import inspect
 from itertools import cycle
 from typing import List, Optional, TypeVar
 
@@ -14,7 +15,7 @@ from typing import Iterator, List, Optional
 
 import numpy as np
 from datasets.arrow_dataset import Dataset, DatasetInfoMixin
-from datasets.features import Features
+from datasets.features import Features, Sequence, Value
 from datasets.features.features import FeatureType, _align_features, _check_if_features_can_be_aligned, cast_to_python_objects
 from datasets.info import DatasetInfo
 from datasets.splits import NamedSplit
@@ -189,16 +190,69 @@ def _interleave_iterable_datasets(
     print_master("=" * 50)
     print_master(f"Print the features of each dataset, make sure that all datasets have valid features.")
     for idx, d in enumerate(datasets):
-        print_master(f"\t\tDataset {idx} features: {[f for f in datasets[0].features]}")
+        print_master(f"\t\tDataset {idx} features: {[f for f in d.features]}")
     print_master("=" * 50)
 
+    def _is_string_value(ft):
+        return isinstance(ft, Value) and getattr(ft, "dtype", None) == "string"
+
+    def _is_string_sequence(ft):
+        return isinstance(ft, Sequence) and _is_string_value(getattr(ft, "feature", None))
+
+    # Some training datasets expose text fields as Value("string"), while others
+    # use Sequence(Value("string")). They are semantically compatible for our
+    # collators, so normalize schema before strict feature alignment.
+    raw_features = [dset.features for dset in datasets]
+    seq_string_keys = set()
+    for feats in raw_features:
+        for k, v in feats.items():
+            if _is_string_sequence(v):
+                seq_string_keys.add(k)
+
+    if seq_string_keys:
+        normalized_datasets = []
+        for dset in datasets:
+            dset_features = dset.features
+            keys_to_wrap = [k for k in seq_string_keys if k in dset_features and _is_string_value(dset_features[k])]
+            if keys_to_wrap:
+                keys_tuple = tuple(keys_to_wrap)
+
+                def _wrap_text_values(example, _keys=keys_tuple):
+                    for key in _keys:
+                        value = example.get(key, None)
+                        if value is None:
+                            example[key] = []
+                        elif isinstance(value, list):
+                            example[key] = [x if isinstance(x, str) else ("" if x is None else str(x)) for x in value]
+                        else:
+                            example[key] = [value if isinstance(value, str) else str(value)]
+                    return example
+
+                dset = dset.map(_wrap_text_values)
+                patched_features = deepcopy(dset_features) if dset_features is not None else None
+                if patched_features is not None:
+                    for key in keys_to_wrap:
+                        patched_features[key] = Sequence(Value("string"))
+                    dset = dset.cast(patched_features)
+            normalized_datasets.append(dset)
+        datasets = normalized_datasets
+        raw_features = [dset.features for dset in datasets]
+
+    normalized_features = []
+    for feats in raw_features:
+        f = deepcopy(feats)
+        for k in seq_string_keys:
+            if k in f and _is_string_value(f[k]):
+                f[k] = Sequence(Value("string"))
+        normalized_features.append(f)
+
     # Perform checks
-    _check_if_features_can_be_aligned([dset.features for dset in datasets])
+    _check_if_features_can_be_aligned(normalized_features)
 
     # TODO: improve this to account for a mix of ClassLabel and Value for example
     # right now it would keep the type of the first dataset in the list
     features = Features(
-        {k: v for features in _align_features([dset.features for dset in datasets]) for k, v in features.items()}
+        {k: v for features in _align_features(normalized_features) for k, v in features.items()}
     )
 
     ex_iterables = [d._ex_iterable for d in datasets]
@@ -301,12 +355,36 @@ class CyclingMultiSourcesBatchesIterable(_BaseExamplesIterable):
     def num_shards(self) -> int:
         return min(ex_iterable.num_shards for ex_iterable in self.ex_iterables)
 
+    @staticmethod
+    def _shard_one(iterable: _BaseExamplesIterable, worker_id: int, num_workers: int, contiguous: bool = True):
+        shard_fn = iterable.shard_data_sources
+        try:
+            sig = inspect.signature(shard_fn)
+            params = sig.parameters
+            if "worker_id" in params and "num_workers" in params:
+                return shard_fn(worker_id=worker_id, num_workers=num_workers)
+            if "num_shards" in params and "index" in params:
+                if "contiguous" in params:
+                    return shard_fn(num_shards=num_workers, index=worker_id, contiguous=contiguous)
+                return shard_fn(num_shards=num_workers, index=worker_id)
+        except (TypeError, ValueError):
+            pass
+
+        try:
+            return shard_fn(worker_id, num_workers)
+        except TypeError:
+            try:
+                return shard_fn(num_workers, worker_id, contiguous=contiguous)
+            except TypeError:
+                return shard_fn(num_workers, worker_id)
+
     def shard_data_sources(
-        self, num_shards: int, index: int, contiguous=True
+        self, worker_id: int, num_workers: int, contiguous: bool = True
     ) -> "CyclingMultiSourcesBatchesIterable":
         """Either keep only the requested shard, or propagate the request to the underlying iterable."""
         return CyclingMultiSourcesBatchesIterable(
-            [iterable.shard_data_sources(num_shards, index, contiguous=contiguous) for iterable in self.ex_iterables],
+            [self._shard_one(iterable, worker_id, num_workers, contiguous=contiguous) for iterable in self.ex_iterables],
+            batch_size=self.batch_size,
             stopping_strategy=self.stopping_strategy,
         )
 
@@ -376,10 +454,15 @@ class RandomlyCyclingMultiSourcesBatchesIterable(CyclingMultiSourcesBatchesItera
             stopping_strategy=self.stopping_strategy,
         )
 
-    def shard_data_sources(self, num_shards: int, index: int, contiguous=True) -> "RandomlyCyclingMultiSourcesBatchesIterable":
+    def shard_data_sources(
+        self, worker_id: int, num_workers: int, contiguous: bool = True
+    ) -> "RandomlyCyclingMultiSourcesBatchesIterable":
         """Either keep only the requested shard, or propagate the request to the underlying iterable."""
         return RandomlyCyclingMultiSourcesBatchesIterable(
-            ex_iterables=[iterable.shard_data_sources(num_shards, index, contiguous=contiguous) for iterable in self.ex_iterables],
+            ex_iterables=[
+                self._shard_one(iterable, worker_id, num_workers, contiguous=contiguous)
+                for iterable in self.ex_iterables
+            ],
             generator=self.generator,
             batch_size=self.batch_size,
             probabilities=self.probabilities,

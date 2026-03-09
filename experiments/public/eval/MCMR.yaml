@@ -1,0 +1,9 @@
+MCMR:
+    dataset_parser: mcmr
+    dataset_name: MCMR
+    subset_name: MCMR
+    query_file: /data/mengrui/.cache/huggingface/datasets/MMEB-V3/multi-condition-tasks/MCMR/query.jsonl
+    candidate_file: /data/mengrui/.cache/huggingface/datasets/MMEB-V3/multi-condition-tasks/MCMR/candidates.jsonl
+    image_root: /data/mengrui/.cache/huggingface/datasets/MMEB-V3/multi-condition-tasks/MCMR/images
+    query_instruction: Find an image-text pair that matches the given query
+    eval_type: global

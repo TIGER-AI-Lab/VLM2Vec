@@ -1,0 +1,4 @@
+ToolDe_train:
+    dataset_parser: toolDe
+    data_path: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/tool-tasks-train
+    weight: 1

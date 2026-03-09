@@ -1,10 +1,13 @@
 import os
 
 from src.constant.dataset_hf_path import EVAL_DATASET_HF_PATH
+from src.constant.dataset_hflocal_path import EVAL_DATASET_HF_PATH as EVAL_DATASET_LOCAL_PATH
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook, RESOLUTION_MAPPING, ImageVideoInstance
 from src.utils.dataset_utils import load_hf_dataset, sample_dataset, load_qrels_mapping
 from src.model.processor import process_input_text
 from src.utils.basic_utils import print_master
+from PIL import Image
+import io
 
 TASK_INST_QRY = "Find a document image that matches the given query:"
 TASK_INST_TGT = "Understand the content of the provided document image."
@@ -58,9 +61,24 @@ def corpus_prepare(batch_dict, *args, **kwargs):
     cand_texts, cand_images, dataset_infos = [], [], []
     for corpus_id, image in zip(batch_dict['corpus-id'], batch_dict['image']):
         image_path = f'{image_root}/{corpus_id}.png'
+
         if not os.path.exists(image_path):
             os.makedirs(image_root, exist_ok=True)
-            image.save(image_path)
+            # 兼容多种存储形式：PIL.Image、dict(bytes/path)、原始字节
+            if isinstance(image, Image.Image):
+                image.save(image_path)
+            elif isinstance(image, dict):
+                if image.get("bytes", None) is not None:
+                    Image.open(io.BytesIO(image["bytes"])).save(image_path)
+                elif image.get("path", None) is not None:
+                    image_path = image["path"]  # 直接使用已有路径
+                else:
+                    raise ValueError(f"Unsupported image dict format for corpus_id={corpus_id}: keys={list(image.keys())}")
+            elif isinstance(image, (bytes, bytearray)):
+                Image.open(io.BytesIO(image)).save(image_path)
+            else:
+                raise ValueError(f"Unsupported image type for corpus_id={corpus_id}: {type(image)}")
+
         cand_texts.append([process_input_text(TASK_INST_TGT, model_backbone, add_image_token=True)])
         cand_images.append([ImageVideoInstance(
             bytes=[None],
@@ -77,15 +95,42 @@ def corpus_prepare(batch_dict, *args, **kwargs):
 DATASET_PARSER_NAME = "vidore"
 @AutoEvalPairDataset.register(DATASET_PARSER_NAME)
 def load_vidore_dataset(model_args, data_args, **kwargs):
-    hf_dataset_name = EVAL_DATASET_HF_PATH[kwargs['dataset_name']][0]
-    hf_dataset_split = EVAL_DATASET_HF_PATH[kwargs['dataset_name']][2]
-    lang = EVAL_DATASET_HF_PATH[kwargs['dataset_name']][1]
-    # BEIR format
-    dataset = load_hf_dataset((hf_dataset_name, "queries", hf_dataset_split))
-    if lang is not None:
-        dataset = dataset.filter(lambda example: example["language"] == lang)
-    qrels = load_hf_dataset((hf_dataset_name, "qrels", hf_dataset_split))
-    corpus = load_hf_dataset((hf_dataset_name, "corpus", hf_dataset_split))
+    dataset_name = kwargs['dataset_name']
+    
+    # 优先使用本地路径
+    if dataset_name in EVAL_DATASET_LOCAL_PATH:
+        hf_dataset_name = EVAL_DATASET_LOCAL_PATH[dataset_name][0]
+        lang = EVAL_DATASET_LOCAL_PATH[dataset_name][1]
+        hf_dataset_split = EVAL_DATASET_LOCAL_PATH[dataset_name][2]
+        if os.path.exists(hf_dataset_name):
+            print(f"Loading {dataset_name} from local path: {hf_dataset_name}")
+            # BEIR format - 加载本地数据集
+            dataset = load_hf_dataset((hf_dataset_name, "queries", hf_dataset_split, "local"))
+            if lang is not None:
+                dataset = dataset.filter(lambda example: example["language"] == lang)
+            qrels = load_hf_dataset((hf_dataset_name, "qrels", hf_dataset_split, "local"))
+            corpus = load_hf_dataset((hf_dataset_name, "corpus", hf_dataset_split, "local"))
+        else:
+            print(f"Local path {hf_dataset_name} not found, falling back to HuggingFace Hub")
+            hf_dataset_name = EVAL_DATASET_HF_PATH[dataset_name][0]
+            lang = EVAL_DATASET_HF_PATH[dataset_name][1]
+            hf_dataset_split = EVAL_DATASET_HF_PATH[dataset_name][2]
+            dataset = load_hf_dataset((hf_dataset_name, "queries", hf_dataset_split))
+            if lang is not None:
+                dataset = dataset.filter(lambda example: example["language"] == lang)
+            qrels = load_hf_dataset((hf_dataset_name, "qrels", hf_dataset_split))
+            corpus = load_hf_dataset((hf_dataset_name, "corpus", hf_dataset_split))
+    else:
+        # 使用HF路径
+        hf_dataset_name = EVAL_DATASET_HF_PATH[dataset_name][0]
+        lang = EVAL_DATASET_HF_PATH[dataset_name][1]
+        hf_dataset_split = EVAL_DATASET_HF_PATH[dataset_name][2]
+        # BEIR format
+        dataset = load_hf_dataset((hf_dataset_name, "queries", hf_dataset_split))
+        if lang is not None:
+            dataset = dataset.filter(lambda example: example["language"] == lang)
+        qrels = load_hf_dataset((hf_dataset_name, "qrels", hf_dataset_split))
+        corpus = load_hf_dataset((hf_dataset_name, "corpus", hf_dataset_split))
     qrels_mapping = load_qrels_mapping(qrels)
     dataset = sample_dataset(dataset, **kwargs)
     print_master(f"Loaded {kwargs['dataset_name']}")

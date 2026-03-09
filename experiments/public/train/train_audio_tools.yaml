@@ -1,0 +1,85 @@
+Clotho_text_audio:
+    dataset_parser: load_audio_clotho_dataset
+    data_path: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/audio-tasks-train/clotho
+    captions_csv: clotho_captions_development.csv
+    audio_subdir: development
+    weight: 1
+
+SpeechCOCO_text_audio:
+    dataset_parser: load_audio_speechcoco_dataset
+    data_path: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/audio-tasks-train/speechcoco
+    data_subdir: data
+    parquet_pattern: train-*.parquet
+    num_sample_per_subset: 100000
+    weight: 1
+
+AVE_audio_video:
+    dataset_parser: load_audio_ave_dataset
+    data_path: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/audio-tasks-train/ave
+    split_file: trainSet.txt
+    audio_dir: audios
+    video_dir: AVE
+    frame_root: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/audio-tasks-train/ave/frames
+    num_frames: 8
+    max_frames_saved: 100
+    weight: 1
+
+UrbanSound8K_audio_cls:
+    dataset_parser: load_audio_urbansound8k_dataset
+    data_path: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/audio-tasks-train/urbansound8k
+    dataset_split: train
+    weight: 1
+
+TUTSound_audio_audio:
+    dataset_parser: build_tutsound_audio_dataset
+    data_path: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/audio-tasks-train/tutsound
+    stratify_by: label_name
+    max_per_label: 100
+    require_pos_diff_fp: true
+    weight: 1
+
+ToolDe_train:
+    dataset_parser: toolDe
+    data_path: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/tool-tasks-train/Tool-DE_train_retriever_50k.json
+    weight: 1
+
+ImageNet_1K:
+    dataset_parser: mmeb
+    dataset_name: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/MMEB-V1-train
+    subset_name: ImageNet_1K
+    dataset_split: original
+    image_dir: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/MMEB-V1-train
+    num_sample_per_subset: 100000
+    weight: 1
+N24News:
+    dataset_parser: mmeb
+    dataset_name: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/MMEB-V1-train
+    subset_name: N24News
+    dataset_split: original
+    image_dir: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/MMEB-V1-train
+    num_sample_per_subset: 50000
+    weight: 1
+HatefulMemes:
+    dataset_parser: mmeb
+    dataset_name: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/MMEB-V1-train
+    subset_name: HatefulMemes
+    dataset_split: original
+    image_dir: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/MMEB-V1-train
+    num_sample_per_subset: 10000
+    weight: 1
+VOC2007:
+    dataset_parser: mmeb
+    dataset_name: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/MMEB-V1-train
+    subset_name: VOC2007
+    dataset_split: original
+    image_dir: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/MMEB-V1-train
+    num_sample_per_subset: 10000
+    weight: 1
+SUN397:
+    dataset_parser: mmeb
+    dataset_name: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/MMEB-V1-train
+    subset_name: SUN397
+    dataset_split: original
+    image_dir: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/MMEB-V1-train
+    num_sample_per_subset: 20000
+    weight: 1

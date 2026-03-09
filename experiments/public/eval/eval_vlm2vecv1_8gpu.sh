@@ -14,7 +14,7 @@ cd projects/VLM2Vec/ || exit
 CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 BATCH_SIZE=32
 MODALITIES=("image" "video" "visdoc")
-DATA_BASEDIR=data/vlm2vec_eval
+DATA_BASEDIR=/code/.cache/datasets/MMEB-v2_1
 OUTPUT_BASEDIR=exps/vlm2vec
 
 # ==> Define models and their base output paths here

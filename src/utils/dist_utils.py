@@ -90,3 +90,35 @@ def varsize_gather_nograd(x: torch.Tensor):
     output = torch.cat(output, dim=0)
 
     return output
+
+
+def ddp_all_gather_variable(x: torch.Tensor) -> torch.Tensor:
+    """
+    All-gather a [B, D] tensor across ranks where B may differ across ranks.
+    Returns [sum(B_i), D].
+    """
+    if not (dist.is_available() and dist.is_initialized()):
+        return x
+
+    world = dist.get_world_size()
+    device = x.device
+
+    local_b = torch.tensor([x.size(0)], device=device, dtype=torch.long)
+    sizes = [torch.zeros_like(local_b) for _ in range(world)]
+    dist.all_gather(sizes, local_b)
+    sizes = [int(s.item()) for s in sizes]
+    max_b = max(sizes)
+
+    if x.size(0) < max_b:
+        pad = torch.zeros((max_b - x.size(0), x.size(1)), device=device, dtype=x.dtype)
+        x_pad = torch.cat([x, pad], dim=0)
+    else:
+        x_pad = x
+
+    gathered = [torch.empty_like(x_pad) for _ in range(world)]
+    dist.all_gather(gathered, x_pad)
+
+    outs = []
+    for g, b in zip(gathered, sizes):
+        outs.append(g[:b])
+    return torch.cat(outs, dim=0)

@@ -1,6 +1,7 @@
 import os
 
 from src.constant.dataset_hf_path import EVAL_DATASET_HF_PATH
+from src.constant.dataset_hflocal_path import EVAL_DATASET_HF_PATH as EVAL_DATASET_LOCAL_PATH
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook, RESOLUTION_MAPPING, ImageVideoInstance
 from src.utils.dataset_utils import load_hf_dataset, sample_dataset
 from src.data.eval_dataset.video_classification_utils import DATASET_INSTRUCTION
@@ -52,7 +53,19 @@ def load_ssv2_dataset(model_args, data_args, **kwargs):
     ssv2-mc setup for zero-shot evaluation.
     """
     dataset_name = kwargs['dataset_name']
-    dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[dataset_name])
+
+    # Try to load from local path first, fallback to HF if not available
+    if dataset_name in EVAL_DATASET_LOCAL_PATH:
+        local_path, subset, split = EVAL_DATASET_LOCAL_PATH[dataset_name]
+        if os.path.exists(local_path):
+            print(f"Loading {dataset_name} from local path: {local_path}")
+            dataset = load_hf_dataset((local_path, subset, split, "local"))
+        else:
+            print(f"Local path {local_path} not found, falling back to HuggingFace Hub")
+            dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[dataset_name])
+    else:
+        dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[dataset_name])
+
     dataset = sample_dataset(dataset, **kwargs)
 
     kwargs['model_backbone'] = model_args.model_backbone

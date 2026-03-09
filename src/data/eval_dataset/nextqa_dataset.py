@@ -1,6 +1,7 @@
 import os
 
 from src.constant.dataset_hf_path import EVAL_DATASET_HF_PATH
+from src.constant.dataset_hflocal_path import EVAL_DATASET_HF_PATH as EVAL_DATASET_LOCAL_PATH
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook
 from src.utils.dataset_utils import load_hf_dataset, sample_dataset
 from src.utils.vision_utils.vision_utils import process_video_frames, load_frames, qa_template
@@ -87,7 +88,17 @@ def data_prepare(batch_dict, *args, **kwargs):
 DATASET_PARSER_NAME = "nextqa"
 @AutoEvalPairDataset.register(DATASET_PARSER_NAME)
 def load_nextqa_dataset(model_args, data_args, *args, **kwargs):
-    dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[kwargs['dataset_name']])
+    dataset_name = kwargs['dataset_name']
+    if dataset_name in EVAL_DATASET_LOCAL_PATH:
+        local_path_info = EVAL_DATASET_LOCAL_PATH[dataset_name]
+        if os.path.exists(local_path_info[0]):
+            print(f"Loading {dataset_name} from local path: {local_path_info[0]}")
+            dataset = load_hf_dataset(local_path_info + ("local",))
+        else:
+            print(f"Local path {local_path_info[0]} not found, falling back to HuggingFace Hub")
+            dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[dataset_name])
+    else:
+        dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[dataset_name])
     dataset = sample_dataset(dataset, **kwargs)
 
     # dataset = dataset.filter(lambda example: example['video'] == 4740931975)

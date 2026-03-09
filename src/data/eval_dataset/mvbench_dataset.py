@@ -1,8 +1,11 @@
 import shutil
+import json
+import glob
 
 import imageio
 
 from src.constant.dataset_hf_path import EVAL_DATASET_HF_PATH
+from src.constant.dataset_hflocal_path import EVAL_DATASET_HF_PATH as EVAL_DATASET_LOCAL_PATH
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook
 from src.utils.dataset_utils import load_hf_dataset_multiple_subset, sample_dataset
 from src.utils.vision_utils.vision_utils import process_video_frames, qa_template
@@ -175,8 +178,22 @@ DATASET_PARSER_NAME = "mvbench"
 DATASET_HF_PATH = "OpenGVLab/MVBench"
 @AutoEvalPairDataset.register(DATASET_PARSER_NAME)
 def load_mvbench_dataset(model_args, data_args, *args, **kwargs):
-    dataset = load_hf_dataset_multiple_subset(EVAL_DATASET_HF_PATH[kwargs['dataset_name']], 
-                                              subset_meta.keys())
+    dataset_name = kwargs['dataset_name']
+    
+    # 优先使用本地路径
+    if dataset_name in EVAL_DATASET_LOCAL_PATH:
+        local_path_info = EVAL_DATASET_LOCAL_PATH[dataset_name]
+        local_path = local_path_info[0]
+        if os.path.exists(local_path):
+            print(f"Loading {dataset_name} from local path: {local_path}")
+            dataset = load_mvbench_local_dataset(local_path, subset_meta.keys())
+        else:
+            print(f"Local path {local_path} not found, falling back to HuggingFace Hub")
+            dataset = load_hf_dataset_multiple_subset(EVAL_DATASET_HF_PATH[dataset_name],
+                                                      subset_meta.keys())
+    else:
+        dataset = load_hf_dataset_multiple_subset(EVAL_DATASET_HF_PATH[dataset_name],
+                                                  subset_meta.keys())
     dataset = sample_dataset(dataset, **kwargs)
     kwargs['model_backbone'] = model_args.model_backbone
     kwargs['image_resolution'] = data_args.image_resolution
@@ -187,3 +204,42 @@ def load_mvbench_dataset(model_args, data_args, *args, **kwargs):
                           drop_last_batch=False, load_from_cache_file=False)
 
     return dataset, None
+
+def load_mvbench_local_dataset(local_path, subset_names):
+    """
+    Load MVBench dataset from local file system
+    """
+    import datasets
+    from datasets import Dataset
+
+    all_data = []
+    for subset_name in subset_names:
+        json_file = os.path.join(local_path, f"{subset_name}.json")
+
+        if not os.path.exists(json_file):
+            print(f"Warning: JSON file {json_file} not found, skipping {subset_name}")
+            continue
+
+        try:
+            with open(json_file, 'r') as f:
+                data = json.load(f)
+
+            # Add subset information
+            if isinstance(data, list):
+                for item in data:
+                    item['subset'] = subset_name
+                    all_data.append(item)
+            else:
+                data['subset'] = subset_name
+                all_data.append(data)
+        except Exception as e:
+            print(f"Error loading {json_file}: {e}")
+            continue
+
+    if not all_data:
+        raise ValueError(f"No data found in local MVBench path: {local_path}")
+
+    # Create HuggingFace dataset
+    dataset = Dataset.from_list(all_data)
+    return dataset
+

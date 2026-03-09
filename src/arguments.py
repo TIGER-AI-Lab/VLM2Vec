@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from transformers import TrainingArguments
 from typing import List
+import torch
 
 
 @dataclass
@@ -17,7 +18,8 @@ class ModelArguments:
     lora_r: int = field(default=16, metadata={"help": "lora r"})
     lora_alpha: int = field(default=64, metadata={"help": "lora alpha"})
     lora_dropout: float = field(default=0.1, metadata={"help": "lora dropout"})
-    lora_target_modules: str = field(default="qkv_proj,o_proj,gate_up_proj,down_proj,k_proj,q_proj,out_proj,v_proj,gate_proj,up_proj", metadata={"help": "lora target modules"})
+    lora_target_modules: str = field(default="qkv_proj,o_proj,gate_up_proj,down_proj,k_proj,q_proj,out_proj,v_proj", metadata={"help": "lora target modules"})
+    full_finetune: bool = field(default=False, metadata={"help": "train all parameters (disable embedding-only freezing)"})
     num_crops: int = field(default=16, metadata={"help": "number of crops used in image encoder"})
     uigraph_use: bool = field(default=False, metadata={"help": "Enable ui graph for token selection"})
     uigraph_diff: int = field(default=1, metadata={"help": "Pixel difference used for constructing ui graph for token selection"})
@@ -46,10 +48,23 @@ class DataArguments:
     resize_max_pixels: int = field(default=28*28*1280, metadata={"help": "The max pixels of the image to resize the image. This is only works when `--resize_use_processor true`."})
     image_decay_factor: float = field(default=None, metadata={"help": "The image decay factor for resizing temporal images"})
     num_hardneg: int = field(default=0, metadata={"help": "hard negative number"})
+    video_max_frames: int = field(default=4, metadata={"help": "Max video frames per sample in training"})
+    video_frame_size: int = field(default=168, metadata={"help": "Square frame size for video frames (pixels)"})
+
+    # Audio configuration (unified for train/eval)
+    audio_sample_rate: int = field(default=16000, metadata={"help": "Audio sample rate for resampling"})
+    audio_max_seconds: float = field(default=None, metadata={"help": "Maximum audio duration in seconds. If set, takes precedence over audio_max_samples"})
+    audio_max_samples: int = field(default=None, metadata={"help": "Maximum audio samples. Used if audio_max_seconds is not set"})
+    audio_min_samples: int = field(default=None, metadata={"help": "Minimum audio samples to keep (shorter audios are discarded)"})
+
+    # Audio cropping strategies
+    train_crop: str = field(default="random", metadata={"help": "Audio cropping strategy for training: 'random'"})
+    eval_crop: str = field(default="head", metadata={"help": "Audio cropping strategy for evaluation: 'head', 'center', or 'multi_crop'"})
 
 
 @dataclass
 class TrainingArguments(TrainingArguments):
+    device: torch.device = field(default=None, metadata={"help": "device for training/inference"})
     image_encoder_freeze: bool = field(default=False, metadata={"help": "huggingface model name"})
     output_dir: str = field(default=None, metadata={"help": "directory for saving trained models"})
     resume_from: str = field(default="none", metadata={"help": "`auto` will detect if any previous checkpoints should be resumed. or specify specific step of the checkpoint."})
@@ -60,9 +75,23 @@ class TrainingArguments(TrainingArguments):
     gc_q_chunk_size: int = field(default=2, metadata={"help": "query side subset size"})
     gc_p_chunk_size: int = field(default=2, metadata={"help": "target side subset size"})
     interleave_stopping_strategy: str = field(default="all_exhausted", metadata={"help": "all_exhausted or first_exhausted"})
-    homogeneous_batch_size_per_device: float = field(default=0, metadata={"help": "Specify number of consecutive samples from the same dataset PER DEVICE. 0/None means random mixing."})
-    interleave_batch_size: float = field(default=0, metadata={"help": "[DEPRECATED] Use `homogeneous_batch_size_per_device`."})
+    interleave_batch_size: float = field(default=0, metadata={"help": "Specify mini-batch size to interleave data from multi-sources, 0/None means random sampling by examples, 1 means full batch."})
+    export_full_checkpoint: int = field(default=0, metadata={"help": "Export full HF dir at a specific checkpoint step; 0 disables."})
+    loss_stage: str = field(default="infonce", metadata={"help": "Training loss stage: infonce | jepa | mixed"})
+    loss_alpha: float = field(default=0.5, metadata={"help": "Alpha for mixed loss: alpha*jepa + (1-alpha)*infonce"})
+    jepa_predictor_hidden: int = field(default=0, metadata={"help": "Hidden dim for JEPA predictor MLP. <=0 means use emb dim."})
 
+    def __post_init__(self):
+        # Ensure base TrainingArguments initialization runs (sets distributed_state, etc.)
+        super().__post_init__()
+        # Some transformers versions don't define distributed_state; keep it for later access.
+        if not hasattr(self, "distributed_state"):
+            self.distributed_state = None
+        # Mirror the base property so callers using the field get the actual device.
+        try:
+            self.device = super().device
+        except Exception:
+            pass
 
 @dataclass
 class MTEBArguments:

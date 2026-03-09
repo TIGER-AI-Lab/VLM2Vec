@@ -24,7 +24,7 @@ from src.data.collator.eval_collator import MultimodalEvalDataCollator
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, generate_cand_dataset
 from src.utils.eval_utils.metrics import RankingMetrics
 from src.model.model import MMEBModel
-from src.model.processor import get_backbone_name, load_processor, COLPALI
+from src.model.processor import get_backbone_name, load_processor, COLPALI, QWEN2_5_OMNI
 from src.utils.basic_utils import batch_to_device, print_rank, print_master
 
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s')
@@ -74,13 +74,179 @@ def encode_embeddings(
             with torch.autocast(enabled=True, dtype=torch.bfloat16, device_type="cuda"):
                 # Determine if encoding query or target based on available keys
                 if encode_side == "qry":
-                    output = model(qry=inputs)
-                    reps = output["qry_reps"].detach()
-                    local_gt_infos.extend(dataset_info)  # to retain all information per query
+                    out_key = "qry_reps"
+                    gt_infos = dataset_info
                 else:
-                    output = model(tgt=inputs)
-                    reps = output["tgt_reps"].detach()
-                    local_gt_infos.extend([info["cand_name"] for info in dataset_info])  # to retain ground-truth labels
+                    out_key = "tgt_reps"
+                    gt_infos = [info["cand_name"] for info in dataset_info]
+
+                if model_args.model_backbone == QWEN2_5_OMNI:
+                    # Bucketed micro-batching by grid_thw to keep visual seq_len aligned.
+                    batch_size = inputs["input_ids"].shape[0]
+                    device = inputs["input_ids"].device
+
+                    pixel_values = inputs.get("pixel_values", None)
+                    image_grid_thw = inputs.get("image_grid_thw", None)
+                    pixel_values_videos = inputs.get("pixel_values_videos", None)
+                    video_grid_thw = inputs.get("video_grid_thw", None)
+
+                    def _build_visual_spans(patch_tensor, grid_tensor):
+                        """
+                        Build per-sample [start, end) spans for flattened visual patches.
+                        patch_tensor is expected to be [sum_i(t_i*h_i*w_i), hidden_dim].
+                        grid_tensor is expected to be [batch_size, 3].
+                        """
+                        if not isinstance(patch_tensor, torch.Tensor):
+                            return None
+                        if not isinstance(grid_tensor, torch.Tensor):
+                            return None
+                        if grid_tensor.dim() != 2 or grid_tensor.shape[1] != 3:
+                            return None
+                        if grid_tensor.shape[0] != batch_size:
+                            return None
+
+                        counts = (grid_tensor[:, 0].long() * grid_tensor[:, 1].long() * grid_tensor[:, 2].long()).tolist()
+                        if any(c < 0 for c in counts):
+                            return None
+
+                        total = int(sum(counts))
+                        if patch_tensor.shape[0] != total:
+                            return None
+
+                        spans = []
+                        start = 0
+                        for c in counts:
+                            end = start + int(c)
+                            spans.append((start, end))
+                            start = end
+                        return spans
+
+                    image_spans = _build_visual_spans(pixel_values, image_grid_thw)
+                    video_spans = _build_visual_spans(pixel_values_videos, video_grid_thw)
+
+                    def _get_batch_aligned_item(value, idx):
+                        if value is None:
+                            return None
+                        if isinstance(value, list):
+                            if len(value) == batch_size:
+                                return value[idx]
+                            return None
+                        if isinstance(value, torch.Tensor):
+                            if value.dim() > 0 and value.shape[0] == batch_size:
+                                return value[idx]
+                            return None
+                        return None
+
+                    def _grid_to_key(grid_item):
+                        if grid_item is None:
+                            return None
+                        if isinstance(grid_item, torch.Tensor):
+                            # shape [3] / [T,3] 等都转成 python tuple 可 hash
+                            return tuple(grid_item.detach().cpu().reshape(-1).tolist())
+                        if isinstance(grid_item, (list, tuple)):
+                            # list of int
+                            try:
+                                flat = []
+                                for x in grid_item:
+                                    if isinstance(x, torch.Tensor):
+                                        flat.extend(x.detach().cpu().reshape(-1).tolist())
+                                    elif isinstance(x, (list, tuple)):
+                                        flat.extend(list(x))
+                                    else:
+                                        flat.append(x)
+                                return tuple(flat)
+                            except Exception:
+                                return str(grid_item)
+                        return str(grid_item)
+
+                    def _bucket_key(i):
+                        # For flattened visual patch tensors, never probe modality by pixel_values[_videos][i],
+                        # because dim0 is token length rather than batch size.
+                        img_gt = _get_batch_aligned_item(image_grid_thw, i)
+                        vid_gt = _get_batch_aligned_item(video_grid_thw, i)
+                        has_img = img_gt is not None
+                        has_vid = vid_gt is not None
+
+                        if has_vid:
+                            return ("vid", _grid_to_key(vid_gt))
+                        if has_img:
+                            return ("img", _grid_to_key(img_gt))
+                        return ("none",)
+
+                    # 1) 分桶（只在当前 batch 内）
+                    buckets = {}
+                    for i in range(batch_size):
+                        k = _bucket_key(i)
+                        buckets.setdefault(k, []).append(i)
+
+                    # 2) 逐桶 forward，并把 reps 写回原顺序
+                    reps_out = torch.empty((batch_size, model.rep_dim), device=device, dtype=torch.float32)
+
+                    def _slice_flat_visual(v, idxs, spans):
+                        if spans is None:
+                            return None
+                        pieces = []
+                        for j in idxs:
+                            s, e = spans[j]
+                            pieces.append(v[s:e])
+                        if len(pieces) == 0:
+                            return v.new_empty((0, *v.shape[1:]))
+                        return torch.cat(pieces, dim=0)
+
+                    def _slice_value(k, v, idxs):
+                        if v is None:
+                            return None
+                        if k == "pixel_values" and isinstance(v, torch.Tensor):
+                            sliced = _slice_flat_visual(v, idxs, image_spans)
+                            if sliced is not None:
+                                return sliced
+                        if k == "pixel_values_videos" and isinstance(v, torch.Tensor):
+                            sliced = _slice_flat_visual(v, idxs, video_spans)
+                            if sliced is not None:
+                                return sliced
+                        if isinstance(v, torch.Tensor):
+                            if v.dim() > 0 and v.shape[0] == batch_size:
+                                return v[idxs]
+                            return v
+                        if isinstance(v, list):
+                            if len(v) == batch_size:
+                                return [v[j] for j in idxs]
+                            return v
+                        return None
+
+                    def _slice_inputs(inputs_dict, idxs):
+                        sub = {}
+                        for kk, vv in inputs_dict.items():
+                            # dataset_infos 不在 inputs 里，这里只处理 tensor/list/None
+                            sub[kk] = _slice_value(kk, vv, idxs)
+                        return sub
+
+                    for _, idxs in buckets.items():
+                        if len(idxs) == 0:
+                            continue
+                        sub_inputs = _slice_inputs(inputs, idxs)
+
+                        # ⚠️ 不要做长度维度裁剪，只做样本维度切片
+                        if encode_side == "qry":
+                            output = model(qry=sub_inputs)
+                        else:
+                            output = model(tgt=sub_inputs)
+
+                        sub_reps = output[out_key].detach()
+                        # sub_reps shape: [len(idxs), D]
+                        reps_out[idxs] = sub_reps.to(reps_out.dtype)
+
+                    reps = reps_out
+                    local_gt_infos.extend(gt_infos)
+
+                else:
+                    # 原来的非 omni 路径：直接跑
+                    if encode_side == "qry":
+                        output = model(qry=inputs)
+                    else:
+                        output = model(tgt=inputs)
+                    reps = output[out_key].detach()
+                    local_gt_infos.extend(gt_infos)
 
             if is_late_interaction and reps.dim() == 3:
                 local_max_len = max(local_max_len, reps.shape[1])
@@ -121,13 +287,37 @@ def encode_embeddings(
     if dist.is_initialized() and full_dataset.num_rows >= world_size:
         print_master(f"Gathering {encode_side} embeddings across all ranks...")
 
-        # Use the more efficient all_gather_into_tensor for tensors
-        output_shape = list(embeds_tensor.shape)
-        output_shape[0] = full_dataset.num_rows
+        # all_gather_into_tensor requires each rank input to have the same shape.
+        # Pad along the batch dimension to the max local count, then trim by counts.
         embeds_tensor = embeds_tensor.to(training_args.device)
+        local_count = torch.tensor([embeds_tensor.shape[0]], device=training_args.device, dtype=torch.int64)
+        all_counts = [torch.zeros_like(local_count) for _ in range(world_size)]
+        dist.all_gather(all_counts, local_count)
+        counts = [int(c.item()) for c in all_counts]
+        max_count = max(counts) if counts else int(local_count.item())
+
+        if embeds_tensor.shape[0] < max_count:
+            pad_shape = (max_count,) + tuple(embeds_tensor.shape[1:])
+            padded = torch.zeros(pad_shape, dtype=embeds_tensor.dtype, device=training_args.device)
+            if embeds_tensor.shape[0] > 0:
+                padded[: embeds_tensor.shape[0]] = embeds_tensor
+            embeds_tensor = padded
+
+        output_shape = (world_size * max_count,) + tuple(embeds_tensor.shape[1:])
         gathered_embeds_tensor = torch.empty(output_shape, dtype=embeds_tensor.dtype, device=training_args.device)
         dist.all_gather_into_tensor(gathered_embeds_tensor, embeds_tensor)
-        final_embeddings = gathered_embeds_tensor.cpu().float().numpy()
+
+        # Trim the padding using per-rank counts, preserving rank order
+        if sum(counts) > 0:
+            offset = 0
+            slices = []
+            for c in counts:
+                if c > 0:
+                    slices.append(gathered_embeds_tensor[offset : offset + c])
+                offset += max_count
+            final_embeddings = torch.cat(slices, dim=0).cpu().float().numpy() if slices else np.array([])
+        else:
+            final_embeddings = np.array([])
         # Gather metadata, for which all_gather_object is appropriate
         gathered_gt_infos = [None for _ in range(world_size)]
         dist.all_gather_object(gathered_gt_infos, local_gt_infos)
@@ -168,6 +358,18 @@ def main():
     training_args: TrainingArguments
     os.makedirs(data_args.encode_output_path, exist_ok=True)
 
+    # 设置设备
+    if torch.cuda.is_available():
+        training_args.device = torch.device("cuda")
+    else:
+        training_args.device = torch.device("cpu")
+
+    # 确保在分布式训练中正确设置设备
+    if dist.is_initialized():
+        torch.cuda.set_device(local_rank)
+        training_args.device = torch.device(f"cuda:{local_rank}")
+
+
     # --- Model Loading ---
     hf_config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
     if not getattr(model_args, "model_backbone", None):
@@ -175,6 +377,7 @@ def main():
         setattr(model_args, 'model_backbone', model_backbone)
         setattr(training_args, 'model_backbone', model_backbone)
     print_master(f'Model Backbone: {model_args.model_backbone}')
+    print_master(f'Using device: {training_args.device}')
     # --- DDP-Safe Model Loading ---
     # Step 1: Only the master process (rank 0) downloads the model.
     if local_rank == 0:
@@ -220,7 +423,16 @@ def main():
         if do_query or do_cand:
             if data_args.data_basedir is not None:
                 # Construct full paths for data files if --data_basedir is provided
-                for key in ["image_root", "video_root", "frame_root", "clip_root", "data_path"]:
+                for key in [
+                    "image_root",
+                    "video_root",
+                    "frame_root",
+                    "clip_root",
+                    "audio_root",
+                    "data_path",
+                    "query_file",
+                    "candidate_file",
+                ]:
                     if data_args.data_basedir and task_config.get(key):
                         task_config[key] = os.path.join(data_args.data_basedir, task_config[key])
 
@@ -253,6 +465,9 @@ def main():
             query_embeds = query_embeds[:len(full_eval_qry_dataset)]  # world_size>1, trim the padded data points
             gt_infos = gt_infos[:len(full_eval_qry_dataset)]
             if local_rank == 0:
+                # 确保目录存在（dataset_name可能包含子目录）
+                os.makedirs(os.path.dirname(query_embed_path), exist_ok=True)
+                os.makedirs(os.path.dirname(dataset_info_path), exist_ok=True)
                 with open(query_embed_path, 'wb') as f:
                     pickle.dump(query_embeds, f)
                 with open(dataset_info_path, 'w') as f:
@@ -275,6 +490,8 @@ def main():
 
             if local_rank == 0:
                 cand_embed_dict = {cand_id: embed for cand_id, embed in zip(all_cand_ids, cand_embeds)}
+                # 确保目录存在（dataset_name可能包含子目录）
+                os.makedirs(os.path.dirname(cand_embed_path), exist_ok=True)
                 with open(cand_embed_path, 'wb') as f: pickle.dump(cand_embed_dict, f)
                 print_master(f"Saved candidate embeddings to {cand_embed_path}")
 
@@ -299,7 +516,19 @@ def main():
             gt_infos = [json.loads(l) for l in open(dataset_info_path)]
             pred_dicts = []
 
-            rank_against_all_candidates = task_config.get("eval_type", "global") == "global"
+            eval_type = str(task_config.get("eval_type", "global")).strip().lower()
+            rank_against_all_candidates = eval_type == "global"
+            if not rank_against_all_candidates:
+                missing_local_cands = any(
+                    not isinstance(info.get("cand_names", None), list) or len(info.get("cand_names", [])) == 0
+                    for info in gt_infos
+                )
+                if missing_local_cands:
+                    print_master(
+                        f"[{dataset_name}] eval_type='{eval_type}' but some queries have empty cand_names; "
+                        f"fallback to global ranking."
+                    )
+                    rank_against_all_candidates = True
             if rank_against_all_candidates:
                 cand_keys = list(cand_embed_dict.keys())
                 cand_embeds = np.stack([cand_embed_dict[key] for key in cand_keys])
@@ -336,6 +565,13 @@ def main():
                     rel_scores = gt_info["rel_scores"] if "rel_scores" in gt_info else None
 
                     assert rel_scores is None or len(rel_docids) == len(rel_scores)
+
+                    # Debug: inspect first sample top10
+                    if qid == 0 and dataset_name == "QVHighlight":
+                        top10_idx = ranked_candids[:10].tolist() if isinstance(ranked_candids, np.ndarray) else ranked_candids[:10]
+                        top10_names = [gt_info["cand_names"][i] for i in top10_idx]
+                        print_master(f"[DEBUG QVHighlight] label: {rel_docids}, top10_idx: {top10_idx}, top10_names: {top10_names}")
+
                     pred_dicts.append({
                         "prediction": [gt_info["cand_names"][i] for i in ranked_candids],
                         "label": rel_docids,

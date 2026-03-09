@@ -2,10 +2,12 @@ import os
 
 from datasets import load_dataset
 from src.constant.dataset_hf_path import EVAL_DATASET_HF_PATH
+from src.constant.dataset_hflocal_path import EVAL_DATASET_HF_PATH as EVAL_DATASET_LOCAL_PATH
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook, RESOLUTION_MAPPING, ImageVideoInstance
 from src.utils.dataset_utils import load_hf_dataset, sample_dataset
 from src.utils.vision_utils.vision_utils import save_frames, process_video_frames, VID_EXTENSIONS
 from src.model.processor import process_input_text
+from src.utils.basic_utils import print_master
 
 TASK_INST_QRY = "Find the clip that corresponds to the described scene in the given video:"
 TASK_INST_TGT = "Understand the content of the provided video."
@@ -24,17 +26,23 @@ def data_prepare(batch_dict, *args, **kwargs):
 
     for query, query_video_path in zip(batch_dict['query'], batch_dict['video_path']):
 
+        # 允许传入绝对路径；若提供 video_root 则使用拼接的路径，否则直接用原始字段
+        query_video_path = os.path.join(video_root, os.path.basename(query_video_path)) if video_root else query_video_path
+        if query_video_path is None:
+            raise ValueError("moment_retrieval: query_video_path is None; 请检查数据或 video_root。")
         video_name = os.path.splitext(os.path.basename(query_video_path))[0]
-        frames_dir = os.path.join(frame_root, video_name)
 
-        # Load query video
-        query_video_path = os.path.join(video_root, os.path.basename(query_video_path)) if video_root else None
+        # 仅使用预提取帧，不再尝试从视频抽帧
+        frames_dir = os.path.join(frame_root, video_name)
+        if not os.path.exists(frames_dir):
+            raise FileNotFoundError(f"Frames dir not found: {frames_dir}. 请确认已预提取帧。")
+
         query_frame_dir = os.path.join(frames_dir, "query")
         if not os.path.exists(query_frame_dir):
-            save_frames(video_path=query_video_path,
-                        frame_dir=query_frame_dir,
-                        max_frames_saved=max_video_frames_saved)
+            raise FileNotFoundError(f"Query frames not found: {query_frame_dir}.")
         qry_frame_paths = process_video_frames(query_frame_dir, num_frames=num_video_frames)
+        if len(qry_frame_paths) == 0:
+            raise FileNotFoundError(f"Query frames empty: {query_frame_dir}.")
 
         query_texts.append([process_input_text(TASK_INST_QRY, model_backbone, text=query, add_video_token=True)])
         query_images.append([ImageVideoInstance(
@@ -43,36 +51,39 @@ def data_prepare(batch_dict, *args, **kwargs):
             resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)] * len(qry_frame_paths),
         ).to_dict()])
 
-        # Load pos and neg clip, save the frames if only the raw video is provided.
+        # Load pos and neg clip：只使用已有帧
         if not os.path.exists(frames_dir):
-            clip_video_dir = os.path.join(clip_root, video_name) if clip_root else None
-            clip_video_paths = [f for f in os.listdir(clip_video_dir) if os.path.splitext(f)[1].lower() in VID_EXTENSIONS]
-            for clip_video_path in clip_video_paths:
-                clip_name = os.path.splitext(clip_video_path)[0]
-                clip_frame_dir_or_file = os.path.join(frames_dir, clip_name)
-                clip_video_path_abs = os.path.join(clip_video_dir, clip_video_path)
-                save_frames(video_path=clip_video_path_abs,
-                            frame_dir=clip_frame_dir_or_file,
-                            max_frames_saved=max_clip_frames_saved)
+            raise FileNotFoundError(f"Frames dir not found: {frames_dir}")
+
         cand_clip_names, cand_frames = [], []
+        positive_clip_names = []
         for clip_frame_dir_or_file in os.listdir(frames_dir):
             clip_frame_dir_abs = os.path.join(frames_dir, clip_frame_dir_or_file)
             if clip_frame_dir_or_file == 'query' or os.path.isfile(clip_frame_dir_abs):
                 continue
             if clip_frame_dir_or_file.startswith("positive"):
-                pos_clip_name = clip_frame_dir_abs
+                positive_clip_names.append(clip_frame_dir_abs)
             cand_frame_paths = process_video_frames(clip_frame_dir_abs, num_frames=num_clip_frames)
+            if len(cand_frame_paths) == 0:
+                raise FileNotFoundError(f"Clip frames empty: {clip_frame_dir_abs}")
             cand_frames.append(ImageVideoInstance(
                 bytes=[None] * len(cand_frame_paths),
                 paths=cand_frame_paths,
                 resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)] * len(cand_frame_paths),
             ).to_dict())
             cand_clip_names.append(clip_frame_dir_abs)  # use absolute path here instead of file name to keep it unique
+        if len(cand_clip_names) == 0:
+            raise FileNotFoundError(f"No candidate clips found under {frames_dir}")
+        if len(positive_clip_names) == 0:
+            raise FileNotFoundError(f"No positive clip found under {frames_dir}")
+        if len(positive_clip_names) > 1:
+            print_master(f"Warning: multiple positive clips found under {frames_dir}: {positive_clip_names}")
+        assert all(p in cand_clip_names for p in positive_clip_names), "positive clips not included in candidates"
         cand_texts.append([process_input_text(TASK_INST_TGT, model_backbone, add_video_token=True)] * len(cand_clip_names))
         cand_clip_images.append(cand_frames)
         dataset_infos.append({
             "cand_names": cand_clip_names,
-            "label_name": pos_clip_name,
+            "label_name": positive_clip_names if len(positive_clip_names) > 1 else positive_clip_names[0],
         })
 
     return {"query_text": query_texts, "query_image": query_images,
@@ -83,11 +94,25 @@ def data_prepare(batch_dict, *args, **kwargs):
 DATASET_PARSER_NAME = "moment_retrieval"
 @AutoEvalPairDataset.register(DATASET_PARSER_NAME)
 def load_moment_retrieval_dataset(model_args, data_args, **kwargs):
+    dataset_name = kwargs.get('dataset_name')
+    
     if kwargs.get("data_path", None) != None:
         dataset = load_dataset("json", data_files=kwargs["data_path"])
         dataset = dataset["train"]
     else:
-        dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[kwargs['dataset_name']])
+        # 优先使用本地路径
+        if dataset_name in EVAL_DATASET_LOCAL_PATH:
+            local_path_info = EVAL_DATASET_LOCAL_PATH[dataset_name]
+            local_path = local_path_info[0]
+            if os.path.exists(local_path):
+                print(f"Loading {dataset_name} from local path: {local_path}")
+                dataset = load_hf_dataset((local_path, local_path_info[1], local_path_info[2], "local"))
+            else:
+                print(f"Local path {local_path} not found, falling back to HuggingFace Hub")
+                dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[dataset_name])
+        else:
+            dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[dataset_name])
+    
     dataset = sample_dataset(dataset, **kwargs)
 
     kwargs['model_backbone'] = model_args.model_backbone

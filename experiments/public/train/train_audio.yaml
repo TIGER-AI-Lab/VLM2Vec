@@ -1,0 +1,39 @@
+Clotho_text_audio:
+    dataset_parser: load_audio_clotho_dataset
+    data_path: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/audio-tasks-train/clotho
+    captions_csv: clotho_captions_development.csv
+    audio_subdir: development
+    weight: 1
+
+SpeechCOCO_text_audio:
+    dataset_parser: load_audio_speechcoco_dataset
+    data_path: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/audio-tasks-train/speechcoco
+    data_subdir: data
+    parquet_pattern: train-*.parquet
+    num_sample_per_subset: 200000
+    weight: 1
+
+AVE_audio_video:
+    dataset_parser: load_audio_ave_dataset
+    data_path: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/audio-tasks-train/ave
+    split_file: trainSet.txt
+    audio_dir: audios
+    video_dir: AVE
+    frame_root: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/audio-tasks-train/ave/frames
+    num_frames: 8
+    max_frames_saved: 100
+    weight: 1
+
+UrbanSound8K_audio_cls:
+    dataset_parser: load_audio_urbansound8k_dataset
+    data_path: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/audio-tasks-train/urbansound8k
+    dataset_split: train
+    weight: 1
+
+TUTSound_audio_audio:
+    dataset_parser: build_tutsound_audio_dataset
+    data_path: /data/mengrui/.cache/huggingface/datasets/MMEB-V3-train/audio-tasks-train/tutsound
+    stratify_by: label_name
+    max_per_label: 100
+    require_pos_diff_fp: true
+    weight: 1

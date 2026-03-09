@@ -5,6 +5,7 @@ import shutil
 from datasets import load_dataset
 
 from src.constant.dataset_hf_path import EVAL_DATASET_HF_PATH
+from src.constant.dataset_hflocal_path import EVAL_DATASET_HF_PATH as EVAL_DATASET_LOCAL_PATH
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook
 from src.utils.dataset_utils import load_hf_dataset, sample_dataset
 from src.utils.vision_utils.vision_utils import process_video_frames, load_frames
@@ -121,7 +122,21 @@ def sub_sample(video_dir, video_export_dir):
 DATASET_PARSER_NAME = "activitynetqa"
 @AutoEvalPairDataset.register(DATASET_PARSER_NAME)
 def load_activitynetqa_dataset(model_args, data_args, *args, **kwargs):
-    dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[kwargs['dataset_name']])
+    dataset_name = kwargs['dataset_name']
+    
+    # 优先使用本地路径
+    if dataset_name in EVAL_DATASET_LOCAL_PATH:
+        local_path_info = EVAL_DATASET_LOCAL_PATH[dataset_name]
+        local_path = local_path_info[0]
+        if os.path.exists(local_path):
+            print(f"Loading {dataset_name} from local path: {local_path}")
+            dataset = load_hf_dataset(local_path_info + ("local",))
+        else:
+            print(f"Local path {local_path} not found, falling back to HuggingFace Hub")
+            dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[dataset_name])
+    else:
+        dataset = load_hf_dataset(EVAL_DATASET_HF_PATH[dataset_name])
+    
     dataset = sample_dataset(dataset, **kwargs)
 
     kwargs['dataset_name'] = DATASET_PARSER_NAME
