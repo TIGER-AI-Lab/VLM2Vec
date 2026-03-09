@@ -7,7 +7,7 @@ from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_met
 from src.model.processor import process_input_text
 from src.utils.vision_utils.vision_utils import save_frames, process_video_frames
 
-def generate_omnidirectional_dataset(dataset, *args, available_modalities=['I', 'V'], **kwargs):
+def generate_omnidirectional_dataset(dataset, *args, **kwargs):
     """
     Generate an omnidirectional evaluation dataset by creating multi-modal query instances.
     This function constructs positive samples that can be queried using different modalities
@@ -19,6 +19,7 @@ def generate_omnidirectional_dataset(dataset, *args, available_modalities=['I', 
         available_modalities (list, optional): List of modalities to generate queries for.
             Supported values: 'I' (image), 'V' (video). Defaults to ['I', 'V'].
     """
+    AVAILABLE_MODALITIES=['I', 'V']
     img_ids, pos_filenames, qry_insts, qry_texts, tgt_texts, tgt_images = [], [], [], [], [], []
     for img_id, qry_text, neg_ids in zip(dataset['image_id'], dataset['qry_text'], dataset['hard_negatives']):
         # generate the candidate pool, which is the same for different query modalities
@@ -26,12 +27,12 @@ def generate_omnidirectional_dataset(dataset, *args, available_modalities=['I', 
         # due to some inconsistency issues in the dataset where the pos id is sometimes in neg id pool, we take robust step to ensure the pos exists and is unique in the pool
         candidate_ids_pool = list(set(neg_ids+[img_id])) 
         for tgt_id in candidate_ids_pool: # add the positive sample into the candidate pool as well, ideally should have (len(neg_ids)+1)*2 candidates in total
-            for modality in available_modalities:
+            for modality in AVAILABLE_MODALITIES:
                 tgt_txt_lst.append("") # no text input for the candidate for now, serving as a placeholder here
                 tgt_visual_lst.append(coco_filename_with_ext(tgt_id, modality))
 
         # now generate the query instance (positive sample) for each modality
-        for modality in available_modalities:
+        for modality in AVAILABLE_MODALITIES:
             img_ids.append(img_id)
             pos_filename = coco_filename_with_ext(img_id, modality)
             pos_filenames.append(pos_filename)
@@ -60,8 +61,9 @@ def data_prepare(batch_dict, *args, **kwargs):
     TGT_INST = "Represent the given text, image or video."
     query_texts, query_images, cand_texts, cand_images, dataset_infos = [], [], [], [], []
     for pos_id, pos_filename, qry_inst, qry_text, tgt_text_lst, tgt_visual_lst in zip(batch_dict['image_id'], batch_dict['pos_filename'], batch_dict['qry_inst'], batch_dict['qry_text'], batch_dict['tgt_text'], batch_dict['tgt_image']):
-        query_text = process_input_text(qry_inst, text=qry_text, model_backbone=model_backbone, add_image_token=True)
-        query_texts.append([query_text])
+        query_texts.append([process_input_text(qry_inst, 
+                                               text=qry_text, 
+                                               model_backbone=model_backbone)])
         query_images.append([None]) # no visual input for the query, or it will be too simple
 
         cand_name_instances, cand_txt_instances, cand_visual_instances= [], [], [] # candidate pool for each single query sample in a batch
