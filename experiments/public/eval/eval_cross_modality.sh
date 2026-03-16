@@ -1,5 +1,5 @@
 DATA_BASEDIR="/data/mingyi/MMEB/image/MMEB"
-OUTPUT_PATH="/home/mingyi/AI-Projects/VLM2VEC_fork/VLM2Vec/eval_cross_modality_outputs/MixedCandFixedQwen2VL2b"
+OUTPUT_PATH="/home/mingyi/AI-Projects/VLM2VEC_fork/VLM2Vec/eval_cross_modality_outputs/t2ivQwen2VL2b"
 
 CUDA_VISIBLE_DEVICES="1" python eval.py \
       --pooling eos \

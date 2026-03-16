@@ -658,12 +658,6 @@ def Qwen2_VL_process_fn(model_inputs: dict, processor: Qwen2VLProcessor, max_len
     vlm_image_token, vlm_video_token = VLM_IMAGE_TOKENS[QWEN2_VL], VLM_VIDEO_TOKENS[QWEN2_VL]
 
     # 1. iterate each pair and process, since processors do not support processing for mixed batch (contains data w/ and w/o visual inputs)
-<<<<<<< HEAD
-    for text, visual_input in zip(texts, visual_inputs):
-        if not visual_input or (type(visual_input)==list and any(i is None for i in visual_input)):
-            # if text inputs only (all images must be valid)
-            inputs = processor(text=[text], images=None, return_tensors="np", max_length=max_length, truncation=True)
-=======
     for text, images in zip(texts, visual_inputs):
         if images is None or (type(images)==list and any(i is None for i in images)):
             # all images must be valid
@@ -674,7 +668,6 @@ def Qwen2_VL_process_fn(model_inputs: dict, processor: Qwen2VLProcessor, max_len
                 max_length=_text_only_max_length(max_length),
                 truncation=True,
             )
->>>>>>> upstream/olm2vec
             input_id = inputs["input_ids"].squeeze().tolist()
             if isinstance(input_id, int):
                 # in case of empty string, only BOS is included
