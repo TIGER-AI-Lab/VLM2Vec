@@ -28,6 +28,13 @@ class ModelArguments:
     uimask_rand: bool = field(default=False, metadata={"help": "Enable random token selection instead of uniform selection"})
     lm_skip_layer: str = field(default='[1,28,0]', metadata={"help": "Specify the layers of the language model to skip for token selection"})
     vis_skip_layer: str = field(default='[1,32,0]', metadata={"help": "Specify the layers of the vision model to skip for token selection"})
+    # WAVE official inference options (only used when --model_backbone wave)
+    wave_train_classify: bool = field(default=True, metadata={"help": "Enable WAVE classify head inference path"})
+    wave_classify_type: str = field(default="all_layer", metadata={"help": "WAVE classify type: last_layer | all_layer"})
+    wave_pred_embeds: bool = field(default=True, metadata={"help": "Request WAVE model to return embedding outputs"})
+    wave_use_beats: bool = field(default=False, metadata={"help": "Enable WAVE BEATs branch"})
+    wave_beats_path: str = field(default=None, metadata={"help": "Path to BEATs checkpoint required by WAVE when wave_use_beats=true"})
+    wave_beats_only: bool = field(default=False, metadata={"help": "Use BEATs-only audio branch in WAVE"})
 
 
 @dataclass

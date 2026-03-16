@@ -11,8 +11,9 @@ from src.arguments import ModelArguments, TrainingArguments
 from src.model.processor import (
     LLAVA_NEXT, QWEN2_VL, PHI3V, get_backbone_name, print_master, QWEN2_5_VL,
     backbone2model, QWEN2_VL_TOKENSELECTION, QWEN2_5_VL_TOKENSELECTION, E5_V,
-    INTERNVIDEO2, GME, VLM_IMAGE_TOKENS, LamRA, LamRA_QWEN2_5, COLPALI, QWEN2_5_OMNI, NVOMNIEMBED
+    INTERNVIDEO2, GME, VLM_IMAGE_TOKENS, LamRA, LamRA_QWEN2_5, COLPALI, QWEN2_5_OMNI, NVOMNIEMBED, WAVE, QWEN3_VL
 )
+from src.model.wave_official_utils import load_wave_official_model_classes
 from src.model.baseline_backbone.colpali import ColPali
 from src.model.baseline_backbone.gme.gme_inference import GmeQwen2VL
 from src.model.baseline_backbone.lamra.lamra_inference import LamRAQwen2VL
@@ -48,17 +49,39 @@ class MMEBModel(nn.Module):
             self.world_size = dist.get_world_size()
 
         # inside MMEBModel.__init__(...)
-        self.rep_dim = (
-            getattr(self.config, "hidden_size", None)
-            or getattr(self.config, "d_model", None)
-            or getattr(self.config, "embed_dim", None)
-            or getattr(getattr(self.encoder, "config", None), "hidden_size", None)
-            or getattr(getattr(getattr(self.encoder, "model", None), "config", None), "hidden_size", None)
-        )
+        self.rep_dim = self._infer_rep_dim(encoder=self.encoder)
 
         if self.rep_dim is None or int(self.rep_dim) <= 0:
             raise ValueError(f"Cannot infer rep_dim from config. Got rep_dim={self.rep_dim}")
         self.rep_dim = int(self.rep_dim)
+
+    def _infer_rep_dim(self, encoder: PreTrainedModel):
+        """
+        Infer representation dimension from common config layouts.
+        Keep legacy priority first, then add nested-config fallbacks for models
+        like Qwen3-VL where hidden size lives under text_config.
+        """
+        cfg = getattr(encoder, "config", None)
+        model_cfg = getattr(getattr(encoder, "model", None), "config", None)
+        text_cfg = getattr(cfg, "text_config", None)
+        vision_cfg = getattr(cfg, "vision_config", None)
+
+        for val in (
+            # legacy paths (preserve behavior for existing models)
+            getattr(cfg, "hidden_size", None),
+            getattr(cfg, "d_model", None),
+            getattr(cfg, "embed_dim", None),
+            getattr(model_cfg, "hidden_size", None),
+            # nested paths (e.g., qwen3_vl)
+            getattr(text_cfg, "hidden_size", None),
+            getattr(text_cfg, "d_model", None),
+            getattr(text_cfg, "embed_dim", None),
+            getattr(vision_cfg, "out_hidden_size", None),
+            getattr(vision_cfg, "hidden_size", None),
+        ):
+            if val is not None:
+                return val
+        return None
 
     @property
     def device(self):
@@ -171,8 +194,9 @@ class MMEBModel(nn.Module):
             attn_mask = input.get("attention_mask", None)
             return self._pooling(hidden_states, attn_mask)
 
-        # ===== QWEN2.5 OMNI (Omni-Embed-Nemotron-3B) =====
-        elif backbone == QWEN2_5_OMNI:
+        # ===== QWEN2.5 OMNI / NVOMNI / WAVE =====
+        elif backbone in {QWEN2_5_OMNI, NVOMNIEMBED, WAVE}:
+            is_wave = backbone == WAVE
             # 1) 过滤掉调试字段（模型不认识）
             EXTRA_KEYS = {"texts", "images", "audios"}
             raw_input = input
@@ -308,6 +332,7 @@ class MMEBModel(nn.Module):
                         model_input.pop("input_features", None)
                         model_input.pop("feature_attention_mask", None)
                         model_input.pop("audio_feature_lengths", None)
+                        model_input.pop("input_raw_wav", None)
                     else:
                         audio_lens = fam.sum(dim=1)
                         invalid_audio = audio_lens <= 0
@@ -321,6 +346,7 @@ class MMEBModel(nn.Module):
                                 model_input.pop("input_features", None)
                                 model_input.pop("feature_attention_mask", None)
                                 model_input.pop("audio_feature_lengths", None)
+                                model_input.pop("input_raw_wav", None)
                             else:
                                 model_input["input_features"] = feats.index_select(0, valid_audio_rows)
                                 model_input["feature_attention_mask"] = fam.index_select(0, valid_audio_rows)
@@ -330,6 +356,12 @@ class MMEBModel(nn.Module):
                                         model_input["audio_feature_lengths"] = afl.index_select(0, valid_audio_rows)
                                     else:
                                         model_input.pop("audio_feature_lengths", None)
+                                raw_wav = model_input.get("input_raw_wav", None)
+                                if isinstance(raw_wav, torch.Tensor) and raw_wav.dim() > 0 and raw_wav.size(0) == fam.size(0):
+                                    model_input["input_raw_wav"] = raw_wav.index_select(0, valid_audio_rows)
+                                elif isinstance(raw_wav, list) and len(raw_wav) == fam.size(0):
+                                    valid_idx = valid_audio_rows.detach().cpu().tolist()
+                                    model_input["input_raw_wav"] = [raw_wav[i] for i in valid_idx]
                         else:
                             model_input["input_features"] = feats
                             model_input["feature_attention_mask"] = fam
@@ -345,13 +377,16 @@ class MMEBModel(nn.Module):
             has_multimodal = has_image or has_video or has_audio
 
             # 5) forward
-            if has_multimodal:
-                outputs = self.encoder(
+            if has_multimodal or is_wave:
+                forward_kwargs = {
                     **model_input,
-                    output_hidden_states=True,
-                    return_dict=True,
-                    use_cache=False,
-                )
+                    "output_hidden_states": True,
+                    "return_dict": True,
+                    "use_cache": False,
+                }
+                if is_wave:
+                    forward_kwargs["pred_embeds"] = bool(getattr(self, "wave_pred_embeds", True))
+                outputs = self.encoder(**forward_kwargs)
                 attn_mask = model_input.get("attention_mask", None)
             else:
                 # 纯文本：只走 text-only encoder
@@ -380,6 +415,12 @@ class MMEBModel(nn.Module):
                 )
                 attn_mask = text_only_input.get("attention_mask", None)
 
+            if hasattr(outputs, "mllm_embeds") and outputs.mllm_embeds is not None:
+                emb = outputs.mllm_embeds
+                if getattr(self, "normalize", False):
+                    emb = F.normalize(emb, p=2, dim=-1)
+                return emb
+
             if hasattr(outputs, "embeddings") and outputs.embeddings is not None:
                 emb = outputs.embeddings
                 if getattr(self, "normalize", False):
@@ -398,7 +439,12 @@ class MMEBModel(nn.Module):
 
         # ===== Fallback: all other HF backbones =====
         else:
-            outputs = self.encoder(**input, return_dict=True, output_hidden_states=True, use_cache=False)
+            forward_kwargs = dict(return_dict=True, output_hidden_states=True, use_cache=False)
+            if backbone == QWEN3_VL:
+                # Qwen3-VL ForConditionalGeneration defaults to full-sequence logits (very memory heavy).
+                # We only need hidden states for embedding pooling, so keep logits to a minimal slice.
+                forward_kwargs["logits_to_keep"] = 1
+            outputs = self.encoder(**input, **forward_kwargs)
             hidden_states = outputs.hidden_states[-1] if getattr(outputs, "hidden_states", None) is not None else outputs.last_hidden_state
             attn_mask = input.get("attention_mask", None)
             if attn_mask is not None:
@@ -441,6 +487,23 @@ class MMEBModel(nn.Module):
             config.padding_side = "left"
             config.use_cache = False
             base_model = backbone2model[model_backbone].from_pretrained(
+                model_args.model_name,
+                config=config,
+                torch_dtype=torch.bfloat16,
+                low_cpu_mem_usage=True,
+            )
+        elif model_backbone == QWEN3_VL:
+            try:
+                from transformers.models.qwen3_vl.modeling_qwen3_vl import Qwen3VLForConditionalGeneration
+            except Exception as e:
+                raise ImportError(
+                    "Qwen3-VL-Embedding requires transformers>=4.57.0 "
+                    "(cannot import transformers.models.qwen3_vl)."
+                ) from e
+            config._attn_implementation = "flash_attention_2"
+            config.padding_side = "left"
+            config.use_cache = False
+            base_model = Qwen3VLForConditionalGeneration.from_pretrained(
                 model_args.model_name,
                 config=config,
                 torch_dtype=torch.bfloat16,
@@ -510,15 +573,51 @@ class MMEBModel(nn.Module):
     def load(cls, model_args: ModelArguments, is_trainable=True, **kwargs):
         model_name_or_path = model_args.checkpoint_path if model_args.checkpoint_path else model_args.model_name
         config_source = model_args.model_name if getattr(model_args, "lora", False) and model_args.checkpoint_path else model_name_or_path
-        config = AutoConfig.from_pretrained(config_source, trust_remote_code=True)
+        config = None
 
         if not hasattr(model_args, "model_backbone") or not model_args.model_backbone:
+            config = AutoConfig.from_pretrained(config_source, trust_remote_code=True)
             model_backbone = get_backbone_name(hf_config=config, model_type=model_args.model_type)
             setattr(model_args, "model_backbone", model_backbone)
 
         print_master(f"Loading backbone [{model_args.model_backbone}] from {model_name_or_path}")
 
-        if model_args.model_backbone in {
+        if model_args.model_backbone == WAVE:
+            Qwen2_5OmniThinkerConfig, Qwen2_5OmniThinkerForConditionalGeneration = load_wave_official_model_classes()
+            config = Qwen2_5OmniThinkerConfig.from_pretrained(config_source, trust_remote_code=True)
+            config.use_cache = False
+            config.padding_side = "left"
+            try:
+                config._attn_implementation = "flash_attention_2"
+                if hasattr(config, "vision_config"):
+                    config.vision_config._attn_implementation = "flash_attention_2"
+            except Exception as e:
+                print_master(f"Warning: Could not set flash_attention_2 for WAVE: {e}")
+
+            # WAVE official classify settings.
+            config.train_classify = bool(getattr(model_args, "wave_train_classify", True))
+            config.classify_type = getattr(model_args, "wave_classify_type", "all_layer")
+            config.sim_temperature = float(getattr(model_args, "temperature", 0.02))
+
+            wave_use_beats = bool(getattr(model_args, "wave_use_beats", False))
+            wave_beats_path = getattr(model_args, "wave_beats_path", None)
+            wave_beats_only = bool(getattr(model_args, "wave_beats_only", False))
+            if hasattr(config, "audio_config"):
+                if wave_use_beats:
+                    if wave_beats_path:
+                        config.audio_config.beats_path = wave_beats_path
+                else:
+                    config.audio_config.beats_path = "No"
+                config.audio_config.beats_only = wave_beats_only
+
+            base_model = Qwen2_5OmniThinkerForConditionalGeneration.from_pretrained(
+                model_name_or_path,
+                torch_dtype=torch.bfloat16,
+                low_cpu_mem_usage=True,
+                config=config,
+                trust_remote_code=True,
+            )
+        elif model_args.model_backbone in {
             LLAVA_NEXT, QWEN2_VL, QWEN2_5_VL, QWEN2_VL_TOKENSELECTION, QWEN2_5_VL_TOKENSELECTION, QWEN2_5_OMNI, E5_V
         }:
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
@@ -536,8 +635,36 @@ class MMEBModel(nn.Module):
                 config=config,
                 trust_remote_code=True,
             )
+        elif model_args.model_backbone == QWEN3_VL:
+            config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
+            try:
+                from transformers.models.qwen3_vl.modeling_qwen3_vl import Qwen3VLForConditionalGeneration
+            except Exception as e:
+                raise ImportError(
+                    "Qwen3-VL-Embedding requires transformers>=4.57.0 "
+                    "(cannot import transformers.models.qwen3_vl)."
+                ) from e
+            try:
+                config._attn_implementation = "flash_attention_2"
+                if hasattr(config, "vision_config"):
+                    config.vision_config._attn_implementation = "flash_attention_2"
+            except Exception as e:
+                print_master(f"Warning: Could not set flash_attention_2 for {model_args.model_backbone}: {e}")
+            base_model = Qwen3VLForConditionalGeneration.from_pretrained(
+                model_args.model_name,
+                torch_dtype=torch.bfloat16,
+                low_cpu_mem_usage=True,
+                config=config,
+                trust_remote_code=True,
+            )
         elif model_args.model_backbone == NVOMNIEMBED:
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
+            try:
+                config._attn_implementation = "flash_attention_2"
+                if hasattr(config, "vision_config"):
+                    config.vision_config._attn_implementation = "flash_attention_2"
+            except Exception as e:
+                print_master(f"Warning: Could not set flash_attention_2 for {model_args.model_backbone}: {e}")
             base_model = AutoModel.from_pretrained(
                 model_args.model_name,
                 torch_dtype=torch.bfloat16,
@@ -561,15 +688,23 @@ class MMEBModel(nn.Module):
             )
         elif model_args.model_backbone == GME:
             base_model = GmeQwen2VL(model_args.model_name, processor=kwargs["processor"])
+            if config is None:
+                config = AutoConfig.from_pretrained(config_source, trust_remote_code=True)
             setattr(base_model, "config", config)
         elif model_args.model_backbone == LamRA:
             base_model = LamRAQwen2VL(model_args.model_name)
+            if config is None:
+                config = AutoConfig.from_pretrained(config_source, trust_remote_code=True)
             setattr(base_model, "config", config)
         elif model_args.model_backbone == LamRA_QWEN2_5:
             base_model = LamRAQwen25VL(model_args.model_name)
+            if config is None:
+                config = AutoConfig.from_pretrained(config_source, trust_remote_code=True)
             setattr(base_model, "config", config)
         elif model_args.model_backbone == COLPALI:
             base_model = ColPali.from_pretrained(model_args.model_name)
+            if config is None:
+                config = AutoConfig.from_pretrained(config_source, trust_remote_code=True)
             setattr(base_model, "config", config)
         else:
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
@@ -634,6 +769,7 @@ class MMEBModel(nn.Module):
             )
 
         model.model_backbone = model_args.model_backbone
+        model.wave_pred_embeds = bool(getattr(model_args, "wave_pred_embeds", True))
         return model
 
     def save(self, output_dir: str):

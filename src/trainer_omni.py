@@ -163,10 +163,25 @@ def build_thinker_state_dict(full_state_dict: Dict[str, torch.Tensor]) -> Dict[s
 # Embedding encoder
 # =========================
 def mean_pool(last_hidden: torch.Tensor, attn_mask: torch.Tensor) -> torch.Tensor:
+    if not isinstance(attn_mask, torch.Tensor):
+        attn_mask = torch.as_tensor(attn_mask, device=last_hidden.device)
+    else:
+        attn_mask = attn_mask.to(last_hidden.device)
     mask = attn_mask.unsqueeze(-1).type_as(last_hidden)
     summed = (last_hidden * mask).sum(dim=1)
     denom = mask.sum(dim=1).clamp(min=1e-6)
     return summed / denom
+
+
+def last_token_pool(last_hidden: torch.Tensor, attn_mask: torch.Tensor) -> torch.Tensor:
+    if not isinstance(attn_mask, torch.Tensor):
+        attn_mask = torch.as_tensor(attn_mask, device=last_hidden.device)
+    else:
+        attn_mask = attn_mask.to(last_hidden.device)
+    last_idx = attn_mask.long().sum(dim=1) - 1
+    last_idx = last_idx.clamp_min(0)
+    b_idx = torch.arange(last_hidden.size(0), device=last_hidden.device)
+    return last_hidden[b_idx, last_idx]
 
 
 class OmniEmbedder(nn.Module):
@@ -260,6 +275,11 @@ class OmniEmbedder(nn.Module):
                 train_proj_adapters=train_proj_adapters,
             )
 
+        pooling = str(pooling).strip().lower()
+        if pooling in {"lasttoken", "last_token", "eos"}:
+            pooling = "last"
+        if pooling not in {"mean", "last"}:
+            raise ValueError(f"Unsupported pooling={pooling}. Expected one of: mean, last, lasttoken")
         self.pooling = pooling
         self.normalize = normalize
 
@@ -380,7 +400,10 @@ class OmniEmbedder(nn.Module):
             attn_mask = inputs.get("attention_mask", None)
             if attn_mask is None:
                 attn_mask = torch.ones(hs.shape[:2], device=hs.device, dtype=torch.long)
-            emb = mean_pool(hs, attn_mask)
+            if self.pooling == "last":
+                emb = last_token_pool(hs, attn_mask)
+            else:
+                emb = mean_pool(hs, attn_mask)
 
         if self.normalize:
             emb = F.normalize(emb, p=2, dim=-1)

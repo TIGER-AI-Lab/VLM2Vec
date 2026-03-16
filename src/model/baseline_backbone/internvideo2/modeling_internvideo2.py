@@ -1098,10 +1098,21 @@ def pretrain_internvideo2_6b_patch14_224(config):
 from dataclasses import dataclass
 from typing import Tuple, Optional, List
 from transformers.configuration_utils import PretrainedConfig
-from transformers.modeling_utils import (PreTrainedModel,
-                                         apply_chunking_to_forward,
-                                         find_pruneable_heads_and_indices,
-                                         prune_linear_layer)
+from transformers.modeling_utils import PreTrainedModel
+try:
+    # transformers<=4.56
+    from transformers.modeling_utils import (
+        apply_chunking_to_forward,
+        find_pruneable_heads_and_indices,
+        prune_linear_layer,
+    )
+except ImportError:
+    # transformers>=4.57
+    from transformers.pytorch_utils import (
+        apply_chunking_to_forward,
+        find_pruneable_heads_and_indices,
+        prune_linear_layer,
+    )
 from transformers.activations import ACT2FN
 from transformers.modeling_outputs import (
     BaseModelOutputWithPastAndCrossAttentions,

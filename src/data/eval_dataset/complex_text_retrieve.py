@@ -405,6 +405,8 @@ def load_complex_text_retrieve_dataset(model_args, data_args, *args, **kwargs):
         raise FileNotFoundError(f"Query file not found: {query_file}")
     if not candidate_file or not os.path.exists(candidate_file):
         raise FileNotFoundError(f"Candidate file not found: {candidate_file}")
+    if qrels_file and not os.path.exists(qrels_file):
+        raise FileNotFoundError(f"Qrels file not found: {qrels_file}")
 
     qrels_variant = None
     if qrels_file:
@@ -426,6 +428,11 @@ def load_complex_text_retrieve_dataset(model_args, data_args, *args, **kwargs):
     qrels = _parse_qrels(_load_rows(qrels_file)) if qrels_file and os.path.exists(qrels_file) else None
 
     query_data = _parse_queries(query_rows, qrels, qrels_variant, subset_name)
+    if query_data and all(len(x.get("label_names", [])) == 0 for x in query_data):
+        raise ValueError(
+            f"No positive labels loaded for subset '{subset_name}'. "
+            f"Please check qrels_file path and qrels/query ID format."
+        )
     candidate_data = _parse_corpus(corpus_rows)
 
     qry_dataset = Dataset.from_list(query_data)

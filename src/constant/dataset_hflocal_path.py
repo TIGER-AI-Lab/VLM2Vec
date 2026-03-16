@@ -125,4 +125,17 @@ EVAL_DATASET_HF_PATH = {
     "SpeechCOCO": (os.path.join(BASE_RAW_DATA_DIR, "audio-tasks", "speechcoco-1k"), "SpeechCOCO", "validation"),
     # Audio-GND
     "TUTSound": (os.path.join(BASE_RAW_DATA_DIR, "audio-tasks", "tutsound"), "TUTSound", "test"),
+
+
+    # GAE-GUIAct
+    "GAE-GUIAct_q2t": (os.path.join(BASE_RAW_DATA_DIR, "gui-tasks", "GAE-GUIAct"), None, "q2t"),
+    "GAE-GUIAct_q2s": (os.path.join(BASE_RAW_DATA_DIR, "gui-tasks", "GAE-GUIAct"), None, "q2s"),
+    "GAE-GUIAct_s2s": (os.path.join(BASE_RAW_DATA_DIR, "gui-tasks", "GAE-GUIAct"), None, "s2s"),
+    "GAE-GUIAct_t2s": (os.path.join(BASE_RAW_DATA_DIR, "gui-tasks", "GAE-GUIAct"), None, "t2s"),
+    # GAE-Mind2Web
+    "GAE-Mind2Web_q2t": (os.path.join(BASE_RAW_DATA_DIR, "gui-tasks", "GAE-Mind2Web"), None, "q2t"),
+    "GAE-Mind2Web_q2s": (os.path.join(BASE_RAW_DATA_DIR, "gui-tasks", "GAE-Mind2Web"), None, "q2s"),
+    "GAE-Mind2Web_s2s": (os.path.join(BASE_RAW_DATA_DIR, "gui-tasks", "GAE-Mind2Web"), None, "s2s"),
+    "GAE-Mind2Web_t2s": (os.path.join(BASE_RAW_DATA_DIR, "gui-tasks", "GAE-Mind2Web"), None, "t2s"),
+
 }

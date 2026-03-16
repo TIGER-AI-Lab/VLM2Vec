@@ -49,6 +49,7 @@ from .ave_retreival_dateset import load_ave_retrieval_dataset
 
 # Audio Grounding
 from .tutsound_dataset import load_tutsound_audio_dataset
+from .tutsound_hard_dataset import load_tutsound_hard_audio_dataset
 
 # Text Retrieval
 from .complex_text_retrieve import load_complex_text_retrieve_dataset

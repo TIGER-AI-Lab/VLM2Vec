@@ -90,8 +90,21 @@ def load_local_hf_dataset(dataset_path: str, subset: str = None, split: str = No
             if os.path.isdir(subset_path):
                 # 检查是否有 parquet 文件
                 import glob
-                parquet_files = glob.glob(os.path.join(subset_path, "*.parquet"))
+                parquet_files = []
+                split_parquet_files = []
+                if split:
+                    split_parquet_files = sorted(glob.glob(os.path.join(subset_path, f"{split}-*.parquet")))
+                    if not split_parquet_files:
+                        split_parquet_files = sorted(glob.glob(os.path.join(subset_path, f"{split}*.parquet")))
+                    parquet_files = split_parquet_files
+                if not parquet_files:
+                    parquet_files = sorted(glob.glob(os.path.join(subset_path, "*.parquet")))
                 if parquet_files:
+                    if split and not split_parquet_files:
+                        print_rank(
+                            f"[load_local_hf_dataset] split='{split}' has no matching parquet in {subset_path}, "
+                            f"fallback to all parquet files."
+                        )
                     # 直接用 pandas 读取并构造 Dataset，绕过 parquet 内置 schema metadata 引起的 CastError
                     import pandas as pd
                     df = pd.concat([pd.read_parquet(f) for f in parquet_files], ignore_index=True)

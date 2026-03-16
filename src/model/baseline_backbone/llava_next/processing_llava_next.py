@@ -21,7 +21,51 @@ from typing import List, Union
 from transformers.feature_extraction_utils import BatchFeature
 from transformers.image_processing_utils import select_best_resolution
 from transformers.image_utils import ImageInput, get_image_size, to_numpy_array
-from transformers.processing_utils import ProcessingKwargs, ProcessorMixin, Unpack, _validate_images_text_input_order
+try:
+    # transformers<=4.56
+    from transformers.processing_utils import ProcessingKwargs, ProcessorMixin, Unpack, _validate_images_text_input_order
+except ImportError:
+    # transformers>=4.57 removes this private helper; keep compatible behavior.
+    from transformers.processing_utils import ProcessingKwargs, ProcessorMixin, Unpack
+
+    def _is_text_input(value) -> bool:
+        if isinstance(value, str):
+            return True
+        if isinstance(value, (list, tuple)) and len(value) > 0:
+            if all(isinstance(x, str) for x in value):
+                return True
+            if all(
+                isinstance(x, (list, tuple)) and all(isinstance(y, str) for y in x)
+                for x in value
+            ):
+                return True
+        return False
+
+    def _is_image_input(value) -> bool:
+        if value is None:
+            return False
+        if hasattr(value, "shape"):
+            return True
+        if hasattr(value, "size") and hasattr(value, "mode"):
+            return True
+        if isinstance(value, (list, tuple)) and len(value) > 0:
+            first = value[0]
+            if isinstance(first, str):
+                return False
+            if isinstance(first, (list, tuple)) and all(isinstance(y, str) for y in first):
+                return False
+            if hasattr(first, "shape"):
+                return True
+            if hasattr(first, "size") and hasattr(first, "mode"):
+                return True
+        return False
+
+    def _validate_images_text_input_order(images, text):
+        if images is None or text is None:
+            return images, text
+        if _is_text_input(images) and _is_image_input(text):
+            return text, images
+        return images, text
 from transformers.tokenization_utils_base import PreTokenizedInput, TextInput
 from transformers.utils import logging
 

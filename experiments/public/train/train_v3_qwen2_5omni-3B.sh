@@ -22,9 +22,9 @@ mkdir -p $EXP_DIR/wandb
 rm -rf $EXP_DIR/wandb/*
 
 cd /data/mengrui/OLM2Vec/OLM2Vec
-cmd="CUDA_VISIBLE_DEVICES=0,1,2,3,5,6,7 \
+cmd="CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
 torchrun \
---nproc_per_node=7 \
+--nproc_per_node=8 \
 --master_port=2209 \
 --max_restarts=0 \
 train_omni.py \
@@ -33,7 +33,7 @@ train_omni.py \
 --model_name /data/mengrui/.cache/huggingface/Qwen2.5-Omni-3B \
 --model_type qwen2_5_omni \
 --bf16 \
---pooling mean \
+--pooling last_token \
 --normalize True \
 --temperature 0.02 \
 --loss_stage mixed \

@@ -1,18 +1,19 @@
 """
-TUTSound 音频事件检测数据集处理
-- 文本标签 -> 音频检索评测数据处理
+TUTSound (hard) 音频事件定位评测数据集
+- 文本标签 -> 音频片段检索（严格片段级判定）
 """
 
 import os
-from typing import Dict, List, Tuple, Any
+from typing import Any, Dict, List, Tuple
 
 import datasets
 import torchaudio
-from src.utils.dataset_utils import sample_dataset
-from src.data.eval_dataset.audio_instruction_utils import build_query_text
-from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset
+
 from src.constant.dataset_hf_path import EVAL_DATASET_HF_PATH
 from src.constant.dataset_hflocal_path import EVAL_DATASET_HF_PATH as EVAL_DATASET_LOCAL_PATH
+from src.data.eval_dataset.audio_instruction_utils import build_query_text
+from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset
+from src.utils.dataset_utils import sample_dataset
 
 
 def _read_evaluate_file(eval_path: str) -> List[Tuple[str, str, float, float, str]]:
@@ -47,10 +48,6 @@ def _seg_id(fp: str, start: float, end: float) -> str:
 
 
 def _normalize_segment(start: float, end: float, audio_dur: float, min_dur: float = 0.05) -> Tuple[float, float]:
-    """
-    Ensure a valid non-empty segment within [0, audio_dur].
-    Some raw labels in TUTSound may have onset==offset.
-    """
     s = max(0.0, float(start))
     e = float(end)
     if e <= s:
@@ -65,15 +62,14 @@ def _normalize_segment(start: float, end: float, audio_dur: float, min_dur: floa
     return s, e
 
 
-def build_tutsound_audio_dataset(path_info: Tuple[str, str, str], **kwargs):
-    dataset_path, subset, split = path_info
+def build_tutsound_hard_audio_dataset(path_info: Tuple[str, str, str], **kwargs):
+    dataset_path, _, _ = path_info
     base_dir = os.path.join(dataset_path, "TUT-sound-events-2017-development")
     neg_win_len = float(kwargs.get("neg_win_len", 1.0))
     neg_stride = float(kwargs.get("neg_stride", 0.5))
     iou_thresh = float(kwargs.get("neg_iou_thresh", 0.1))
     neg_max_per_query = int(kwargs.get("neg_max_per_query", 50))
 
-    # 1) 读四个 fold 的 evaluate 文件
     all_rows = []
     for fold in ["1", "2", "3", "4"]:
         eval_file_name = f"street_fold{fold}_evaluate.txt"
@@ -81,21 +77,19 @@ def build_tutsound_audio_dataset(path_info: Tuple[str, str, str], **kwargs):
         if os.path.isfile(eval_file):
             fold_rows = _read_evaluate_file(eval_file)
             all_rows.extend(fold_rows)
-            print(f"TUTSound: loaded fold{fold} with {len(fold_rows)} events")
+            print(f"TUTSound(hard): loaded fold{fold} with {len(fold_rows)} events")
         else:
-            print(f"Warning: TUTSound evaluate file not found: {eval_file}")
+            print(f"Warning: TUTSound(hard) evaluate file not found: {eval_file}")
 
     if not all_rows:
-        raise FileNotFoundError("No TUTSound evaluate files found for any fold")
+        raise FileNotFoundError("No TUTSound(hard) evaluate files found for any fold")
 
-    # 2) 按 wav 聚合 GT 事件段
     gt_by_fp: Dict[str, Dict[str, Any]] = {}
     for fp, scene, onset, offset, label in all_rows:
         if fp not in gt_by_fp:
             gt_by_fp[fp] = {"scene": scene, "events": []}
         gt_by_fp[fp]["events"].append({"label": label, "onset": onset, "offset": offset})
 
-    # 3) 构造 query：每个 GT event 一条；候选为同文件片段（含 GT + 背景滑窗）
     query_audio = []
     query_text = []
     query_image = []
@@ -127,23 +121,10 @@ def build_tutsound_audio_dataset(path_info: Tuple[str, str, str], **kwargs):
         normalized_events = []
         for ev in gt_events:
             seg_s, seg_e = _normalize_segment(ev["onset"], ev["offset"], audio_dur=audio_dur)
-            normalized_events.append({
-                "label": ev["label"],
-                "onset": seg_s,
-                "offset": seg_e,
-            })
+            normalized_events.append({"label": ev["label"], "onset": seg_s, "offset": seg_e})
         gt_events = normalized_events
         gt_segments = [(float(ev["onset"]), float(ev["offset"])) for ev in gt_events]
-        # Relaxed positives: within the same file, any segment with the same label is considered correct.
-        label_to_seg_ids: Dict[str, List[str]] = {}
-        for ev in gt_events:
-            seg_id = _seg_id(fp, float(ev["onset"]), float(ev["offset"]))
-            label_to_seg_ids.setdefault(ev["label"], []).append(seg_id)
-        for k in list(label_to_seg_ids.keys()):
-            # Keep deterministic order while removing accidental duplicates.
-            label_to_seg_ids[k] = list(dict.fromkeys(label_to_seg_ids[k]))
 
-        # 背景滑窗候选（固定长度，最后一窗不满则丢弃）
         neg_segments = []
         if neg_win_len > 0 and neg_stride > 0 and audio_dur >= neg_win_len:
             t = 0.0
@@ -159,11 +140,9 @@ def build_tutsound_audio_dataset(path_info: Tuple[str, str, str], **kwargs):
                     neg_segments.append((seg_start, seg_end))
                 t += neg_stride
 
-        # 负例采样上限（每个 query）
         if neg_max_per_query > 0 and len(neg_segments) > neg_max_per_query:
             neg_segments = neg_segments[:neg_max_per_query]
 
-        # 候选集合：所有 GT 片段 + 背景片段
         cand_segments = gt_segments + neg_segments
         cand_names = [_seg_id(fp, s, e) for s, e in cand_segments]
         cand_audio_row = [{"path": abs_path, "start": s, "end": e, "bytes": None} for s, e in cand_segments]
@@ -179,7 +158,6 @@ def build_tutsound_audio_dataset(path_info: Tuple[str, str, str], **kwargs):
             cand_audio.append(cand_audio_row)
 
             primary_seg_id = _seg_id(fp, float(ev["onset"]), float(ev["offset"]))
-            positive_seg_ids = label_to_seg_ids.get(ev["label"], [primary_seg_id])
             dataset_infos.append(
                 {
                     "file_path": fp,
@@ -187,8 +165,8 @@ def build_tutsound_audio_dataset(path_info: Tuple[str, str, str], **kwargs):
                     "gt_events": gt_events,
                     "query_event": ev,
                     "cand_names": cand_names,
-                    # Relaxed criterion: same file + same label + any matched segment counts as correct.
-                    "label_name": list(positive_seg_ids),
+                    # Strict criterion: the exact target segment must be retrieved.
+                    "label_name": [primary_seg_id],
                     "primary_label_name": primary_seg_id,
                 }
             )
@@ -209,14 +187,17 @@ def build_tutsound_audio_dataset(path_info: Tuple[str, str, str], **kwargs):
     return dataset, None
 
 
-DATASET_PARSER_NAME = "tutsound_audio_gnd"
+DATASET_PARSER_NAME = "tutsound_audio_gnd_hard"
 
 
 @AutoEvalPairDataset.register(DATASET_PARSER_NAME)
-def load_tutsound_audio_dataset(model_args, data_args, **kwargs):
-    dataset_name = kwargs.get("dataset_name", "TUTSound")
+def load_tutsound_hard_audio_dataset(model_args, data_args, **kwargs):
+    dataset_name = kwargs.get("dataset_name", "TUTSound(hard)")
     path_info = EVAL_DATASET_LOCAL_PATH.get(dataset_name, EVAL_DATASET_HF_PATH.get(dataset_name))
     if path_info is None:
-        raise ValueError(f"Unknown dataset_name={dataset_name}")
+        # Keep compatibility: allow hard task name while sharing TUTSound raw files.
+        path_info = EVAL_DATASET_LOCAL_PATH.get("TUTSound", EVAL_DATASET_HF_PATH.get("TUTSound"))
+    if path_info is None:
+        raise ValueError(f"Unknown dataset_name={dataset_name}, and fallback 'TUTSound' not found")
 
-    return build_tutsound_audio_dataset(path_info, **kwargs)
+    return build_tutsound_hard_audio_dataset(path_info, **kwargs)

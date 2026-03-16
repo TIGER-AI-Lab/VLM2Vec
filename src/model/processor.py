@@ -24,6 +24,7 @@ from src.model.vlm_backbone.qwen2_5_vl import Qwen2_5_VLForConditionalGeneration
 from src.model.vlm_backbone.qwen2_5_vl_tokenselection import \
     Qwen2_5_VLForConditionalGeneration as Qwen2_5_VL_TokenSelectionForConditionalGeneration
 from src.model.vlm_backbone.omni_embed import OmniEmbedForConditionalGeneration
+from src.model.wave_official_utils import load_wave_official_processor_class
 
 
 PHI_IMAGE_TOKEN_MAX_INPUT_ID = int(1e9)
@@ -185,6 +186,8 @@ def _merge_group_outputs(ordered_groups, total_batch_size):
         "input_features",
         "feature_attention_mask",
         "audio_feature_lengths",
+        # WAVE official BEATs path consumes raw waveform tensors separately.
+        "input_raw_wav",
     }
 
     for key in all_keys:
@@ -340,10 +343,12 @@ LLAVA_NEXT = 'llava_next'
 QWEN2_VL = 'qwen2_vl'
 QWEN2_VL_TOKENSELECTION = 'qwen2_vl'
 QWEN2_5_VL = 'qwen2_5_vl'
+QWEN3_VL = 'qwen3_vl'
 QWEN2_VL_TOKENSELECTION = 'qwen2_vl_tokenselection'
 QWEN2_5_VL_TOKENSELECTION = 'qwen2_5_vl_tokenselection'
 QWEN2_5_OMNI = 'qwen2_5_omni'  # Qwen2.5-Omni / Omni-Embed
 NVOMNIEMBED = 'nvomniembed'  # NVIDIA omni-embed-nemotron
+WAVE = 'wave'  # WAVE official (Qwen2.5-Omni-Thinker)
 INTERNVIDEO2 = 'internvideo2'
 GME = 'gme'  # QWEN2-VL
 LamRA = 'lamra'  # QWEN2-VL
@@ -358,8 +363,10 @@ MODEL2BACKBONE = {  # keys are from hf_config.model_type or manually added if no
     'qwen2_5_vl': QWEN2_5_VL,
     'qwen2_vl_tokenselection': QWEN2_VL_TOKENSELECTION,
     'qwen2_5_vl_tokenselection': QWEN2_5_VL_TOKENSELECTION,
+    'qwen3_vl': QWEN3_VL,
     'qwen2_5_omni': QWEN2_5_OMNI,
     'qwen2_5_omni_thinker': QWEN2_5_OMNI,
+    'wave': WAVE,
     'nvomniembed': NVOMNIEMBED,
     'internvideo2': INTERNVIDEO2,
     'gme': GME, 
@@ -375,10 +382,12 @@ VLM_IMAGE_TOKENS = {
     LLAVA_NEXT: "<image>",
     QWEN2_VL: "<|image_pad|>",
     QWEN2_5_VL: "<|image_pad|>",
+    QWEN3_VL: "<|image_pad|>",
     QWEN2_VL_TOKENSELECTION: "<|image_pad|>",
     QWEN2_5_VL_TOKENSELECTION: "<|image_pad|>",
     QWEN2_5_OMNI: "<|image_pad|>",
     NVOMNIEMBED: "<|image_pad|>",
+    WAVE: "<|IMAGE|>",
     GME: "<|image_pad|>",
     LamRA: "<|image_pad|>",
     LamRA_QWEN2_5: "<|image_pad|>",
@@ -391,10 +400,12 @@ VLM_VIDEO_TOKENS = {
     LLAVA_NEXT: "<image>",
     QWEN2_VL: "<|video_pad|>",
     QWEN2_5_VL: "<|video_pad|>",
+    QWEN3_VL: "<|video_pad|>",
     QWEN2_VL_TOKENSELECTION: "<|video_pad|>",
     QWEN2_5_VL_TOKENSELECTION: "<|video_pad|>",
     QWEN2_5_OMNI: "<|video_pad|>",
     NVOMNIEMBED: "<|video_pad|>",
+    WAVE: "<|VIDEO|>",
     GME: "<|video_pad|>",
     LamRA: "<|video_pad|>",
     LamRA_QWEN2_5: "<|video_pad|>",
@@ -479,6 +490,20 @@ def load_processor(model_args, data_args=None):
         image_processor = Qwen2_5_VLImageProcessor.from_pretrained(model_name_or_path, size=size)
         tokenizer = Qwen2TokenizerFast.from_pretrained(model_name_or_path)
         processor = Qwen2_5_VLProcessor.from_pretrained(model_name_or_path, image_processor=image_processor, tokenizer=tokenizer)
+    elif model_args.model_backbone == QWEN3_VL:
+        try:
+            from transformers.models.qwen3_vl.processing_qwen3_vl import Qwen3VLProcessor
+        except Exception as e:
+            raise ImportError(
+                "Qwen3-VL-Embedding requires transformers>=4.57.0 "
+                "(current environment cannot import transformers.models.qwen3_vl)."
+            ) from e
+        processor = Qwen3VLProcessor.from_pretrained(model_name_or_path)
+        if data_args is not None and hasattr(processor, "image_processor"):
+            if getattr(data_args, "resize_min_pixels", None) is not None:
+                processor.image_processor.min_pixels = data_args.resize_min_pixels
+            if getattr(data_args, "resize_max_pixels", None) is not None:
+                processor.image_processor.max_pixels = data_args.resize_max_pixels
     elif model_args.model_backbone == QWEN2_5_VL_TOKENSELECTION:
         # TODO: qwen2.5 token selection not working yet
         from src.model.vlm_backbone.qwen2_5_vl_tokenselection.processing_qwen2_5_vl import Qwen2_5_VLProcessor
@@ -517,6 +542,11 @@ def load_processor(model_args, data_args=None):
         from transformers import AutoProcessor
         _install_qwen_omni_warning_filters()
         processor = AutoProcessor.from_pretrained(model_name_or_path, trust_remote_code=True)
+    elif model_args.model_backbone == WAVE:
+        _install_qwen_omni_warning_filters()
+        processor_path = model_args.processor_name if model_args.processor_name else model_name_or_path
+        Qwen2_5OmniProcessor = load_wave_official_processor_class()
+        processor = Qwen2_5OmniProcessor.from_pretrained(processor_path, trust_remote_code=True)
         
     elif model_args.model_backbone == INTERNVIDEO2:
         return None
@@ -730,6 +760,153 @@ def Qwen2_VL_process_fn(model_inputs: dict, processor: Qwen2VLProcessor, max_len
     inputs['video_grid_thw'] = video_grid_thw
 
     return inputs
+
+
+def Qwen3_VL_Embedding_process_fn(model_inputs: dict, processor, max_length=None):
+    """
+    Qwen3-VL-Embedding official-style preprocessing:
+    - build chat conversation (system + user content)
+    - apply_chat_template
+    - process_vision_info
+    - processor(text=..., images=..., videos=...)
+    """
+    texts = model_inputs.get("text", []) or []
+    images = model_inputs.get("images", None)
+    videos = model_inputs.get("videos", None)
+    audios = model_inputs.get("audios", None)
+
+    if audios is not None and any(a is not None for a in audios):
+        raise ValueError(
+            "Qwen3-VL-Embedding does not support audio inputs in this eval pipeline. "
+            "Please evaluate it on text/image/video modalities."
+        )
+
+    try:
+        from qwen_vl_utils import process_vision_info
+    except Exception:
+        from src.model.vlm_backbone.qwen2_vl.qwen_vl_utils import process_vision_info
+
+    def _strip_special_tokens(text: str) -> str:
+        if text is None:
+            return ""
+        stripped = text
+        all_mm_tokens = set(VLM_IMAGE_TOKENS.values()) | set(VLM_VIDEO_TOKENS.values())
+        for tok in all_mm_tokens:
+            if tok:
+                stripped = stripped.replace(tok, " ")
+        return " ".join(stripped.split())
+
+    def _normalize_video_frames(video_item):
+        if video_item is None:
+            return None
+        if not isinstance(video_item, list):
+            return video_item
+        flat = []
+        for frame in video_item:
+            if frame is None:
+                continue
+            if isinstance(frame, list):
+                flat.extend([x for x in frame if x is not None])
+            else:
+                flat.append(frame)
+        return flat if flat else None
+
+    conversations = []
+    for idx, text in enumerate(texts):
+        content = []
+
+        image_item = None
+        if images is not None and idx < len(images):
+            image_item = images[idx]
+        if image_item is not None:
+            if isinstance(image_item, list):
+                for image in image_item:
+                    if image is not None:
+                        content.append({"type": "image", "image": image})
+            else:
+                content.append({"type": "image", "image": image_item})
+
+        video_item = None
+        if videos is not None and idx < len(videos):
+            video_item = _normalize_video_frames(videos[idx])
+        if video_item is not None:
+            content.append({"type": "video", "video": video_item})
+
+        clean_text = _strip_special_tokens(text if isinstance(text, str) else str(text))
+        if not clean_text:
+            clean_text = " "
+        content.append({"type": "text", "text": clean_text})
+
+        conversations.append([
+            {"role": "system", "content": [{"type": "text", "text": "Represent the user's input."}]},
+            {"role": "user", "content": content},
+        ])
+
+    def _apply_chat_template(conversation):
+        if hasattr(processor, "apply_chat_template"):
+            return processor.apply_chat_template(conversation, add_generation_prompt=True, tokenize=False)
+        tokenizer = getattr(processor, "tokenizer", None)
+        if tokenizer is not None and hasattr(tokenizer, "apply_chat_template"):
+            return tokenizer.apply_chat_template(conversation, add_generation_prompt=True, tokenize=False)
+        raise AttributeError("Qwen3-VL processor/tokenizer has no apply_chat_template")
+
+    chat_texts = []
+    for conv in conversations:
+        text = _apply_chat_template(conv)
+        if isinstance(text, list):
+            text = "".join([x if isinstance(x, str) else str(x) for x in text])
+        if not isinstance(text, str):
+            text = str(text)
+        chat_texts.append(text)
+
+    try:
+        image_inputs, video_inputs, _video_kwargs = process_vision_info(conversations, return_video_kwargs=True)
+    except TypeError:
+        image_inputs, video_inputs = process_vision_info(conversations)
+
+    def _has_visual_payload(visual_inputs):
+        if visual_inputs is None:
+            return False
+        if not isinstance(visual_inputs, list):
+            return True
+        for item in visual_inputs:
+            if item is None:
+                continue
+            if isinstance(item, list):
+                if any(x is not None for x in item):
+                    return True
+            else:
+                return True
+        return False
+
+    has_visual_inputs = _has_visual_payload(image_inputs) or _has_visual_payload(video_inputs)
+    effective_max_length = 8192 if max_length is None else int(max_length)
+    # NOTE:
+    # Qwen3-VL fast image processor may fail on some raw resolutions when do_resize=False
+    # (invalid patch reshape). Use processor default resizing behavior for robustness.
+    processor_kwargs = dict(
+        text=chat_texts,
+        images=image_inputs,
+        videos=video_inputs,
+        padding=True,
+        return_tensors="pt",
+    )
+    if has_visual_inputs:
+        # Keep multimodal placeholders intact; truncation may break image/video token alignment.
+        processor_kwargs["truncation"] = False
+    else:
+        processor_kwargs["truncation"] = True
+        processor_kwargs["max_length"] = effective_max_length
+    try:
+        outputs = processor(**processor_kwargs)
+    except RuntimeError as e:
+        if "shape" in str(e) and "invalid for input of size" in str(e):
+            logger.warning("Qwen3-VL preprocess failed with raw size; retrying with do_resize=True.")
+            outputs = processor(**processor_kwargs, do_resize=True)
+        else:
+            raise
+    return outputs
+
 
 def Gme_process_fn(model_inputs: dict, processor: Qwen2VLProcessor, max_length=None):
     inputs = {
@@ -1408,13 +1585,18 @@ def NVOmni_process_fn(model_inputs: dict, processor, max_length=None):
     videos = model_inputs.get("videos", None)
     audios = model_inputs.get("audios", None)
     audio_sample_rate = model_inputs.get("audio_sample_rate", None)
+    # WAVE-only compatibility flag: raw wav is consumed by WAVE BEATs branch.
+    keep_input_raw_wav = bool(model_inputs.get("_keep_input_raw_wav", False))
     min_image_size = _infer_image_min_size(processor)
 
     def _strip_special_tokens(text: str) -> str:
         if text is None:
             return ""
         stripped = text
-        for tok in (VLM_IMAGE_TOKENS.get(NVOMNIEMBED), VLM_VIDEO_TOKENS.get(NVOMNIEMBED)):
+        # Remove placeholder tokens from upstream prompts (e.g. <|VIDEO|>, <|video_pad|>).
+        # Multimodal placeholders are injected again by apply_chat_template/content items.
+        all_mm_tokens = set(VLM_IMAGE_TOKENS.values()) | set(VLM_VIDEO_TOKENS.values())
+        for tok in all_mm_tokens:
             if tok:
                 stripped = stripped.replace(tok, " ")
         return " ".join(stripped.split())
@@ -1685,7 +1867,31 @@ def NVOmni_process_fn(model_inputs: dict, processor, max_length=None):
             mm_kwargs["audio_kwargs"] = audio_kwargs
             mm_kwargs["audio"] = audios_g
 
-        return processor(text=texts_g, **mm_kwargs)
+        outputs = processor(text=texts_g, **mm_kwargs)
+
+        # Keep raw waveform only when explicitly requested (WAVE official BEATs path).
+        if has_audios and keep_input_raw_wav:
+            raw_wavs = []
+            max_len = 0
+            for a in audios_g:
+                if isinstance(a, torch.Tensor):
+                    wav = a.detach().float().cpu().reshape(-1)
+                elif isinstance(a, np.ndarray):
+                    wav = torch.from_numpy(a.astype(np.float32, copy=False)).reshape(-1)
+                else:
+                    wav = torch.as_tensor(np.asarray(a, dtype=np.float32)).reshape(-1)
+                raw_wavs.append(wav)
+                if wav.numel() > max_len:
+                    max_len = int(wav.numel())
+
+            if max_len > 0 and len(raw_wavs) > 0:
+                raw_batch = torch.zeros((len(raw_wavs), max_len), dtype=torch.float32)
+                for i, wav in enumerate(raw_wavs):
+                    if wav.numel() > 0:
+                        raw_batch[i, : wav.numel()] = wav
+                outputs["input_raw_wav"] = raw_batch
+
+        return outputs
 
     groups = defaultdict(list)  # sig -> list[(orig_i, record)]
     for i, r in enumerate(sample_records):
@@ -1778,11 +1984,13 @@ process_vlm_inputs_fns = {
     LLAVA_NEXT: Llava_NEXT_process_fn,
     QWEN2_VL: Qwen2_VL_process_fn,
     QWEN2_5_VL: Qwen2_VL_process_fn,
+    QWEN3_VL: Qwen3_VL_Embedding_process_fn,
     QWEN2_VL_TOKENSELECTION: Qwen2_VL_TokenSelection_process_fn,
     QWEN2_5_VL_TOKENSELECTION: Qwen2_VL_TokenSelection_process_fn,
     # Keep qwen2_5_omni aligned with nemotron-style multimodal preprocessing.
     QWEN2_5_OMNI: NVOmni_process_fn,
     NVOMNIEMBED: NVOmni_process_fn,
+    WAVE: NVOmni_process_fn,
     INTERNVIDEO2: InternVideo2_process_fn,
     GME: Gme_process_fn,
     LamRA: Gme_process_fn,

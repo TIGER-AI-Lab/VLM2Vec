@@ -64,3 +64,9 @@ TUTSound:
     dataset_split: test
     audio_root: audio-tasks/tutsound
     eval_type: local
+TUTSound(hard):
+    dataset_parser: tutsound_audio_gnd_hard
+    dataset_name: TUTSound(hard)
+    dataset_split: test
+    audio_root: audio-tasks/tutsound
+    eval_type: local

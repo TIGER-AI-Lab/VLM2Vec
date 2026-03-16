@@ -80,7 +80,7 @@ def main():
         model_type=model_args.model_type,
         torch_dtype=torch.bfloat16,
         device_map=None,
-        pooling="mean",
+        pooling=model_args.pooling,
         normalize=True,
         train_proj_adapters=False,
         lora=getattr(model_args, "lora", False),

@@ -163,6 +163,13 @@ def build_tutsound_audio_dataset(*args: Any, **kwargs: Any):
             })
         gt_events = normalized_events
         gt_segments = [(float(ev["onset"]), float(ev["offset"])) for ev in gt_events]
+        # Relaxed positives: within the same file, any segment with the same label is considered correct.
+        label_to_seg_ids: Dict[str, List[str]] = {}
+        for ev in gt_events:
+            seg_id = _seg_id(fp, float(ev["onset"]), float(ev["offset"]))
+            label_to_seg_ids.setdefault(ev["label"], []).append(seg_id)
+        for k in list(label_to_seg_ids.keys()):
+            label_to_seg_ids[k] = list(dict.fromkeys(label_to_seg_ids[k]))
 
         # 背景滑窗候选（可选，用于负例采样）
         neg_segments = []
@@ -216,14 +223,19 @@ def build_tutsound_audio_dataset(*args: Any, **kwargs: Any):
                 "end": float(ev["offset"])
             })
 
+            primary_seg_id = _seg_id(fp, float(ev["onset"]), float(ev["offset"]))
+            positive_seg_ids = label_to_seg_ids.get(ev["label"], [primary_seg_id])
             dataset_infos.append(
                 {
                     "file_path": fp,
                     "scene": info["scene"],
                     "gt_events": gt_events,
                     "query_event": ev,
-                    "label_name": ev["label"],
-                    "seg_id": _seg_id(fp, float(ev["onset"]), float(ev["offset"])),
+                    "query_label": ev["label"],
+                    # Relaxed criterion metadata (same file + same label).
+                    "label_name": list(positive_seg_ids),
+                    "primary_label_name": primary_seg_id,
+                    "seg_id": primary_seg_id,
                 }
             )
 
@@ -248,9 +260,9 @@ def build_tutsound_audio_dataset(*args: Any, **kwargs: Any):
     num_sample_per_subset = kwargs.get("num_sample_per_subset", None)
 
     if (max_per_label is not None or stratify_ratio is not None) and stratify_by is None:
-        stratify_by = "label_name"
+        stratify_by = "query_label"
 
-    if stratify_by == "label_name":
+    if stratify_by in {"label_name", "query_label"}:
         if stratify_ratio is None and max_per_label is None and isinstance(num_sample_per_subset, int):
             stratify_ratio = num_sample_per_subset / max(1, len(dataset))
 
@@ -260,7 +272,11 @@ def build_tutsound_audio_dataset(*args: Any, **kwargs: Any):
 
             label2indices: Dict[str, List[int]] = {}
             for idx, info in enumerate(dataset_infos):
-                lab = str(info.get("label_name", ""))
+                lab_value = info.get(stratify_by, "")
+                if isinstance(lab_value, list):
+                    # Backward compatibility: when stratify_by=label_name (now list), fall back to query_label.
+                    lab_value = info.get("query_label", "")
+                lab = str(lab_value)
                 label2indices.setdefault(lab, []).append(idx)
 
             rng = random.Random(seed)

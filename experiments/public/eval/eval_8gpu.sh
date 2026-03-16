@@ -13,13 +13,33 @@ cd "$REPO_ROOT" || exit 1
 # ==============================================================================
 # Configuration
 # ==============================================================================
-CUDA_VISIBLE_DEVICES="4,5,6,7"
+CUDA_VISIBLE_DEVICES="0,1,2,3"
 BATCH_SIZE=8
-MODALITIES=("image" "video" "tool" "visdoc" "audio" "text")
+# MODALITIES=("image" "video" "tool" "visdoc" "text")
+MODALITIES=("image")
 DATA_BASEDIR=/data/mengrui/.cache/huggingface/datasets/MMEB-V3
 OUTPUT_BASEDIR=exps/vlm2vec
+# WAVE-only optional args (only effective when MODEL_BACKBONE=wave)
+WAVE_PROCESSOR_PATH="${WAVE_PROCESSOR_PATH:-}"
+WAVE_TRAIN_CLASSIFY="${WAVE_TRAIN_CLASSIFY:-true}"
+WAVE_CLASSIFY_TYPE="${WAVE_CLASSIFY_TYPE:-all_layer}"
+WAVE_PRED_EMBEDS="${WAVE_PRED_EMBEDS:-true}"
+WAVE_USE_BEATS="${WAVE_USE_BEATS:-false}"
+WAVE_BEATS_PATH="${WAVE_BEATS_PATH:-}"
+WAVE_BEATS_ONLY="${WAVE_BEATS_ONLY:-false}"
+# Audio eval option: keep empty by default to preserve previous behavior.
+AUDIO_MAX_SECONDS="${AUDIO_MAX_SECONDS:-}"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 TIMING_LOG="$OUTPUT_BASEDIR/eval_timing_${TIMESTAMP}.csv"
+DATASET_TIMING_LOG="$OUTPUT_BASEDIR/eval_dataset_timing_${TIMESTAMP}.csv"
+
+CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES// /}"
+IFS=',' read -r -a GPU_IDS <<< "$CUDA_VISIBLE_DEVICES"
+NPROC_PER_NODE="${#GPU_IDS[@]}"
+if [ "$NPROC_PER_NODE" -lt 1 ]; then
+  echo "Invalid CUDA_VISIBLE_DEVICES: '$CUDA_VISIBLE_DEVICES'"
+  exit 1
+fi
 
 # Format seconds as HH:MM:SS
 format_duration() {
@@ -30,11 +50,61 @@ format_duration() {
   printf "%02d:%02d:%02d" "$hours" "$minutes" "$seconds"
 }
 
+# Parse a MODEL_SPECS line into globals.
+# Legacy format keeps working:
+#   MODEL_NAME;MODEL_BACKBONE;BASE_OUTPUT_PATH[;CHECKPOINT_PATH]
+# Extended options (append as key=value):
+#   processor_name=...;lora=true|false;checkpoint_path=...;pooling=...;normalize=...;audio_max_seconds=...;modalities=...;extra_args=...
+parse_model_spec() {
+  local spec="$1"
+  local start_opt_idx=4
+  IFS=';' read -r -a SPEC_FIELDS <<< "$spec"
+
+  MODEL_NAME="${SPEC_FIELDS[0]:-}"
+  MODEL_BACKBONE="${SPEC_FIELDS[1]:-}"
+  BASE_OUTPUT_PATH="${SPEC_FIELDS[2]:-}"
+  CHECKPOINT_PATH="${SPEC_FIELDS[3]:-}"
+
+  SPEC_PROCESSOR_NAME=""
+  SPEC_LORA=""
+  SPEC_POOLING="mean"
+  SPEC_NORMALIZE="true"
+  SPEC_AUDIO_MAX_SECONDS=""
+  SPEC_MODALITIES=""
+  SPEC_EXTRA_ARGS=""
+
+  # If the 4th field is key=value, treat it as an option (no legacy checkpoint field).
+  if [[ -n "${SPEC_FIELDS[3]:-}" && "${SPEC_FIELDS[3]}" == *=* ]]; then
+    CHECKPOINT_PATH=""
+    start_opt_idx=3
+  fi
+
+  for ((i=start_opt_idx; i<${#SPEC_FIELDS[@]}; i++)); do
+    opt="${SPEC_FIELDS[$i]}"
+    case "$opt" in
+      processor_name=*) SPEC_PROCESSOR_NAME="${opt#processor_name=}" ;;
+      lora=*) SPEC_LORA="${opt#lora=}" ;;
+      checkpoint_path=*) CHECKPOINT_PATH="${opt#checkpoint_path=}" ;;
+      pooling=*) SPEC_POOLING="${opt#pooling=}" ;;
+      normalize=*) SPEC_NORMALIZE="${opt#normalize=}" ;;
+      audio_max_seconds=*) SPEC_AUDIO_MAX_SECONDS="${opt#audio_max_seconds=}" ;;
+      modalities=*) SPEC_MODALITIES="${opt#modalities=}" ;;
+      extra_args=*) SPEC_EXTRA_ARGS="${opt#extra_args=}" ;;
+      "") ;;
+      *) echo "WARNING: Unknown MODEL_SPECS option '$opt' in spec: $spec" ;;
+    esac
+  done
+}
+
 
 # ==> Define models and their base output paths here
 # Format: "MODEL_NAME;MODEL_BACKBONE;BASE_OUTPUT_PATH[;CHECKPOINT_PATH]"
 declare -a MODEL_SPECS
-MODEL_SPECS+=( "/data/mengrui/.cache/huggingface/omni-embed-nemotron-3b;nvomniembed;$OUTPUT_BASEDIR/omni-embed-nemotron-3b" )
+# MODEL_SPECS+=( "/data/mengrui/.cache/huggingface/omni-embed-nemotron-3b;nvomniembed;$OUTPUT_BASEDIR/omni-embed-nemotron-3b" )
+# Ours example (only edit MODEL_SPECS when switching models):
+MODEL_SPECS+=( "/data/mengrui/.cache/huggingface/Qwen2.5-Omni-3B;qwen2_5_omni;$OUTPUT_BASEDIR/ours;/data/mengrui/.cache/huggingface/Qwen2_5Omni_3B_BS512_step5k/checkpoint-5000" )
+# MODEL_SPECS+=( "/data/mengrui/.cache/huggingface/Qwen3-VL-Embedding-8B;qwen3_vl;$OUTPUT_BASEDIR/Qwen3-VL-Embedding-8B" )
+# MODEL_SPECS+=( "/data/mengrui/.cache/huggingface/Qwen3-VL-Embedding-2B;qwen3_vl;$OUTPUT_BASEDIR/Qwen3-VL-Embedding-2B" )
 # MODEL_SPECS+=( "VLM2Vec/VLM2Vec-V2.0;qwen2_vl;$OUTPUT_BASEDIR/VLM2Vec-V2.0-Qwen2VL-2B" )
 # MODEL_SPECS+=( "Alibaba-NLP/gme-Qwen2-VL-2B-Instruct;gme;$OUTPUT_BASEDIR/gme-Qwen2-VL-2B-Instruct" )
 # MODEL_SPECS+=( "Alibaba-NLP/gme-Qwen2-VL-7B-Instruct;gme;$OUTPUT_BASEDIR/gme-Qwen2-VL-7B-Instruct" )
@@ -50,7 +120,11 @@ MODEL_SPECS+=( "/data/mengrui/.cache/huggingface/omni-embed-nemotron-3b;nvomniem
 # ==============================================================================
 mkdir -p "$OUTPUT_BASEDIR"
 echo "model_name,modality,start_time,end_time,duration_seconds,duration_hms,status" > "$TIMING_LOG"
+echo "model_name,model_backbone,modality,dataset_name,start_time,end_time,duration_seconds,duration_hms,load_seconds,query_seconds,cand_seconds,score_seconds,do_query,do_cand,status,error" > "$DATASET_TIMING_LOG"
 echo "==> Timing log: $TIMING_LOG"
+echo "==> Dataset timing log: $DATASET_TIMING_LOG"
+echo "==> CUDA_VISIBLE_DEVICES: $CUDA_VISIBLE_DEVICES"
+echo "==> nproc_per_node: $NPROC_PER_NODE"
 echo ""
 
 global_start_ts=$(date +%s)
@@ -58,23 +132,63 @@ failed_tasks=0
 
 # Loop through each model specification
 for spec in "${MODEL_SPECS[@]}"; do
-  # Parse the model specification from the spec string
-  IFS=';' read -r MODEL_NAME MODEL_BACKBONE BASE_OUTPUT_PATH CHECKPOINT_PATH <<< "$spec"
+  # Parse model spec (legacy + extended options)
+  parse_model_spec "$spec"
   if [ -z "$MODEL_NAME" ] || [ -z "$MODEL_BACKBONE" ] || [ -z "$BASE_OUTPUT_PATH" ]; then
     echo "Invalid MODEL_SPECS entry: $spec"
-    echo "Expected format: MODEL_NAME;MODEL_BACKBONE;BASE_OUTPUT_PATH[;CHECKPOINT_PATH]"
+    echo "Expected: MODEL_NAME;MODEL_BACKBONE;BASE_OUTPUT_PATH[;CHECKPOINT_PATH][;key=value...]"
     exit 1
+  fi
+  EXTRA_MODEL_ARGS=""
+  EFFECTIVE_NORMALIZE="$SPEC_NORMALIZE"
+  case "$MODEL_BACKBONE" in
+    qwen2_5_omni|nvomniembed|wave)
+      EFFECTIVE_NORMALIZE="true"
+      ;;
+  esac
+  if [[ "$MODEL_BACKBONE" == "wave" ]]; then
+    WAVE_PROCESSOR_EFFECTIVE="${WAVE_PROCESSOR_PATH:-$MODEL_NAME}"
+    EXTRA_MODEL_ARGS="$EXTRA_MODEL_ARGS --processor_name \"$WAVE_PROCESSOR_EFFECTIVE\""
+    EXTRA_MODEL_ARGS="$EXTRA_MODEL_ARGS --wave_train_classify \"$WAVE_TRAIN_CLASSIFY\""
+    EXTRA_MODEL_ARGS="$EXTRA_MODEL_ARGS --wave_classify_type \"$WAVE_CLASSIFY_TYPE\""
+    EXTRA_MODEL_ARGS="$EXTRA_MODEL_ARGS --wave_pred_embeds \"$WAVE_PRED_EMBEDS\""
+    if [[ "$WAVE_USE_BEATS" == "true" ]]; then
+      if [[ -n "$WAVE_BEATS_PATH" ]]; then
+        EXTRA_MODEL_ARGS="$EXTRA_MODEL_ARGS --wave_use_beats true --wave_beats_path \"$WAVE_BEATS_PATH\" --wave_beats_only \"$WAVE_BEATS_ONLY\""
+      else
+        echo "WARNING: WAVE_USE_BEATS=true but WAVE_BEATS_PATH is empty; fallback to --wave_use_beats false."
+        EXTRA_MODEL_ARGS="$EXTRA_MODEL_ARGS --wave_use_beats false"
+      fi
+    else
+      EXTRA_MODEL_ARGS="$EXTRA_MODEL_ARGS --wave_use_beats false"
+    fi
+  fi
+  MODEL_MODALITIES=("${MODALITIES[@]}")
+  if [[ -n "$SPEC_MODALITIES" ]]; then
+    SPEC_MODALITIES="${SPEC_MODALITIES// /}"
+    IFS=',' read -r -a MODEL_MODALITIES <<< "$SPEC_MODALITIES"
   fi
   model_start_ts=$(date +%s)
 
   echo "================================================="
   echo "🚀 Processing Model: $MODEL_NAME"
+  echo "   Modalities: ${MODEL_MODALITIES[*]}"
   echo "================================================="
 
   # Loop through each modality for the current model
-  for MODALITY in "${MODALITIES[@]}"; do
+  for MODALITY in "${MODEL_MODALITIES[@]}"; do
+    if [[ -z "$MODALITY" ]]; then
+      continue
+    fi
     DATA_CONFIG_PATH="experiments/public/eval/$MODALITY.yaml"
     OUTPUT_PATH="$BASE_OUTPUT_PATH/$MODALITY/"
+    EXTRA_DATA_ARGS=""
+    if [[ "$MODALITY" == "audio" ]]; then
+      EFFECTIVE_AUDIO_MAX_SECONDS="${SPEC_AUDIO_MAX_SECONDS:-$AUDIO_MAX_SECONDS}"
+      if [[ -n "$EFFECTIVE_AUDIO_MAX_SECONDS" ]]; then
+        EXTRA_DATA_ARGS="$EXTRA_DATA_ARGS --audio_max_seconds $EFFECTIVE_AUDIO_MAX_SECONDS"
+      fi
+    fi
     if [ "$BASE_OUTPUT_PATH" = "/" ] || [ -z "$BASE_OUTPUT_PATH" ]; then
       echo "Invalid BASE_OUTPUT_PATH resolved to '$BASE_OUTPUT_PATH' for spec: $spec"
       exit 1
@@ -87,15 +201,27 @@ for spec in "${MODEL_SPECS[@]}"; do
     # Ensure the output directory exists
     mkdir -p "$OUTPUT_PATH"
 
-    cmd="CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES torchrun --nproc_per_node=8 --master_port=2277 --max_restarts=0 eval.py \
-      --pooling mean \
-      --normalize true \
+    cmd="CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES EVAL_MODALITY=\"$MODALITY\" EVAL_DATASET_TIMING_LOG=\"$DATASET_TIMING_LOG\" torchrun --nproc_per_node=$NPROC_PER_NODE --master_port=2277 --max_restarts=0 eval.py \
+      --pooling \"mean\" \
+      --normalize \"$EFFECTIVE_NORMALIZE\" \
       --per_device_eval_batch_size $BATCH_SIZE \
       --model_backbone \"$MODEL_BACKBONE\" \
       --model_name \"$MODEL_NAME\" \
+      $EXTRA_MODEL_ARGS \
+      $EXTRA_DATA_ARGS \
       --dataset_config \"$DATA_CONFIG_PATH\" \
       --encode_output_path \"$OUTPUT_PATH\" \
+      --lora true \
       --data_basedir \"$DATA_BASEDIR\""
+    if [ -n "$SPEC_PROCESSOR_NAME" ]; then
+      cmd="$cmd --processor_name \"$SPEC_PROCESSOR_NAME\""
+    fi
+    if [ -n "$SPEC_LORA" ]; then
+      cmd="$cmd --lora \"$SPEC_LORA\""
+    fi
+    if [ -n "$SPEC_EXTRA_ARGS" ]; then
+      cmd="$cmd $SPEC_EXTRA_ARGS"
+    fi
 
     # Add checkpoint_path only when provided in MODEL_SPECS.
     if [ -n "$CHECKPOINT_PATH" ]; then

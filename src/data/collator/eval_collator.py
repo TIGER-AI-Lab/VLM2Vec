@@ -15,11 +15,13 @@ from src.model.processor import (
     LLAVA_NEXT,
     QWEN2_VL,
     QWEN2_5_VL,
+    QWEN3_VL,
     PHI3V,
     QWEN2_VL_TOKENSELECTION,
     QWEN2_5_VL_TOKENSELECTION,
     QWEN2_5_OMNI,
     NVOMNIEMBED,
+    WAVE,
     process_vlm_inputs_fns,
 )
 from src.data.collator.train_collator_omni import OmniAutoProcessorCollator
@@ -159,20 +161,27 @@ class MultimodalEvalDataCollator:
             b = raw_images["bytes"][image_idx] if "bytes" in raw_images else None
             p = raw_images["paths"][image_idx] if "paths" in raw_images else None
             image_resolution = raw_images["resolutions"][image_idx] if "resolutions" in raw_images else None
+            if isinstance(p, str) and p.strip() == "":
+                p = None
 
             if b is None and p is None:
                 image = None
             elif b is not None:
                 image = Image.open(io.BytesIO(b)).convert("RGB")
             else:
-                image = Image.open(p).convert("RGB")
+                # Compatibility fallback: some GUI samples may reference missing local files.
+                # Keep pipeline running by treating missing paths as no-image samples.
+                if os.path.exists(p):
+                    image = Image.open(p).convert("RGB")
+                else:
+                    image = None
 
             if (not self.data_args.resize_use_processor) and image is not None and image_resolution:
                 image = image.resize(image_resolution)
 
             # image_decay_factor 逻辑（原样保留）
             if image is not None and (image_resolution is None and self.data_args.image_decay_factor is not None):
-                assert self.model_args.model_backbone in [QWEN2_VL, QWEN2_5_VL, QWEN2_VL_TOKENSELECTION, QWEN2_5_VL_TOKENSELECTION], \
+                assert self.model_args.model_backbone in [QWEN2_VL, QWEN2_5_VL, QWEN3_VL, QWEN2_VL_TOKENSELECTION, QWEN2_5_VL_TOKENSELECTION], \
                     "image_decay_factor is only supported for Qwen models"
                 max_pixels = max(
                     self.data_args.resize_min_pixels,
@@ -291,16 +300,19 @@ class MultimodalEvalDataCollator:
 
         try:
             # Call the processor directly (grouping is handled inside processor now)
-            from src.model.processor import Omni_process_fn, NVOmni_process_fn, NVOMNIEMBED, QWEN2_5_OMNI
+            from src.model.processor import Omni_process_fn, NVOmni_process_fn, NVOMNIEMBED, QWEN2_5_OMNI, WAVE
             # Keep eval behavior consistent with training:
             # use apply_chat_template + process_mm_info for both qwen2_5_omni and nvomniembed.
             process_fn = (
                 NVOmni_process_fn
-                if self.model_args.model_backbone in {NVOMNIEMBED, QWEN2_5_OMNI}
+                if self.model_args.model_backbone in {NVOMNIEMBED, QWEN2_5_OMNI, WAVE}
                 else Omni_process_fn
             )
+            omni_inputs = dict(inputs)
+            # input_raw_wav is only needed by WAVE official BEATs branch.
+            omni_inputs["_keep_input_raw_wav"] = (self.model_args.model_backbone == WAVE)
             outputs = process_fn(
-                model_inputs=inputs,
+                model_inputs=omni_inputs,
                 processor=self.processor,
                 max_length=self.data_args.max_len
             )
@@ -319,7 +331,7 @@ class MultimodalEvalDataCollator:
           - query_text/query_image/query_audio
           - cand_text/cand_image or cand_video/cand_audio
         """
-        use_omni = self.model_args.model_backbone in {QWEN2_5_OMNI, NVOMNIEMBED}
+        use_omni = self.model_args.model_backbone in {QWEN2_5_OMNI, NVOMNIEMBED, WAVE}
 
         if self.encode_side == "qry":
             inputs = self._get_batch_inputs(

@@ -40,19 +40,7 @@ class RankingMetrics:
         Recall@K = (Number of relevant items in top K) / (Total number of relevant items)
         """
         if not true_labels: # No relevant items
-            return 1.0 # Or 0.0 depending on convention if no relevant items exist.
-            # Typically, if there are no true positives, recall is undefined or 1 if no predictions are made.
-            # Let's assume if true_labels is empty, it means perfect recall if prediction is also empty, or 0 if not.
-            # A common convention is that if the set of true positives is empty, recall is 1.0.
-            # However, if true_labels is empty but predictions are made, it might be 0.
-            # Let's use the common definition: if len(true_labels) == 0, recall is 1.0 if no items were expected and none were retrieved.
-            # If items were expected (true_labels not empty) but none retrieved, recall is 0.
-            # If true_labels is empty and nothing is predicted, it's 1.0.
-            # If true_labels is empty and something is predicted, it's 0.0. (This is debatable)
-            # For simplicity here, if there are no true_labels, then no relevant items can be found.
-            return 1.0 # All 0 relevant items were recalled
-        if k == 0 and not true_labels: # no predictions and no true labels
-            return 1.0
+            return 0.0
         if k == 0 and true_labels: # no predictions but true labels exist
             return 0.0
 
