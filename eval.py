@@ -111,7 +111,9 @@ def encode_embeddings(
 
     model.eval()
     with torch.no_grad():
-        for inputs, dataset_info in tqdm(loader, desc=f"{description} (rank {local_rank})", disable=local_rank > 0):
+        # print_rank(f"{description} on rank {local_rank} with {len(loader)} batches...")
+        for batch_idx, (inputs, dataset_info) in enumerate(tqdm(loader, desc=f"{description} (rank {local_rank})", disable=local_rank>0)):
+            # print_rank(f"[DEBUG] Processing batch {batch_idx}, inputs keys: {list(inputs.keys())}, inputs len: {len(inputs.get('input_ids', []))}")
             inputs = batch_to_device(inputs, training_args.device)
             with torch.autocast(enabled=True, dtype=torch.bfloat16, device_type="cuda"):
                 # Determine if encoding query or target based on available keys
@@ -217,9 +219,9 @@ def encode_embeddings(
 
                     # 1) 分桶（只在当前 batch 内）
                     buckets = {}
-                    for i in range(batch_size):
-                        k = _bucket_key(i)
-                        buckets.setdefault(k, []).append(i)
+                    for batch_idx in range(batch_size):
+                        k = _bucket_key(batch_idx)
+                        buckets.setdefault(k, []).append(batch_idx)
 
                     # 2) 逐桶 forward，并把 reps 写回原顺序
                     reps_out = torch.empty((batch_size, model.rep_dim), device=device, dtype=torch.float32)
@@ -273,12 +275,15 @@ def encode_embeddings(
                             output = model(qry=sub_inputs)
                         else:
                             output = model(tgt=sub_inputs)
-
+                            
+                        # print_rank(f"[DEBUG] Model output keys: {list(output.keys()) if 'output' in locals() else 'No output'}")
+                        # print_rank(f"[DEBUG] out_key: {out_key}")
                         sub_reps = output[out_key].detach()
                         # sub_reps shape: [len(idxs), D]
                         reps_out[idxs] = sub_reps.to(reps_out.dtype)
 
                     reps = reps_out
+                    # print_rank(f"[DEBUG] reps shape: {reps.shape if reps is not None else 'None'}")
                     local_gt_infos.extend(gt_infos)
 
                 else:
@@ -293,8 +298,13 @@ def encode_embeddings(
             if is_late_interaction and reps.dim() == 3:
                 local_max_len = max(local_max_len, reps.shape[1])
 
+            # print_rank(f"[DEBUG] Batch : reps.shape = {reps.shape if reps is not None else 'None'}")
+            # print_rank(f"[DEBUG] About to append reps with shape: {reps.shape}")
+            # print_rank(f"[DEBUG] local_embeds length before append: {len(local_embeds)}")
             local_embeds.append(reps)
+            # print_rank(f"[DEBUG] local_embeds length after append: {len(local_embeds)}")
 
+    # print_rank(f"[DEBUG] local_embeds length: {len(local_embeds)}")
     if not local_embeds:
         # Handle cases where a rank gets no data
         return np.array([]), []
@@ -367,6 +377,10 @@ def encode_embeddings(
     else:
         all_gt_infos = local_gt_infos
         final_embeddings = embeds_tensor.cpu().float().numpy()
+
+    # print_rank(f"[DEBUG] final_embeddings.shape: {final_embeddings.shape}")
+    # print_rank(f"[DEBUG] all_gt_infos length: {len(all_gt_infos)}")
+    assert(len(final_embeddings) == len(all_gt_infos) and len(final_embeddings) > 0)
 
     return final_embeddings, all_gt_infos
 

@@ -1,5 +1,5 @@
 import logging
-logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='[%(asctime)s] %(levelname)s [%(filename)s:%(lineno)s] %(message)s')
 logger = logging.getLogger(__name__)
 import torch
 import os
@@ -7,18 +7,18 @@ import os
 def print_rank(message):
     """If distributed is initialized, print the rank."""
     if torch.distributed.is_initialized():
-        logger.info(f'rank{torch.distributed.get_rank()}: ' + message)
+        logger.info(f'rank{torch.distributed.get_rank()}: ' + message, stacklevel=2)
     else:
-        logger.info(message)
+        logger.info(message, stacklevel=2)
 
 
 def print_master(message):
     """If distributed is initialized print only on rank 0."""
     if torch.distributed.is_initialized():
         if torch.distributed.get_rank() == 0:
-            logger.info(message)
+            logger.info(message, stacklevel=2)
     else:
-        logger.info(message)
+        logger.info(message, stacklevel=2)
 
 
 def find_latest_checkpoint(output_dir):

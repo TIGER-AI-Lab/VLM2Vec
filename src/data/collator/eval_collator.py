@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Optional, Dict, Any
 from transformers import ProcessorMixin, AutoProcessor, AutoTokenizer
 from src.arguments import DataArguments, ModelArguments
+from src.utils.basic_utils import print_rank, print_master
 import torch
 try:
     from qwen_vl_utils import smart_resize
@@ -318,13 +319,25 @@ class MultimodalEvalDataCollator:
             )
             return self._tensor_only(outputs)
         except Exception as e:
-            print(f"Error in _omni_process_batch: {e}")
-            print(f"Inputs keys: {list(inputs.keys())}")
-            print(f"Text length: {len(inputs.get('text', []))}")
-            print(f"Images length: {len(inputs.get('images', [])) if inputs.get('images') else 'None'}")
-            print(f"Audios length: {len(inputs.get('audios', [])) if inputs.get('audios') else 'None'}")
-            raise
+            err_msg = str(e) if str(e) else f"Seilent {type(e).__name__} exception"
+            print_rank(f"Error in _omni_process_batch: {err_msg}")
+            # print_rank(f"Error in _omni_process_batch: {e}")
+            print_rank(f"Inputs keys: {list(inputs.keys())}")
+            print_rank(f"Text length: {len(inputs.get('text', []))}")
+            print_rank(f"Images length: {len(inputs.get('images', [])) if inputs.get('images') else 'None'}")
+            print_rank(f"Audios length: {len(inputs.get('audios', [])) if inputs.get('audios') else 'None'}")
 
+            print("=== EXCEPTION DEBUG ===")
+            print(f"Exception caught: {repr(e)}")
+            print(f"Exception type: {type(e)}")
+            print(f"Exception message: '{str(e)}'")
+            print(f"Exception args: {e.args}")
+            print("=== ABOUT TO RAISE ===")
+            import traceback
+            traceback.print_exception(type(e), e, e.__traceback__)
+            print("=== RAISING NOW ===")
+            raise RuntimeError(f"Failed to process batch with Omni/NVOmni processor: {err_msg}") from e
+        
     def __call__(self, examples):
         """
         examples: dict with keys:
@@ -483,4 +496,7 @@ class MultimodalEvalDataCollator:
             process_fn = process_vlm_inputs_fns[self.model_args.model_backbone]
             processed_inputs = process_fn(inputs, processor=self.processor, max_length=self.data_args.max_len)
         dataset_infos = [e["dataset_infos"] for e in examples]
+        print(f"[DEBUG] Collating: processed_inputs type={type(processed_inputs)}, keys={list(processed_inputs.keys()) if processed_inputs else 'None'}, dataset_infos len={len(dataset_infos)}")
+        if processed_inputs is None:
+            print("[DEBUG] processed_inputs is None - batch will be skipped!")
         return processed_inputs, dataset_infos

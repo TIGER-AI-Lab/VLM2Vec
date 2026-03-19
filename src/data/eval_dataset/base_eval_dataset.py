@@ -41,16 +41,25 @@ RESOLUTION_MAPPING = {
     "low": (128, 128),
 }
 
+class OmniInstance:
+    def __init__(self, bytes, paths):
+        self.bytes = bytes
+        self.paths = paths
 
-class ImageVideoInstance:
+    def to_dict(self):
+        return {
+            "bytes": self.bytes,
+            "paths": self.paths,
+        }
+    
+class ImageVideoInstance(OmniInstance):
     """
     len(bytes) == len(path) == len(resolution) == 1: image
     len(bytes) == len(path) == len(resolution) > 1: multi-image / video
     """
     def __init__(self, bytes, paths, resolutions):
         assert len(bytes) == len(paths) == len(resolutions)
-        self.bytes = bytes
-        self.paths = paths
+        super().__init__(bytes, paths)
         self.resolutions = resolutions
 
     def to_dict(self):
@@ -60,6 +69,18 @@ class ImageVideoInstance:
             "resolutions": self.resolutions,
         }
 
+class AudioInstance(OmniInstance):
+    def __init__(self, bytes, paths, sample_rate):
+        # assert len(bytes) == len(paths) == 1
+        self.super().__init__(bytes, paths)
+        self.sample_rate = sample_rate
+
+    def to_dict(self):
+        return {
+            "bytes": self.bytes,
+            "paths": self.paths
+            # "sample_rate": self.sample_rate,
+        }
 
 class AutoEvalPairDataset(metaclass=ABCMeta):
     # Base class for auto datasets.
@@ -134,9 +155,7 @@ def generate_cand_dataset(dataset, corpus):
         return a
 
     for row in dataset:
-        assert len(row["cand_text"]) == len(row["cand_image"]) == len(row["dataset_infos"]["cand_names"]), \
-            f"Unmatched num of candidates: cand_text: {len(row["cand_text"])}, cand_image: {len(row["cand_image"])}, dataset_infos: {len(row["dataset_infos"]["cand_names"])}"
-        for cand_text, cand_image, cand_name in zip(row["cand_text"], row["cand_image"], row["dataset_infos"]["cand_names"]):
+        for cand_text, cand_name in zip(row["cand_text"], row["dataset_infos"]["cand_names"]):
             # 检测候选项使用的视觉字段（cand_image 或 cand_video）
             cand_visual_key = None
             if "cand_video" in row:
@@ -161,7 +180,8 @@ def generate_cand_dataset(dataset, corpus):
             else:
                 cand_audio_seq = [None] * len(row["cand_text"])
 
-            assert len(row["cand_text"]) == len(row[cand_visual_key]) == len(row["dataset_infos"]["cand_names"]) == len(cand_audio_seq)
+            assert len(row["cand_text"]) == len(row[cand_visual_key]) == len(row["dataset_infos"]["cand_names"]) == len(cand_audio_seq), \
+                f"Length mismatch, cand_text: {len(row['cand_text'])}, {cand_visual_key}: {len(row[cand_visual_key])}, cand_names: {len(row['dataset_infos']['cand_names'])}, cand_audio: {len(cand_audio_seq)}"
             for cand_text, cand_visual, cand_name, cand_audio in zip(
                 row["cand_text"], row[cand_visual_key], row["dataset_infos"]["cand_names"], cand_audio_seq
             ):
@@ -220,7 +240,7 @@ def coco_filename(id):
     return f'COCO_val2014_{str(id).zfill(12)}'
 
 def coco_filename_with_ext(id, modality='I'):
-    ext = MODALITY_EXT_MAPPING[modality] # default to jpg if modality not found
+    ext = MODALITY_EXT_MAPPING[modality]
     return f'{coco_filename(id)}.{ext}'
 
 def coco_id(filename):

@@ -191,7 +191,6 @@ dependencies:
       - dill==0.3.8
       - einops==0.8.1
       - filelock==3.24.3
-      - flash-attn==2.7.1.post4
       - frozenlist==1.8.0
       - fsspec==2024.3.1
       - gitdb==4.0.12
@@ -279,3 +278,4 @@ dependencies:
       - wandb==0.22.3
       - xxhash==3.6.0
       - yarl==1.22.0
+      # - flash-attn==2.5.8

@@ -57,3 +57,4 @@ from .complex_text_retrieve import load_complex_text_retrieve_dataset
 # cross modal retrieval
 from .ti2v_dataset import load_ti2v_dataset
 from .t2iv_dataset import load_t2iv_dataset
+from .t2iva import load_t2iva_dataset
