@@ -429,9 +429,10 @@ class MMEBTrainer(Trainer):
                     total_batched_samples += 1
 
                     dataset_stat = collections.Counter(inputs[0]['global_dataset_name'])
-                    # print_rank(f"dataset name: {str(set(inputs[0]['global_dataset_name']))}")
-                    # for dname, count in sorted(dataset_stat.items(), key=lambda t:t[1], reverse=True):
-                    #     print_rank(f"\t\tdataset_name={dname}, count={count}")
+                    if step < 5:
+                        print_rank(f"dataset name: {str(set(inputs[0]['global_dataset_name']))}")
+                        for dname, count in sorted(dataset_stat.items(), key=lambda t:t[1], reverse=True):
+                            print_rank(f"\t\tdataset_name={dname}, count={count}")
 
                     is_last_step_and_steps_less_than_grad_acc = (
                         steps_in_epoch <= args.gradient_accumulation_steps and (step + 1) == steps_in_epoch
@@ -669,8 +670,16 @@ class GradCacheLateProcessTrainer(MMEBTrainer):
     def training_step(self, model, inputs, *args, **kwargs) -> torch.Tensor:
         model.train()
         queries, targets = inputs
-        queries = batch_to_device(queries, model.device)
-        targets = batch_to_device(targets, model.device)
+        
+        if hasattr(model, "module"):
+            device = model.module.device
+        elif hasattr(model, "device"):
+            device = model.device
+        else:
+            device = next(model.parameters()).device
+            
+        queries = batch_to_device(queries, device)
+        targets = batch_to_device(targets, device)
 
         _distributed = dist.is_initialized() and dist.get_world_size() > 1
         if _distributed:

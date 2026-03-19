@@ -139,6 +139,7 @@ for experiment in EXPERIMENTS:
     # --- Construct and Save the Final JSON Report ---
     final_metadata = experiment_metadata.copy()
     final_metadata['report_generated_date'] = datetime.now().isoformat()
+    current_experiment_scores['visdoc'] = {(f'{k}-fixed' if k in ['MMLongBench-page', 'ViDoSeek-page'] else k): v for k, v in current_experiment_scores['visdoc'].items()} # temp fix
     final_output = {
         "metadata": final_metadata,
         "metrics": current_experiment_scores

@@ -30,6 +30,17 @@ pushd train_600k/
 for f in *.tar.gz; do tar -xzvf "$f"; done
 popd
 
+# 2.3 Process LLaVA-Hound annotation files
+# We need to generate `video_qa_240k.jsonl` for training, which is a subset of `video_240k_caption_15k.jsonl`.
+pushd video_instruction/train/sft/
+if [ -f "video_240k_caption_15k.jsonl" ]; then
+    echo "Generating video_qa_240k.jsonl..."
+    head -n 240000 video_240k_caption_15k.jsonl > video_qa_240k.jsonl
+else
+    echo "Warning: video_240k_caption_15k.jsonl not found. Skipping video_qa_240k.jsonl generation."
+fi
+popd
+
 popd
 
 # 3. Adjust the data path in the data config yaml, refer to `experiments/public/train/train_alltasks.yaml`

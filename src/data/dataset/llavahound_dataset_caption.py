@@ -24,7 +24,7 @@ def process_conversations_for_vret(conversations, prompt):
 VRET_QRY_PROMPT = "Find a video that contains the following visual content: "
 VRET_TGT_PROMPT = "Understand the content of the provided video: "
 @add_metainfo_hook
-def data_prepare(batch_dict, *args, **kwargs):
+def data_prepare_v5(batch_dict, *args, **kwargs):
     model_backbone = kwargs['model_backbone']
     image_resolution = kwargs['image_resolution']
     frame_basedir = kwargs['video_frame_basedir']
@@ -37,24 +37,29 @@ def data_prepare(batch_dict, *args, **kwargs):
             if data_mode == 'caption_retrieval':
                 query, pos_text = process_conversations(conversations, video_token=VLM_VIDEO_TOKENS[model_backbone])
                 frame_paths = process_video_frames(os.path.join(frame_basedir, video_id), num_frames=num_frames)
-                assert len(frame_paths) > 0, f"llavahound_dataset_caption.py: No frames found for video_id={video_id} at {os.path.join(frame_basedir, video_id)}."
-                video_frames = {"bytes": [None] * num_frames, "paths": frame_paths, "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)] * num_frames}
+                if len(frame_paths) == 0: continue
+                default_res = RESOLUTION_MAPPING.get(image_resolution, [224, 224])
+                if default_res is None: default_res = [224, 224]
+                video_frames = {"bytes": [None] * num_frames, "paths": frame_paths, "resolutions": [default_res] * num_frames}
                 query_texts.append(query)
                 pos_texts.append(pos_text)
-                neg_texts.append("")
+                neg_texts.append([])
                 query_images.append(video_frames)
-                pos_images.append(None)
-                neg_images.append(None)
+                pos_images.append({'bytes': [b''], 'paths': [''], 'resolutions': [[224, 224]]})
+                neg_images.append([{'bytes': [b''], 'paths': [''], 'resolutions': [[224, 224]]}])
             elif data_mode == 'video_retrieval':
                 query = process_conversations_for_vret(conversations, prompt=VRET_QRY_PROMPT)
                 frame_paths = process_video_frames(os.path.join(frame_basedir, video_id), num_frames=num_frames)
-                video_frames = {"bytes": [None] * num_frames, "paths": frame_paths, "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)] * num_frames}
+                if len(frame_paths) == 0: continue
+                default_res = RESOLUTION_MAPPING.get(image_resolution, [224, 224])
+                if default_res is None: default_res = [224, 224]
+                video_frames = {"bytes": [None] * num_frames, "paths": frame_paths, "resolutions": [default_res] * num_frames}
                 query_texts.append(query)
                 pos_texts.append(VRET_TGT_PROMPT + VLM_VIDEO_TOKENS[model_backbone])
-                neg_texts.append("")
-                query_images.append(None)
+                neg_texts.append([])
+                query_images.append({'bytes': [], 'paths': [], 'resolutions': []})
                 pos_images.append(video_frames)
-                neg_images.append(None)
+                neg_images.append([{'bytes': [b''], 'paths': [''], 'resolutions': [[224, 224]]}])
             else:
                 raise NotImplementedError(f'data_mode={data_mode} not implemented.')
         except Exception as e:
@@ -90,8 +95,9 @@ def load_llavahound_caption_dataset(model_args, data_args, training_args, *args,
     kwargs['video_frame_basedir'] = kwargs["video_frame_basedir"]
     kwargs['global_dataset_name'] = f'{DATASET_PARSER_NAME}/{dataset_name}'
     # dataset = dataset.shuffle(buffer_size=8192, seed=training_args.seed)
-    dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True, batch_size=128, drop_last_batch=True)
-    dataset = dataset.cast(MULTIMODAL_FEATURES)
+    dataset = dataset.map(lambda x: data_prepare_v5(x, **kwargs), batched=True, batch_size=128, drop_last_batch=True,
+                          features=MULTIMODAL_FEATURES, remove_columns=['video', 'conversations', 'id'])
+    # dataset = dataset.cast(MULTIMODAL_FEATURES)
 
     # num_rows in iterable_dataset is not available, set it here for printing dataset stats
     setattr(dataset, 'num_rows', num_rows)

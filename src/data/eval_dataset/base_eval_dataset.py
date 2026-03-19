@@ -41,16 +41,25 @@ RESOLUTION_MAPPING = {
     "low": (128, 128),
 }
 
+class OmniInstance:
+    def __init__(self, bytes, paths):
+        self.bytes = bytes
+        self.paths = paths
 
-class ImageVideoInstance:
+    def to_dict(self):
+        return {
+            "bytes": self.bytes,
+            "paths": self.paths,
+        }
+    
+class ImageVideoInstance(OmniInstance):
     """
     len(bytes) == len(path) == len(resolution) == 1: image
     len(bytes) == len(path) == len(resolution) > 1: multi-image / video
     """
     def __init__(self, bytes, paths, resolutions):
         assert len(bytes) == len(paths) == len(resolutions)
-        self.bytes = bytes
-        self.paths = paths
+        super().__init__(bytes, paths)
         self.resolutions = resolutions
 
     def to_dict(self):
@@ -60,6 +69,18 @@ class ImageVideoInstance:
             "resolutions": self.resolutions,
         }
 
+class AudioInstance(OmniInstance):
+    def __init__(self, bytes, paths, sample_rate):
+        # assert len(bytes) == len(paths) == 1
+        self.super().__init__(bytes, paths)
+        self.sample_rate = sample_rate
+
+    def to_dict(self):
+        return {
+            "bytes": self.bytes,
+            "paths": self.paths
+            # "sample_rate": self.sample_rate,
+        }
 
 class AutoEvalPairDataset(metaclass=ABCMeta):
     # Base class for auto datasets.
@@ -134,45 +155,47 @@ def generate_cand_dataset(dataset, corpus):
         return a
 
     for row in dataset:
-        # 检测候选项使用的视觉字段（cand_image 或 cand_video）
-        cand_visual_key = None
-        if "cand_video" in row:
-            cand_visual_key = "cand_video"
-        elif "cand_image" in row:
-            cand_visual_key = "cand_image"
-        
-        # ✅ 新架构/全局模式：query_dataset 可能不含候选字段，直接跳过
-        if (
-            ("cand_text" not in row)
-            or (cand_visual_key is None)
-            or ("dataset_infos" not in row)
-            or (not isinstance(row["dataset_infos"], dict))
-            or ("cand_names" not in row["dataset_infos"])
-        ):
-            continue
+        for cand_text, cand_name in zip(row["cand_text"], row["dataset_infos"]["cand_names"]):
+            # 检测候选项使用的视觉字段（cand_image 或 cand_video）
+            cand_visual_key = None
+            if "cand_video" in row:
+                cand_visual_key = "cand_video"
+            elif "cand_image" in row:
+                cand_visual_key = "cand_image"
+            
+            # ✅ 新架构/全局模式：query_dataset 可能不含候选字段，直接跳过
+            if (
+                ("cand_text" not in row)
+                or (cand_visual_key is None)
+                or ("dataset_infos" not in row)
+                or (not isinstance(row["dataset_infos"], dict))
+                or ("cand_names" not in row["dataset_infos"])
+            ):
+                continue
 
-        # ✅ 旧架构/local 模式：保持原逻辑不变
-        cand_audio_seq = row.get("cand_audio", None)
-        if cand_audio_seq is not None:
-            assert len(cand_audio_seq) == len(row["cand_text"])
-        else:
-            cand_audio_seq = [None] * len(row["cand_text"])
+            # ✅ 旧架构/local 模式：保持原逻辑不变
+            cand_audio_seq = row.get("cand_audio", None)
+            if cand_audio_seq is not None:
+                assert len(cand_audio_seq) == len(row["cand_text"])
+            else:
+                cand_audio_seq = [None] * len(row["cand_text"])
 
-        assert len(row["cand_text"]) == len(row[cand_visual_key]) == len(row["dataset_infos"]["cand_names"]) == len(cand_audio_seq)
-        for cand_text, cand_visual, cand_name, cand_audio in zip(
-            row["cand_text"], row[cand_visual_key], row["dataset_infos"]["cand_names"], cand_audio_seq
-        ):
-            if cand_name not in all_cand_name:
-                # 根据原始字段决定使用哪个键
-                cand_row = {
-                    "cand_text": [cand_text],
-                    "dataset_infos": {"cand_name": cand_name},
-                }
-                cand_row[cand_visual_key] = [cand_visual]
-                if cand_audio is not None:
-                    cand_row["cand_audio"] = _normalize_audio_item(cand_audio)
-                cand_rows.append(cand_row)
-                all_cand_name.add(cand_name)
+            assert len(row["cand_text"]) == len(row[cand_visual_key]) == len(row["dataset_infos"]["cand_names"]) == len(cand_audio_seq), \
+                f"Length mismatch, cand_text: {len(row['cand_text'])}, {cand_visual_key}: {len(row[cand_visual_key])}, cand_names: {len(row['dataset_infos']['cand_names'])}, cand_audio: {len(cand_audio_seq)}"
+            for cand_text, cand_visual, cand_name, cand_audio in zip(
+                row["cand_text"], row[cand_visual_key], row["dataset_infos"]["cand_names"], cand_audio_seq
+            ):
+                if cand_name not in all_cand_name:
+                    # 根据原始字段决定使用哪个键
+                    cand_row = {
+                        "cand_text": [cand_text],
+                        "dataset_infos": {"cand_name": cand_name},
+                    }
+                    cand_row[cand_visual_key] = [cand_visual]
+                    if cand_audio is not None:
+                        cand_row["cand_audio"] = _normalize_audio_item(cand_audio)
+                    cand_rows.append(cand_row)
+                    all_cand_name.add(cand_name)
 
     if corpus is not None:
         for row in corpus:
@@ -198,3 +221,27 @@ def generate_cand_dataset(dataset, corpus):
 
     cand_dataset = Dataset.from_list(cand_rows)
     return cand_dataset
+
+# ============== Cross Modality Utilities ==============
+MODALITY_EXT_MAPPING = {
+    'I': 'jpg',
+    'V': 'mp4', 
+    'A': 'wav'
+}
+
+MODALITY_INST_MAPPING = {
+    'T': "Find the text that best matches the given image and video.",
+    'I': "Find the image that best matches the given text: ",
+    'V': "Find the video that best matches the given text: ",
+    'A': "Find the audio that best matches the given text: "
+}
+
+def coco_filename(id):
+    return f'COCO_val2014_{str(id).zfill(12)}'
+
+def coco_filename_with_ext(id, modality='I'):
+    ext = MODALITY_EXT_MAPPING[modality]
+    return f'{coco_filename(id)}.{ext}'
+
+def coco_id(filename):
+    return int(filename.split('_')[-1].split('.')[0])

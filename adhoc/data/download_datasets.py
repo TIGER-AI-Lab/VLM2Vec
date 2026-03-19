@@ -4,6 +4,7 @@ from src.utils.basic_utils import print_rank
 
 # --- Visual Document Datasets ---
 VISDOC_DATASETS = {
+    '''
     # visdoc datasets follow the BEIR format (corpus, queries, qrels)
     # Visdoc-ViDoRe v1 10
     "ViDoRe_arxivqa": ("vidore/arxivqa_test_subsampled_beir", None, "test"),
@@ -30,9 +31,13 @@ VISDOC_DATASETS = {
     "VisRAG_PlotQA": ("openbmb/VisRAG-Ret-Test-PlotQA", None, "train"),
     # VisDoc-OOD 4
     "ViDoSeek-doc": ("VLM2Vec/ViDoSeek", None, "test"),
-    "ViDoSeek-page": ("VLM2Vec/ViDoSeek-page", None, "test"),
+    # "ViDoSeek-page": ("VLM2Vec/ViDoSeek-page", None, "test"),
     "MMLongBench-doc": ("VLM2Vec/MMLongBench-doc", None, "test"),
-    "MMLongBench-page": ("VLM2Vec/MMLongBench", None, "test"),
+    # "MMLongBench-page": ("VLM2Vec/MMLongBench", None, "test"),
+    '''
+    
+    "ViDoSeek-page": ("VLM2Vec/ViDoSeek-page-fixed", None, "test"),
+    "MMLongBench-page": ("VLM2Vec/MMLongBench-page-fixed", None, "test"),
 }
 
 # --- Video Datasets ---
@@ -229,24 +234,25 @@ if __name__ == "__main__":
     # download_standard_datasets(VIDEO_DATASETS, "video", output_dir="hf_datasets/video-tasks")
     # download_standard_datasets(IMAGE_DATASETS, "image", output_dir="hf_datasets/image-tasks")
 
-    BASE_RAW_DATA_DIR = "/mnt/disks/rmeng_pd/data/vlm2vec/raw"
-    
+    # BASE_RAW_DATA_DIR = "/mnt/disks/rmeng_pd/data/vlm2vec/raw"
+    BASE_RAW_DATA_DIR = "~/Downloads/vlm2vec/data/"
+
     # Ensure git lfs is installed and configured
     print_rank("  Ensuring git lfs is installed...")
     os.system("git lfs install")
 
     VISDOC_OUTPUT_DIR = os.path.join(BASE_RAW_DATA_DIR, "visdoc-tasks")
-    VIDEO_OUTPUT_DIR = os.path.join(BASE_RAW_DATA_DIR, "video-tasks")
-    IMAGE_OUTPUT_DIR = os.path.join(BASE_RAW_DATA_DIR, "image-tasks")
+    # VIDEO_OUTPUT_DIR = os.path.join(BASE_RAW_DATA_DIR, "video-tasks")
+    # IMAGE_OUTPUT_DIR = os.path.join(BASE_RAW_DATA_DIR, "image-tasks")
 
     # Ensure the base output directories exist
     os.makedirs(VISDOC_OUTPUT_DIR, exist_ok=True)
-    os.makedirs(VIDEO_OUTPUT_DIR, exist_ok=True)
-    os.makedirs(IMAGE_OUTPUT_DIR, exist_ok=True)
+    # os.makedirs(VIDEO_OUTPUT_DIR, exist_ok=True)
+    # os.makedirs(IMAGE_OUTPUT_DIR, exist_ok=True)
 
     # Call the new download function for each modality
     download_datasets_via_git_clone(VISDOC_DATASETS, VISDOC_OUTPUT_DIR, "visdoc-tasks")
-    download_datasets_via_git_clone(VIDEO_DATASETS, VIDEO_OUTPUT_DIR, "video-tasks")
-    download_datasets_via_git_clone(IMAGE_DATASETS, IMAGE_OUTPUT_DIR, "image-tasks")
+    # download_datasets_via_git_clone(VIDEO_DATASETS, VIDEO_OUTPUT_DIR, "video-tasks")
+    # download_datasets_via_git_clone(IMAGE_DATASETS, IMAGE_OUTPUT_DIR, "image-tasks")
 
     print("\nAll dataset cloning attempts are complete.")

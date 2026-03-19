@@ -16,7 +16,7 @@ def process_conversations(conversations, video_token, prompt):
 
 QA_QUERY_PROMPT="Answer a question based on the content of a video. "
 @add_metainfo_hook
-def data_prepare(batch_dict, *args, **kwargs):
+def data_prepare_v5(batch_dict, *args, **kwargs):
     model_backbone = kwargs['model_backbone']
     image_resolution = kwargs['image_resolution']
     frame_basedir = kwargs['video_frame_basedir']
@@ -27,14 +27,19 @@ def data_prepare(batch_dict, *args, **kwargs):
         try:
             query, pos_text = process_conversations(conversations, video_token=VLM_VIDEO_TOKENS[model_backbone], prompt=QA_QUERY_PROMPT)
             frame_paths = process_video_frames(os.path.join(frame_basedir, video_id), num_frames=num_frames)
-            assert len(frame_paths) > 0, f"llavahound_dataset_qa.py: No frames found for video_id={video_id} at {os.path.join(frame_basedir, video_id)}."
-            video_frames = {"bytes": [None] * num_frames, "paths": frame_paths, "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)] * num_frames}
+            if len(frame_paths) == 0:
+                # Skip if no frames found
+                continue
+            # Use [0, 0] as placeholder for unknown resolution to satisfy List<List<int>> schema
+            default_res = RESOLUTION_MAPPING.get(image_resolution, [224, 224])
+            if default_res is None: default_res = [224, 224]
+            video_frames = {"bytes": [None] * num_frames, "paths": frame_paths, "resolutions": [default_res] * num_frames}
             query_texts.append(query)
             pos_texts.append(pos_text)
-            neg_texts.append("")
+            neg_texts.append([])
             query_images.append(video_frames)
-            pos_images.append(None)
-            neg_images.append(None)
+            pos_images.append({'bytes': [b''], 'paths': [''], 'resolutions': [[224, 224]]})
+            neg_images.append([{'bytes': [b''], 'paths': [''], 'resolutions': [[224, 224]]}])
         except Exception as e:
             print(f'Error in processing {DATASET_PARSER_NAME}: \n\t\tdata id: {data_id} \n\t\tconversations: {conversations}')
             print(e)
@@ -68,8 +73,9 @@ def load_llavahound_qa_dataset(model_args, data_args, training_args, *args, **kw
     kwargs['video_frame_basedir'] = kwargs["video_frame_basedir"]
     kwargs['global_dataset_name'] = f'{DATASET_PARSER_NAME}/{dataset_name}'
     # dataset = dataset.shuffle(buffer_size=8192, seed=training_args.seed)
-    dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True, batch_size=128, drop_last_batch=True)
-    dataset = dataset.cast(MULTIMODAL_FEATURES)
+    dataset = dataset.map(lambda x: data_prepare_v5(x, **kwargs), batched=True, batch_size=128, drop_last_batch=True,
+                          features=MULTIMODAL_FEATURES, remove_columns=['video', 'conversations', 'id'])
+    # dataset = dataset.cast(MULTIMODAL_FEATURES)
 
     # num_rows in iterable_dataset is not available, set it here for printing dataset stats
     setattr(dataset, 'num_rows', num_rows)

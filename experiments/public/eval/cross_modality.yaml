@@ -1,0 +1,32 @@
+# MSCOCO_ti2v:
+#     dataset_parser: ti2v
+#     dataset_name: MSCOCO_ti2v
+#     dataset_split: test
+#     image_root: /home/mingyi/synthesis/val2014
+#     video_root: /home/mingyi/synthesis/output
+#     frame_root: /home/mingyi/synthesis/frames
+#     num_frames: 8
+#     max_frames_saved: 16
+#     eval_type: local
+
+# MSCOCO_t2iv:
+#     dataset_parser: t2iv
+#     dataset_name: MSCOCO_t2iv
+#     dataset_split: test
+#     image_root: /home/mingyi/synthesis/val2014
+#     video_root: /home/mingyi/synthesis/mscoco_omini
+#     frame_root: /home/mingyi/synthesis/frames_omini
+#     num_frames: 8
+#     max_frames_saved: 16
+#     eval_type: local
+
+MSCOCO_t2iva:
+    dataset_parser: t2iva
+    dataset_name: MSCOCO_t2iva
+    dataset_split: test
+    image_root: /home/mingyi/synthesis/val2014
+    video_root: /home/mingyi/synthesis/mscoco_omini
+    frame_root: /home/mingyi/synthesis/frames_omini
+    num_frames: 8
+    max_frames_saved: 16
+    eval_type: local

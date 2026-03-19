@@ -59,8 +59,13 @@ def init_mixed_dataset(dataset_config, model_args, data_args, training_args):
         )
         train_datasets.append(train_dataset)
 
-    if training_args.interleave_batch_size and training_args.interleave_batch_size <= 1.0:
-        interleave_batch_size = training_args.per_device_train_batch_size * world_size * training_args.interleave_batch_size
+    # Handle Deprecation
+    if training_args.homogeneous_batch_size_per_device == 0 and training_args.interleave_batch_size != 0:
+        print_master("WARNING: `interleave_batch_size` is deprecated. Please use `homogeneous_batch_size_per_device`.")
+        training_args.homogeneous_batch_size_per_device = training_args.interleave_batch_size
+
+    if training_args.homogeneous_batch_size_per_device and training_args.homogeneous_batch_size_per_device <= 1.0:
+        interleave_batch_size = training_args.per_device_train_batch_size * world_size * training_args.homogeneous_batch_size_per_device
     else:
         interleave_batch_size = training_args.interleave_batch_size
     dataset_num_rows = [_safe_num_rows(d) for d in train_datasets]

@@ -17,6 +17,10 @@ datasets/
 .vscode/
 .idea/
 
+/data
+/exps
+
+*output*
 # temp / runtime junk
 core.*
 Environment

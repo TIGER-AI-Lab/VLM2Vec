@@ -7,7 +7,7 @@ import torch
 from torch import nn
 
 import torch.nn.functional as F
-from timm.models.layers import DropPath, to_2tuple, trunc_normal_
+from timm.layers import DropPath, to_2tuple, trunc_normal_
 
 import torch.utils.checkpoint as checkpoint
 from functools import partial
@@ -536,7 +536,7 @@ class LayerScale(nn.Module):
         self.weight = nn.Parameter(init_values * torch.ones(dim))
         self.force_fp32 = force_fp32
 
-    @torch.cuda.amp.autocast(enabled=False)
+    @torch.amp.autocast('cuda', enabled=False)
     def forward(self, x):
         if self.force_fp32:
             output_type = x.dtype
