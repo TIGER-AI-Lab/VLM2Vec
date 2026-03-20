@@ -224,6 +224,7 @@ def generate_cand_dataset(dataset, corpus):
 
 # ============== Cross Modality Utilities ==============
 MODALITY_EXT_MAPPING = {
+    'T': 'txt',
     'I': 'jpg',
     'V': 'mp4', 
     'A': 'wav'

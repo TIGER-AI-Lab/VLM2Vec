@@ -714,4 +714,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:
+        if dist.is_initialized():
+            dist.barrier()
+            print_master("All ranks' processing finished, cleaning up distributed process group ...")
+            dist.destroy_process_group()
