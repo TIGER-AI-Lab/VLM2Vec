@@ -1,5 +1,6 @@
 import logging
 import math
+import warnings
 from collections import defaultdict
 
 import PIL
@@ -335,6 +336,15 @@ def _install_qwen_omni_warning_filters():
         lg.addFilter(warning_filter)
         for handler in lg.handlers:
             handler.addFilter(warning_filter)
+
+    # Suppress very noisy tokenizer warning in omni multimodal eval:
+    # `max_length` is ignored when padding=True and truncation is disabled.
+    warnings.filterwarnings(
+        "ignore",
+        message=r".*max_length.*ignored.*padding.*no truncation strategy.*",
+        category=UserWarning,
+        module=r"transformers\.tokenization_utils_base",
+    )
 
     root_logger._suppress_qwen_omni_warnings = True
 
@@ -1586,6 +1596,8 @@ def NVOmni_process_fn(model_inputs: dict, processor, max_length=None):
     videos = model_inputs.get("videos", None)
     audios = model_inputs.get("audios", None)
     audio_sample_rate = model_inputs.get("audio_sample_rate", None)
+    resize_min_pixels = model_inputs.get("_resize_min_pixels", None)
+    resize_max_pixels = model_inputs.get("_resize_max_pixels", None)
     # WAVE-only compatibility flag: raw wav is consumed by WAVE BEATs branch.
     keep_input_raw_wav = bool(model_inputs.get("_keep_input_raw_wav", False))
     min_image_size = _infer_image_min_size(processor)
@@ -1822,33 +1834,35 @@ def NVOmni_process_fn(model_inputs: dict, processor, max_length=None):
             images_g = [x if isinstance(x, list) else [x] for x in images_g]
 
         # Text-only groups can keep short caps.
-        # For multimodal groups (especially audio), too-small max_length truncates
-        # multimodal placeholder tokens while feature lengths remain full, causing
-        # Qwen2.5-Omni RoPE index shape mismatch in forward.
+        # For multimodal groups, truncation may cut <image>/<video>/<audio> placeholders
+        # while visual/audio features stay full, causing token/feature mismatch in forward.
         if not has_images and not has_videos and not has_audios:
             if max_length is None:
                 text_max_length = 2048
             else:
                 text_max_length = min(int(max_length), 2048)
+            text_kwargs = {
+                "truncation": True,
+                "padding": True,
+                "max_length": text_max_length,
+            }
         else:
-            if max_length is None:
-                text_max_length = 2048
-            else:
-                text_max_length = max(int(max_length), 2048)
-
-        text_kwargs = {
-            "truncation": True,
-            "padding": True,
-            "max_length": text_max_length,
-        }
+            # Keep all multimodal placeholders so token count matches extracted features.
+            text_kwargs = {
+                "truncation": False,
+                "padding": True,
+            }
+        # Follow DataArguments resize knobs when provided; fallback matches DataArguments defaults.
+        effective_min_pixels = int(resize_min_pixels) if resize_min_pixels is not None else (28 * 28 * 4)
+        effective_max_pixels = int(resize_max_pixels) if resize_max_pixels is not None else (28 * 28 * 1280)
         videos_kwargs = {
-            "min_pixels": 32 * 14 * 14,
-            "max_pixels": 64 * 28 * 28,
+            "min_pixels": effective_min_pixels,
+            "max_pixels": effective_max_pixels,
             "use_audio_in_video": False,
         }
         images_kwargs = {
-            "min_pixels": 32 * 14 * 14,
-            "max_pixels": 64 * 28 * 28,
+            "min_pixels": effective_min_pixels,
+            "max_pixels": effective_max_pixels,
         }
         audio_kwargs = {"max_length": 2048000}
         if audio_sample_rate is not None:

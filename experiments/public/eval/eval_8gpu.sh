@@ -13,10 +13,12 @@ cd "$REPO_ROOT" || exit 1
 # ==============================================================================
 # Configuration
 # ==============================================================================
-CUDA_VISIBLE_DEVICES="0,1,2,3"
-BATCH_SIZE=8
+CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
+BATCH_SIZE=16
+# Per-process dataloader workers. Can override by env, e.g. DATALOADER_NUM_WORKERS=12 bash ...
+DATALOADER_NUM_WORKERS="${DATALOADER_NUM_WORKERS:-8}"
 # MODALITIES=("image" "video" "tool" "visdoc" "text")
-MODALITIES=("image")
+MODALITIES=("gui")
 DATA_BASEDIR=/data/mengrui/.cache/huggingface/datasets/MMEB-V3
 OUTPUT_BASEDIR=exps/vlm2vec
 # WAVE-only optional args (only effective when MODEL_BACKBONE=wave)
@@ -67,7 +69,8 @@ parse_model_spec() {
 
   SPEC_PROCESSOR_NAME=""
   SPEC_LORA=""
-  SPEC_POOLING="mean"
+  # Empty means "auto by model backbone"; can still override with pooling=...
+  SPEC_POOLING=""
   SPEC_NORMALIZE="true"
   SPEC_AUDIO_MAX_SECONDS=""
   SPEC_MODALITIES=""
@@ -102,14 +105,16 @@ parse_model_spec() {
 declare -a MODEL_SPECS
 # MODEL_SPECS+=( "/data/mengrui/.cache/huggingface/omni-embed-nemotron-3b;nvomniembed;$OUTPUT_BASEDIR/omni-embed-nemotron-3b" )
 # Ours example (only edit MODEL_SPECS when switching models):
-MODEL_SPECS+=( "/data/mengrui/.cache/huggingface/Qwen2.5-Omni-3B;qwen2_5_omni;$OUTPUT_BASEDIR/ours;/data/mengrui/.cache/huggingface/Qwen2_5Omni_3B_BS512_step5k/checkpoint-5000" )
-# MODEL_SPECS+=( "/data/mengrui/.cache/huggingface/Qwen3-VL-Embedding-8B;qwen3_vl;$OUTPUT_BASEDIR/Qwen3-VL-Embedding-8B" )
-# MODEL_SPECS+=( "/data/mengrui/.cache/huggingface/Qwen3-VL-Embedding-2B;qwen3_vl;$OUTPUT_BASEDIR/Qwen3-VL-Embedding-2B" )
-# MODEL_SPECS+=( "VLM2Vec/VLM2Vec-V2.0;qwen2_vl;$OUTPUT_BASEDIR/VLM2Vec-V2.0-Qwen2VL-2B" )
+# MODEL_SPECS+=( "/data/mengrui/.cache/huggingface/Qwen2.5-Omni-3B;qwen2_5_omni;$OUTPUT_BASEDIR/ours-256;/data/mengrui/.cache/huggingface/Qwen2_5Omni_3B_BS256_step10k/checkpoint-10000" )
+# MODEL_SPECS+=( "/data/mengrui/.cache/huggingface/Qwen2.5-Omni-3B;qwen2_5_omni;$OUTPUT_BASEDIR/ours-512;/data/mengrui/.cache/huggingface/Qwen2_5Omni_3B_BS512_step5k/checkpoint-5000" )
+MODEL_SPECS+=( "/data/mengrui/.cache/huggingface/Qwen3-VL-Embedding-8B;qwen3_vl;$OUTPUT_BASEDIR/Qwen3-VL-Embedding-8B" )
+MODEL_SPECS+=( "/data/mengrui/.cache/huggingface/Qwen3-VL-Embedding-2B;qwen3_vl;$OUTPUT_BASEDIR/Qwen3-VL-Embedding-2B" )
+# MODEL_SPECS+=( "/data/mengrui/.cache/huggingface/Qwen2-VL-2B-Instruct;qwen2_vl;$OUTPUT_BASEDIR/VLM2Vec-V2.0-Qwen2VL-2B;/data/mengrui/.cache/huggingface/VLM2Vec-V2.0;lora=true;pooling=last;normalize=true")
 # MODEL_SPECS+=( "Alibaba-NLP/gme-Qwen2-VL-2B-Instruct;gme;$OUTPUT_BASEDIR/gme-Qwen2-VL-2B-Instruct" )
-# MODEL_SPECS+=( "Alibaba-NLP/gme-Qwen2-VL-7B-Instruct;gme;$OUTPUT_BASEDIR/gme-Qwen2-VL-7B-Instruct" )
+# MODEL_SPECS+=( "/data/mengrui/.cache/huggingface/gme-Qwen2-VL-7B-Instruct;gme;$OUTPUT_BASEDIR/gme-Qwen2-VL-7B-Instruct" )
 # MODEL_SPECS+=( "code-kunkun/LamRA-Ret;lamra;$OUTPUT_BASEDIR/LamRA-Ret" )
-# MODEL_SPECS+=( "vidore/colpali-v1.3;colpali;$OUTPUT_BASEDIR/colpali-v1.3" )
+# MODEL_SPECS+=( "/data/mengrui/.cache/huggingface/WAVE-7B;wave;$OUTPUT_BASEDIR/WAVE-7B" )
+# MODEL_SPECS+=( "/data/mengrui/.cache/huggingface/colpaligemma-3b-pt-448-base;colpali;$OUTPUT_BASEDIR/colpali-v1.3;/data/mengrui/.cache/huggingface/colpali-v1.3;lora=true" )
 #MODEL_SPECS+=( "royokong/e5-v;llava_next;$OUTPUT_BASEDIR/e5-v" )
 #MODEL_SPECS+=( "src/model/vlm_backbone/internvideo2/;internvideo2;$OUTPUT_BASEDIR/internvideo2" )
 #MODEL_SPECS+=( "code-kunkun/LamRA-Ret-Qwen2.5VL-7b;lamra-qwen25;$OUTPUT_BASEDIR/gme-Qwen2-VL-7B-Instruct" )  # not ready
@@ -139,8 +144,29 @@ for spec in "${MODEL_SPECS[@]}"; do
     echo "Expected: MODEL_NAME;MODEL_BACKBONE;BASE_OUTPUT_PATH[;CHECKPOINT_PATH][;key=value...]"
     exit 1
   fi
+  # Auto-detect processor for Qwen2.5-Omni LoRA checkpoints to avoid tokenizer/template mismatch.
+  if [[ "$MODEL_BACKBONE" == "qwen2_5_omni" && -n "$CHECKPOINT_PATH" && -z "$SPEC_PROCESSOR_NAME" ]]; then
+    if [[ -d "$CHECKPOINT_PATH" ]]; then
+      SPEC_PROCESSOR_NAME="$CHECKPOINT_PATH"
+      echo "Auto processor_name for qwen2_5_omni: $SPEC_PROCESSOR_NAME"
+    else
+      echo "WARNING: qwen2_5_omni checkpoint path not found for auto processor_name: $CHECKPOINT_PATH"
+    fi
+  fi
   EXTRA_MODEL_ARGS=""
   EFFECTIVE_NORMALIZE="$SPEC_NORMALIZE"
+  # Auto-select model-appropriate pooling defaults; allow explicit spec override.
+  case "$MODEL_BACKBONE" in
+    qwen2_5_omni|nvomniembed|wave)
+      EFFECTIVE_POOLING="mean"
+      ;;
+    *)
+      EFFECTIVE_POOLING="last"
+      ;;
+  esac
+  if [[ -n "$SPEC_POOLING" ]]; then
+    EFFECTIVE_POOLING="$SPEC_POOLING"
+  fi
   case "$MODEL_BACKBONE" in
     qwen2_5_omni|nvomniembed|wave)
       EFFECTIVE_NORMALIZE="true"
@@ -202,16 +228,16 @@ for spec in "${MODEL_SPECS[@]}"; do
     mkdir -p "$OUTPUT_PATH"
 
     cmd="CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES EVAL_MODALITY=\"$MODALITY\" EVAL_DATASET_TIMING_LOG=\"$DATASET_TIMING_LOG\" torchrun --nproc_per_node=$NPROC_PER_NODE --master_port=2277 --max_restarts=0 eval.py \
-      --pooling \"mean\" \
+      --pooling \"$EFFECTIVE_POOLING\" \
       --normalize \"$EFFECTIVE_NORMALIZE\" \
       --per_device_eval_batch_size $BATCH_SIZE \
+      --dataloader_num_workers $DATALOADER_NUM_WORKERS \
       --model_backbone \"$MODEL_BACKBONE\" \
       --model_name \"$MODEL_NAME\" \
       $EXTRA_MODEL_ARGS \
       $EXTRA_DATA_ARGS \
       --dataset_config \"$DATA_CONFIG_PATH\" \
       --encode_output_path \"$OUTPUT_PATH\" \
-      --lora true \
       --data_basedir \"$DATA_BASEDIR\""
     if [ -n "$SPEC_PROCESSOR_NAME" ]; then
       cmd="$cmd --processor_name \"$SPEC_PROCESSOR_NAME\""

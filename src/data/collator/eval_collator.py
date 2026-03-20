@@ -312,6 +312,9 @@ class MultimodalEvalDataCollator:
             omni_inputs = dict(inputs)
             # input_raw_wav is only needed by WAVE official BEATs branch.
             omni_inputs["_keep_input_raw_wav"] = (self.model_args.model_backbone == WAVE)
+            # Let omni processor follow DataArguments image resize knobs.
+            omni_inputs["_resize_min_pixels"] = getattr(self.data_args, "resize_min_pixels", None)
+            omni_inputs["_resize_max_pixels"] = getattr(self.data_args, "resize_max_pixels", None)
             outputs = process_fn(
                 model_inputs=omni_inputs,
                 processor=self.processor,
@@ -345,6 +348,14 @@ class MultimodalEvalDataCollator:
           - cand_text/cand_image or cand_video/cand_audio
         """
         use_omni = self.model_args.model_backbone in {QWEN2_5_OMNI, NVOMNIEMBED, WAVE}
+        # Ensure qwen omni warning filters are active in dataloader worker processes too.
+        if use_omni and not getattr(self, "_qwen_warning_filter_ready", False):
+            try:
+                from src.model.processor import _install_qwen_omni_warning_filters
+                _install_qwen_omni_warning_filters()
+            except Exception:
+                pass
+            self._qwen_warning_filter_ready = True
 
         if self.encode_side == "qry":
             inputs = self._get_batch_inputs(

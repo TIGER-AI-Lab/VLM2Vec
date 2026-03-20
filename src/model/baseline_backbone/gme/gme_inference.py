@@ -31,7 +31,9 @@ class GmeQwen2VL(nn.Module):
         # self.base = AutoModelForVision2Seq.from_pretrained(
         #     model_name, torch_dtype=torch.bfloat16, **kwargs
         # )
-        config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
+        # GME repo ships remote code with strict transformers<4.52 checks.
+        # Use the local Qwen2-VL config path to keep compatibility with newer transformers.
+        config = AutoConfig.from_pretrained(model_name, trust_remote_code=False)
         config._attn_implementation = "flash_attention_2"
         config.padding_side = "left"
         config.use_cache = False

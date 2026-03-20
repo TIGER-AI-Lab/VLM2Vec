@@ -407,12 +407,22 @@ class MMEBModel(nn.Module):
                     if hasattr(m, "config") and hasattr(m.config, "padding_side"):
                         m.config.padding_side = "left"
 
-                outputs = self.encoder.model(
-                    **text_only_input,
-                    output_hidden_states=True,
-                    return_dict=True,
-                    use_cache=False,
-                )
+                # Keep text-only and multimodal paths aligned for omni backbones by
+                # using the full model forward (can expose `embeddings` consistently).
+                if backbone in {NVOMNIEMBED, QWEN2_5_OMNI}:
+                    outputs = self.encoder(
+                        **text_only_input,
+                        output_hidden_states=True,
+                        return_dict=True,
+                        use_cache=False,
+                    )
+                else:
+                    outputs = self.encoder.model(
+                        **text_only_input,
+                        output_hidden_states=True,
+                        return_dict=True,
+                        use_cache=False,
+                    )
                 attn_mask = text_only_input.get("attention_mask", None)
 
             if hasattr(outputs, "mllm_embeds") and outputs.mllm_embeds is not None:
@@ -689,7 +699,8 @@ class MMEBModel(nn.Module):
         elif model_args.model_backbone == GME:
             base_model = GmeQwen2VL(model_args.model_name, processor=kwargs["processor"])
             if config is None:
-                config = AutoConfig.from_pretrained(config_source, trust_remote_code=True)
+                # GME remote code enforces transformers<4.52; keep local Qwen2-VL config path.
+                config = AutoConfig.from_pretrained(config_source, trust_remote_code=False)
             setattr(base_model, "config", config)
         elif model_args.model_backbone == LamRA:
             base_model = LamRAQwen2VL(model_args.model_name)
@@ -728,7 +739,6 @@ class MMEBModel(nn.Module):
                 lora_model = PeftModel.from_pretrained(
                     base_model.base_model.model, model_name_or_path, config=lora_config, is_trainable=is_trainable
                 )
-                lora_model.load_adapter(model_name_or_path, lora_model.active_adapter, is_trainable=is_trainable)
                 if not is_trainable:
                     lora_model = lora_model.merge_and_unload()
                 base_model.base_model.model = lora_model
@@ -737,11 +747,30 @@ class MMEBModel(nn.Module):
                     base_model.model = lora_model
                 print_master("LoRA attached to qwen2_5_omni thinker.model.")
                 encoder = base_model
+            elif model_args.model_backbone in {QWEN2_VL, QWEN2_VL_TOKENSELECTION}:
+                # VLM2Vec adapters for Qwen2-VL are exported against the full
+                # conditional-generation model. Attaching to `base_model.model`
+                # causes widespread key mismatch and near-random retrieval scores.
+                lora_model = PeftModel.from_pretrained(
+                    base_model, model_name_or_path, config=lora_config, is_trainable=is_trainable
+                )
+                if not is_trainable:
+                    lora_model = lora_model.merge_and_unload()
+                encoder = lora_model
+            elif model_args.model_backbone == COLPALI:
+                # ColPali adapter keys are exported against the full ColPali wrapper
+                # (includes `custom_text_proj` and nested `model.language_model` path).
+                # Injecting into `base_model.model` causes large key mismatch.
+                lora_model = PeftModel.from_pretrained(
+                    base_model, model_name_or_path, config=lora_config, is_trainable=is_trainable
+                )
+                if not is_trainable:
+                    lora_model = lora_model.merge_and_unload()
+                encoder = lora_model
             elif hasattr(base_model, "model") and base_model.model is not None:
                 lora_model = PeftModel.from_pretrained(
                     base_model.model, model_name_or_path, config=lora_config, is_trainable=is_trainable
                 )
-                lora_model.load_adapter(model_name_or_path, lora_model.active_adapter, is_trainable=is_trainable)
                 if not is_trainable:
                     lora_model = lora_model.merge_and_unload()
                 base_model.model = lora_model
@@ -750,7 +779,6 @@ class MMEBModel(nn.Module):
                 lora_model = PeftModel.from_pretrained(
                     base_model, model_name_or_path, config=lora_config, is_trainable=is_trainable
                 )
-                lora_model.load_adapter(model_name_or_path, lora_model.active_adapter, is_trainable=is_trainable)
                 if not is_trainable:
                     lora_model = lora_model.merge_and_unload()
                 encoder = lora_model

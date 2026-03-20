@@ -1,0 +1,638 @@
+EDIS:
+    dataset_parser: image_t2i
+    dataset_name: EDIS
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+Wiki-SS-NQ:
+    dataset_parser: image_t2i
+    dataset_name: Wiki-SS-NQ
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+WebQA:
+    dataset_parser: image_t2i
+    dataset_name: WebQA
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+Visual7W-Pointing:
+    dataset_parser: image_i2i_vg
+    dataset_name: Visual7W-Pointing
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+RefCOCO:
+    dataset_parser: image_i2i_vg
+    dataset_name: RefCOCO
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+GQA:
+    dataset_parser: image_qa
+    dataset_name: GQA
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+OVEN:
+    dataset_parser: image_i2i_vg
+    dataset_name: OVEN
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+MSCOCO_t2i:
+    dataset_parser: image_t2i
+    dataset_name: MSCOCO_t2i
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+MSCOCO:
+    dataset_parser: image_i2i_vg
+    dataset_name: MSCOCO
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+NIGHTS:
+    dataset_parser: image_i2i_vg
+    dataset_name: NIGHTS
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+SmthSmthV2:
+    dataset_parser: ssv2
+    dataset_name: SmthSmthV2
+    video_root: video-tasks/videos/video_cls/SSv2
+    frame_root: video-tasks/frames/video_cls/SSv2
+    num_sample_per_subset: 1000
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: local
+
+DiDeMo:
+    dataset_parser: didemo
+    dataset_name: DiDeMo
+    video_root: video-tasks/videos/video_ret/DiDeMo/
+    frame_root: video-tasks/frames/video_ret/data/ziyan/video_retrieval/DiDeMo/frames/
+    num_sample_per_subset: None
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: global
+
+MSVD:
+    dataset_parser: msvd
+    dataset_name: MSVD
+    video_root: video-tasks/videos/video_ret/MSVD/
+    frame_root: video-tasks/frames/video_ret/data/ziyan/video_retrieval/MSVD/frames/
+    num_sample_per_subset: None
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: global
+
+VATEX:
+    dataset_parser: vatex
+    dataset_name: VATEX
+    video_root: video-tasks/videos/video_ret/VATEX/
+    frame_root: video-tasks/frames/video_ret/data/ziyan/video_retrieval/VATEX/frames/
+    num_sample_per_subset: None
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: global
+
+HMDB51:
+    dataset_parser: video_classification
+    dataset_name: HMDB51
+    video_root: video-tasks/videos/video_cls/HMDB51
+    frame_root: video-tasks/frames/video_cls/HMDB51
+    num_sample_per_subset: None
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: global
+
+MSR-VTT:
+    dataset_parser: msrvtt
+    dataset_name: MSR-VTT
+    video_root: video-tasks/videos/video_ret/MSR-VTT/
+    frame_root: video-tasks/frames/video_ret/data/ziyan/video_retrieval/MSR-VTT/frames/
+    num_sample_per_subset: None
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: global
+
+K700:
+    dataset_parser: video_classification
+    dataset_name: Kinetics-700
+    video_root: video-tasks/videos/video_cls/K700
+    frame_root: video-tasks/frames/video_cls/K700
+    num_sample_per_subset: None
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: global
+
+YouCook2:
+    dataset_parser: youcook2
+    dataset_name: YouCook2
+    video_root: video-tasks/videos/video_ret/YouCook2/
+    frame_root: video-tasks/frames/video_ret/data/ziyan/video_retrieval/YouCook2/frames/
+    num_sample_per_subset: None
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: global
+
+ActivityNetQA:
+    dataset_parser: activitynetqa
+    dataset_name: ActivityNetQA
+    video_root: video-tasks/videos/video_qa/ActivityNetQA
+    frame_root: video-tasks/frames/video_qa/video_qa/ActivityNetQA
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: local
+
+Video-MME:
+    dataset_parser: videomme
+    dataset_name: Video-MME
+    video_root: video-tasks/videos/video_qa/Video-MME
+    frame_root: video-tasks/frames/video_qa/video_qa/Video-MME
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: local
+
+CREMA-D:
+    dataset_parser: audio_cls
+    dataset_name: CREMA-D
+    dataset_split: test
+    audio_root: audio-tasks/creamD
+    eval_type: local
+
+Clotho:
+    dataset_parser: clotho_text_audio
+    dataset_name: Clotho
+    dataset_split: test
+    audio_root: audio-tasks/clotho/clotho
+    eval_type: global
+
+SpeechCOCO:
+    dataset_parser: audio_ret_speechcoco
+    dataset_name: SpeechCOCO
+    dataset_split: validation
+    audio_root: audio-tasks/speechcoco-1k
+    eval_type: global
+
+AVE:
+    dataset_parser: ave_retrieval  # audio -> video
+    dataset_name: AVE
+    dataset_split: test
+    audio_root: audio-tasks/AVE/AVE_Dataset/audios
+    video_root: audio-tasks/AVE/AVE_Dataset/AVE
+    frame_root: audio-tasks/AVE/AVE_Dataset/frames
+    num_frames: 8
+    eval_type: local
+
+SpeechCommands:
+    dataset_parser: audio_cls
+    dataset_name: SpeechCommands
+    dataset_split: test
+    audio_root: audio-tasks/speechcommand-1k
+    eval_type: local
+
+text/NanoBEIR/NanoHotpotQA:
+  dataset_parser: complex_text_retrieve
+  data_path: text-tasks
+  subset_name: NanoBEIR/NanoHotpotQA
+  eval_type: global
+
+  query_file:
+    text-tasks/NanoBEIR/NanoHotpotQA/queries/train-00000-of-00001.parquet
+  candidate_file:
+    text-tasks/NanoBEIR/NanoHotpotQA/corpus/train-00000-of-00001.parquet
+  qrels_file:
+    text-tasks/NanoBEIR/NanoHotpotQA/qrels/train-00000-of-00001.parquet
+
+text/NanoBEIR/NanoNQ:
+  dataset_parser: complex_text_retrieve
+  data_path: text-tasks
+  subset_name: NanoBEIR/NanoNQ
+  eval_type: global
+
+  query_file:
+    text-tasks/NanoBEIR/NanoNQ/queries/train-00000-of-00001.parquet
+  candidate_file:
+    text-tasks/NanoBEIR/NanoNQ/corpus/train-00000-of-00001.parquet
+  qrels_file:
+    text-tasks/NanoBEIR/NanoNQ/qrels/train-00000-of-00001.parquet
+
+text/MultiConIR/Movies:
+  dataset_parser: complex_text_retrieve
+  data_path: text-tasks
+  subset_name: MultiConIR/Movies
+  eval_type: global
+
+  query_file: text-tasks/MultiConIR_v2/Movies/queries.jsonl
+  candidate_file: text-tasks/MultiConIR_v2/Movies/corpus.jsonl
+  qrels_file: text-tasks/MultiConIR_v2/Movies/qrels.jsonl
+
+text/LongEmbed/2wikimqa:
+  dataset_parser: complex_text_retrieve
+  data_path: text-tasks
+  subset_name: LongEmbed/2wikimqa
+  eval_type: global
+
+  query_file: text-tasks/LongEmbed/2wikimqa/queries.jsonl
+  candidate_file: text-tasks/LongEmbed/2wikimqa/corpus.jsonl
+  qrels_file: text-tasks/LongEmbed/2wikimqa/qrels.jsonl
+
+text/InfoSearch/Format-v1:
+  dataset_parser: complex_text_retrieve
+  data_path: text-tasks
+  subset_name: InfoSearch/Format-v1
+  eval_type: global
+
+  query_file: text-tasks/InfoSearch/Format-v1/queries.jsonl
+  candidate_file: text-tasks/InfoSearch/Format-v1/corpus.jsonl
+  qrels_file:
+    text-tasks/InfoSearch/Format-v1/qrels_og/test.jsonl
+
+text/MultiConIR/Medical Case:
+  dataset_parser: complex_text_retrieve
+  data_path: text-tasks
+  subset_name: 'MultiConIR/Medical Case'
+  eval_type: global
+
+  query_file: text-tasks/MultiConIR_v2/Medical Case/queries.jsonl
+  candidate_file: text-tasks/MultiConIR_v2/Medical Case/corpus.jsonl
+  qrels_file: text-tasks/MultiConIR_v2/Medical Case/qrels.jsonl
+
+text/NanoBEIR/NanoFiQA2018:
+  dataset_parser: complex_text_retrieve
+  data_path: text-tasks
+  subset_name: NanoBEIR/NanoFiQA2018
+  eval_type: global
+
+  query_file:
+    text-tasks/NanoBEIR/NanoFiQA2018/queries/train-00000-of-00001.parquet
+  candidate_file:
+    text-tasks/NanoBEIR/NanoFiQA2018/corpus/train-00000-of-00001.parquet
+  qrels_file:
+    text-tasks/NanoBEIR/NanoFiQA2018/qrels/train-00000-of-00001.parquet
+
+text/MultiConIR/Legal Document:
+  dataset_parser: complex_text_retrieve
+  data_path: text-tasks
+  subset_name: MultiConIR/Legal Document
+  eval_type: global
+
+  query_file: text-tasks/MultiConIR_v2/Legal Document/queries.jsonl
+  candidate_file: text-tasks/MultiConIR_v2/Legal Document/corpus.jsonl
+  qrels_file: text-tasks/MultiConIR_v2/Legal Document/qrels.jsonl
+
+text/NanoBEIR/NanoMSMARCO:
+  dataset_parser: complex_text_retrieve
+  data_path: text-tasks
+  subset_name: NanoBEIR/NanoMSMARCO
+  eval_type: global
+
+  query_file:
+    text-tasks/NanoBEIR/NanoMSMARCO/queries/train-00000-of-00001.parquet
+  candidate_file:
+    text-tasks/NanoBEIR/NanoMSMARCO/corpus/train-00000-of-00001.parquet
+  qrels_file:
+    text-tasks/NanoBEIR/NanoMSMARCO/qrels/train-00000-of-00001.parquet
+
+text/NanoBEIR/NanoFEVER:
+  dataset_parser: complex_text_retrieve
+  data_path: MMEB-V3/text-tasks
+  subset_name: NanoBEIR/NanoFEVER
+  eval_type: global
+
+  query_file:
+    text-tasks/NanoBEIR/NanoFEVER/queries/train-00000-of-00001.parquet
+  candidate_file:
+    text-tasks/NanoBEIR/NanoFEVER/corpus/train-00000-of-00001.parquet
+  qrels_file:
+    text-tasks/NanoBEIR/NanoFEVER/qrels/train-00000-of-00001.parquet
+
+VisRAG_ArxivQA:
+    dataset_parser: visrag
+    dataset_name: VisRAG_ArxivQA
+    image_root: visdoc-tasks/images/VisRAG_ArxivQA
+    eval_type: global
+
+ViDoRe_syntheticDocQA_artificial_intelligence:
+    dataset_parser: vidore
+    dataset_name: ViDoRe_syntheticDocQA_artificial_intelligence
+    image_root: visdoc-tasks/images/ViDoRe_syntheticDocQA_artificial_intelligence
+    eval_type: global
+
+ViDoRe_arxivqa:
+    dataset_parser: vidore
+    dataset_name: ViDoRe_arxivqa
+    image_root: visdoc-tasks/images/ViDoRe_arxivqa
+    eval_type: global
+
+ViDoRe_syntheticDocQA_government_reports:
+    dataset_parser: vidore
+    dataset_name: ViDoRe_syntheticDocQA_government_reports
+    image_root: visdoc-tasks/images/ViDoRe_syntheticDocQA_government_reports
+    eval_type: global
+
+ViDoRe_syntheticDocQA_energy:
+    dataset_parser: vidore
+    dataset_name: ViDoRe_syntheticDocQA_energy
+    image_root: visdoc-tasks/images/ViDoRe_syntheticDocQA_energy
+    eval_type: global
+
+ViDoRe_syntheticDocQA_healthcare_industry:
+    dataset_parser: vidore
+    dataset_name: ViDoRe_syntheticDocQA_healthcare_industry
+    image_root: visdoc-tasks/images/ViDoRe_syntheticDocQA_healthcare_industry
+    eval_type: global
+
+ViDoSeek-doc:
+    dataset_parser: vidore
+    dataset_name: ViDoSeek-doc
+    image_root: visdoc-tasks/images/ViDoSeek-doc
+    eval_type: global
+
+VisRAG_SlideVQA:
+    dataset_parser: visrag
+    dataset_name: VisRAG_SlideVQA
+    image_root: visdoc-tasks/images/VisRAG_SlideVQA
+    eval_type: global
+
+ViDoRe_tabfquad:
+    dataset_parser: vidore
+    dataset_name: ViDoRe_tabfquad
+    image_root: visdoc-tasks/images/ViDoRe_tabfquad
+    eval_type: global
+
+VisRAG_ChartQA:
+    dataset_parser: visrag
+    dataset_name: VisRAG_ChartQA
+    image_root: visdoc-tasks/images/VisRAG_ChartQA
+    eval_type: global
+
+toolde/code/craft-vqa:
+  dataset_parser: toolde
+  subset_name: code/craft-vqa
+  query_file:
+    tool-tasks/ToolDe-Queries/code/craft-vqa/queries-00000-of-00001.parquet
+  candidate_file:
+    tool-tasks/ToolDe-Candidates/code/tools-00000-of-00001.parquet
+  eval_type: global
+
+toolde/web/toolemu:
+  dataset_parser: toolde
+  subset_name: web/toolemu
+  query_file:
+    tool-tasks/ToolDe-Queries/web/toolemu/queries-00000-of-00001.parquet
+  candidate_file:
+    tool-tasks/ToolDe-Candidates/web/tools-00000-of-00001.parquet
+  eval_type: global
+
+toolde/web/t-eval-dialog:
+  dataset_parser: toolde
+  subset_name: web/t-eval-dialog
+  query_file:
+    tool-tasks/ToolDe-Queries/web/t-eval-dialog/queries-00000-of-00001.parquet
+  candidate_file:
+    tool-tasks/ToolDe-Candidates/web/tools-00000-of-00001.parquet
+  eval_type: global
+
+toolde/web/mnms:
+  dataset_parser: toolde
+  subset_name: web/mnms
+  query_file: tool-tasks/ToolDe-Queries/web/mnms/queries-00000-of-00001.parquet
+  candidate_file:
+    tool-tasks/ToolDe-Candidates/web/tools-00000-of-00001.parquet
+  eval_type: global
+
+toolde/code/gorilla-tensor:
+  dataset_parser: toolde
+  subset_name: code/gorilla-tensor
+  query_file:
+    tool-tasks/ToolDe-Queries/code/gorilla-tensor/queries-00000-of-00001.parquet
+  candidate_file:
+    tool-tasks/ToolDe-Candidates/code/tools-00000-of-00001.parquet
+  eval_type: global
+
+toolde/web/apigen:
+  dataset_parser: toolde
+  subset_name: web/apigen
+  query_file:
+    tool-tasks/ToolDe-Queries/web/apigen/queries-00000-of-00001.parquet
+  candidate_file:
+    tool-tasks/ToolDe-Candidates/web/tools-00000-of-00001.parquet
+  eval_type: global
+
+toolde/web/taskbench-daily:
+  dataset_parser: toolde
+  subset_name: web/taskbench-daily
+  query_file:
+    tool-tasks/ToolDe-Queries/web/taskbench-daily/queries-00000-of-00001.parquet
+  candidate_file:
+    tool-tasks/ToolDe-Candidates/web/tools-00000-of-00001.parquet
+  eval_type: global
+
+toolde/code/craft-tabmwp:
+  dataset_parser: toolde
+  subset_name: code/craft-tabmwp
+  query_file:
+    tool-tasks/ToolDe-Queries/code/craft-tabmwp/queries-00000-of-00001.parquet
+  candidate_file:
+    tool-tasks/ToolDe-Candidates/code/tools-00000-of-00001.parquet
+  eval_type: global
+
+toolde/customized/gpt4tools:
+  dataset_parser: toolde
+  subset_name: customized/gpt4tools
+  query_file:
+    tool-tasks/ToolDe-Queries/customized/gpt4tools/queries-00000-of-00001.parquet
+  candidate_file:
+    tool-tasks/ToolDe-Candidates/customized/tools-00000-of-00001.parquet
+  eval_type: global
+
+toolde/web/ultratool:
+  dataset_parser: toolde
+  subset_name: web/ultratool
+  query_file:
+    tool-tasks/ToolDe-Queries/web/ultratool/queries-00000-of-00001.parquet
+  candidate_file:
+    tool-tasks/ToolDe-Candidates/web/tools-00000-of-00001.parquet
+  eval_type: global
+  
+EDIS:
+    dataset_parser: image_t2i
+    dataset_name: EDIS
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+Wiki-SS-NQ:
+    dataset_parser: image_t2i
+    dataset_name: Wiki-SS-NQ
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+WebQA:
+    dataset_parser: image_t2i
+    dataset_name: WebQA
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+Visual7W-Pointing:
+    dataset_parser: image_i2i_vg
+    dataset_name: Visual7W-Pointing
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+RefCOCO:
+    dataset_parser: image_i2i_vg
+    dataset_name: RefCOCO
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+GQA:
+    dataset_parser: image_qa
+    dataset_name: GQA
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+OVEN:
+    dataset_parser: image_i2i_vg
+    dataset_name: OVEN
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+MSCOCO_t2i:
+    dataset_parser: image_t2i
+    dataset_name: MSCOCO_t2i
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+MSCOCO:
+    dataset_parser: image_i2i_vg
+    dataset_name: MSCOCO
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+NIGHTS:
+    dataset_parser: image_i2i_vg
+    dataset_name: NIGHTS
+    dataset_split: test
+    image_root: image-tasks/MMEB/
+    eval_type: local
+
+SmthSmthV2:
+    dataset_parser: ssv2
+    dataset_name: SmthSmthV2
+    video_root: video-tasks/videos/video_cls/SSv2
+    frame_root: video-tasks/frames/video_cls/SSv2
+    num_sample_per_subset: 1000
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: local
+
+DiDeMo:
+    dataset_parser: didemo
+    dataset_name: DiDeMo
+    video_root: video-tasks/videos/video_ret/DiDeMo/
+    frame_root: video-tasks/frames/video_ret/data/ziyan/video_retrieval/DiDeMo/frames/
+    num_sample_per_subset: None
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: global
+
+MSVD:
+    dataset_parser: msvd
+    dataset_name: MSVD
+    video_root: video-tasks/videos/video_ret/MSVD/
+    frame_root: video-tasks/frames/video_ret/data/ziyan/video_retrieval/MSVD/frames/
+    num_sample_per_subset: None
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: global
+
+VATEX:
+    dataset_parser: vatex
+    dataset_name: VATEX
+    video_root: video-tasks/videos/video_ret/VATEX/
+    frame_root: video-tasks/frames/video_ret/data/ziyan/video_retrieval/VATEX/frames/
+    num_sample_per_subset: None
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: global
+
+HMDB51:
+    dataset_parser: video_classification
+    dataset_name: HMDB51
+    video_root: video-tasks/videos/video_cls/HMDB51
+    frame_root: video-tasks/frames/video_cls/HMDB51
+    num_sample_per_subset: None
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: global
+
+MSR-VTT:
+    dataset_parser: msrvtt
+    dataset_name: MSR-VTT
+    video_root: video-tasks/videos/video_ret/MSR-VTT/
+    frame_root: video-tasks/frames/video_ret/data/ziyan/video_retrieval/MSR-VTT/frames/
+    num_sample_per_subset: None
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: global
+
+K700:
+    dataset_parser: video_classification
+    dataset_name: Kinetics-700
+    video_root: video-tasks/videos/video_cls/K700
+    frame_root: video-tasks/frames/video_cls/K700
+    num_sample_per_subset: None
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: global
+
+YouCook2:
+    dataset_parser: youcook2
+    dataset_name: YouCook2
+    video_root: video-tasks/videos/video_ret/YouCook2/
+    frame_root: video-tasks/frames/video_ret/data/ziyan/video_retrieval/YouCook2/frames/
+    num_sample_per_subset: None
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: global
+
+ActivityNetQA:
+    dataset_parser: activitynetqa
+    dataset_name: ActivityNetQA
+    video_root: video-tasks/videos/video_qa/ActivityNetQA
+    frame_root: video-tasks/frames/video_qa/video_qa/ActivityNetQA
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: local
+
+Video-MME:
+    dataset_parser: videomme
+    dataset_name: Video-MME
+    video_root: video-tasks/videos/video_qa/Video-MME
+    frame_root: video-tasks/frames/video_qa/video_qa/Video-MME
+    max_frames_saved: 64
+    num_frames: 8
+    eval_type: local

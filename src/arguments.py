@@ -55,8 +55,8 @@ class DataArguments:
     resize_max_pixels: int = field(default=28*28*1280, metadata={"help": "The max pixels of the image to resize the image. This is only works when `--resize_use_processor true`."})
     image_decay_factor: float = field(default=None, metadata={"help": "The image decay factor for resizing temporal images"})
     num_hardneg: int = field(default=0, metadata={"help": "hard negative number"})
-    video_max_frames: int = field(default=4, metadata={"help": "Max video frames per sample in training"})
-    video_frame_size: int = field(default=168, metadata={"help": "Square frame size for video frames (pixels)"})
+    video_max_frames: int = field(default=8, metadata={"help": "Max video frames per sample in training"})
+    video_frame_size: int = field(default=224, metadata={"help": "Square frame size for video frames (pixels)"})
 
     # Audio configuration (unified for train/eval)
     audio_sample_rate: int = field(default=16000, metadata={"help": "Audio sample rate for resampling"})
