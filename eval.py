@@ -392,13 +392,13 @@ def main():
     local_rank = int(os.environ.get("LOCAL_RANK", 0)) if dist.is_initialized() else 0
     world_size = dist.get_world_size() if dist.is_initialized() else 1
     # DEBUG PRINTS for Distributed Setup
-    print_master("Distributed init debug info:")
-    print_master(f"RANK: {os.environ.get('RANK')}")
-    print_master(f"LOCAL_RANK: {os.environ.get('LOCAL_RANK')}")
-    print_master(f"WORLD_SIZE: {os.environ.get('WORLD_SIZE')}")
-    print_master(f"MASTER_ADDR: {os.environ.get('MASTER_ADDR')}")
-    print_master(f"MASTER_PORT: {os.environ.get('MASTER_PORT')}")
     if dist.is_initialized():
+        print_master("Distributed init debug info:")
+        print_master(f"RANK: {os.environ.get('RANK')}")
+        print_master(f"LOCAL_RANK: {os.environ.get('LOCAL_RANK')}")
+        print_master(f"WORLD_SIZE: {os.environ.get('WORLD_SIZE')}")
+        print_master(f"MASTER_ADDR: {os.environ.get('MASTER_ADDR')}")
+        print_master(f"MASTER_PORT: {os.environ.get('MASTER_PORT')}")
         print_rank(f"dist.get_rank(): {dist.get_rank()}")
         print_rank(f"dist.get_world_size(): {dist.get_world_size()}")
 
@@ -479,7 +479,11 @@ def main():
             print_master(f"--- Evaluating {dataset_name} ---")
 
             query_embed_path = os.path.join(data_args.encode_output_path, f"{dataset_name}_qry")
-            cand_embed_path = os.path.join(data_args.encode_output_path, f"{dataset_name}_tgt")
+            # special care for mscoco cross modal retrieval candidates, as they share the same candidate pool
+            if task_config['dataset_parser'] == "mscoco_cmret":
+                cand_embed_path = os.path.join(data_args.encode_output_path, f"mscoco_cmret_tgt")
+            else:
+                cand_embed_path = os.path.join(data_args.encode_output_path, f"{dataset_name}_tgt")
             dataset_info_path = os.path.join(data_args.encode_output_path, f"{dataset_name}_info.jsonl")
 
             do_query = not os.path.exists(query_embed_path) or not os.path.exists(dataset_info_path)
@@ -714,4 +718,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:
+        if dist.is_initialized():
+            dist.barrier()
+            print_master("All ranks' processing finished, cleaning up distributed process group ...")
+            dist.destroy_process_group()

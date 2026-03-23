@@ -507,7 +507,7 @@ class MultimodalEvalDataCollator:
             process_fn = process_vlm_inputs_fns[self.model_args.model_backbone]
             processed_inputs = process_fn(inputs, processor=self.processor, max_length=self.data_args.max_len)
         dataset_infos = [e["dataset_infos"] for e in examples]
-        print(f"[DEBUG] Collating: processed_inputs type={type(processed_inputs)}, keys={list(processed_inputs.keys()) if processed_inputs else 'None'}, dataset_infos len={len(dataset_infos)}")
-        if processed_inputs is None:
-            print("[DEBUG] processed_inputs is None - batch will be skipped!")
+        # print(f"[DEBUG] Collating: processed_inputs type={type(processed_inputs)}, keys={list(processed_inputs.keys()) if processed_inputs else 'None'}, dataset_infos len={len(dataset_infos)}")
+        # if processed_inputs is None:
+            # print("[DEBUG] processed_inputs is None - batch will be skipped!")
         return processed_inputs, dataset_infos

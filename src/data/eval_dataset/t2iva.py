@@ -60,7 +60,7 @@ def data_prepare(batch_dict, *args, **kwargs):
     dataset_name = kwargs['dataset_name']
     model_backbone = kwargs['model_backbone']
 
-    TGT_INST = "Represent the given text, image or video."
+    TGT_INST = "Represent the given text, image, video, or audio."
     query_texts, query_images, cand_texts, cand_images, cand_videos, cand_audios, dataset_infos = [], [], [], [], [], [], []
     for pos_id, pos_filename, qry_inst, qry_text, tgt_text_lst, tgt_visual_lst, tgt_audio_lst in zip(batch_dict['image_id'], batch_dict['pos_filename'], batch_dict['qry_inst'], batch_dict['qry_text'], batch_dict['tgt_text'], batch_dict['tgt_image'], batch_dict['tgt_audio']):
         query_texts.append([process_input_text(qry_inst, 

@@ -18,15 +18,210 @@
 #     frame_root: /home/mingyi/synthesis/frames_omini
 #     num_frames: 8
 #     max_frames_saved: 16
-#     eval_type: local
+#     eval_type: global
 
-MSCOCO_t2iva:
-    dataset_parser: t2iva
-    dataset_name: MSCOCO_t2iva
+# MSCOCO_t2iva:
+#     dataset_parser: t2iva
+#     dataset_name: MSCOCO_t2iva
+#     dataset_split: test
+#     image_root: /home/mingyi/synthesis/val2014
+#     video_root: /home/mingyi/synthesis/mscoco_omini
+#     frame_root: /home/mingyi/synthesis/frames_omini
+#     num_frames: 8
+#     max_frames_saved: 16
+#     eval_type: global
+
+# MSCOCO_i2tva:
+#     dataset_parser: cmret
+#     dataset_name: MSCOCO_i2tva
+#     dataset_split: test
+#     image_root: /home/mingyi/synthesis/val2014
+#     video_root: /home/mingyi/synthesis/mscoco_omini
+#     audio_root: /home/mingyi/synthesis/mscoco_omini
+#     frame_root: /home/mingyi/synthesis/frames_omini
+#     num_frames: 8
+#     max_frames_saved: 16
+#     eval_type: global
+
+MSCOCO_t2i:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cmt2i
     dataset_split: test
     image_root: /home/mingyi/synthesis/val2014
-    video_root: /home/mingyi/synthesis/mscoco_omini
+    video_root: /home/mingyi/synthesis/videos
+    audio_root: /home/mingyi/synthesis/videos
     frame_root: /home/mingyi/synthesis/frames_omini
     num_frames: 8
     max_frames_saved: 16
+    input_mod: ['T']
+    query_mod: ['I']
+    cand_mod: ['T', 'I', 'V', 'A']
+    eval_type: local
+
+MSCOCO_t2v:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cmt2v
+    dataset_split: test
+    image_root: /home/mingyi/synthesis/val2014
+    video_root: /home/mingyi/synthesis/videos
+    audio_root: /home/mingyi/synthesis/videos
+    frame_root: /home/mingyi/synthesis/frames_omini
+    num_frames: 8
+    max_frames_saved: 16
+    input_mod: ['T']
+    query_mod: ['V']
+    cand_mod: ['T', 'I', 'V', 'A']
+    eval_type: local
+
+MSCOCO_t2a:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cmt2a
+    dataset_split: test
+    image_root: /home/mingyi/synthesis/val2014
+    video_root: /home/mingyi/synthesis/videos
+    audio_root: /home/mingyi/synthesis/videos
+    frame_root: /home/mingyi/synthesis/frames_omini
+    num_frames: 8
+    max_frames_saved: 16
+    input_mod: ['T']
+    query_mod: ['A']
+    cand_mod: ['T', 'I', 'V', 'A']
+    eval_type: local
+
+
+MSCOCO_i2t:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cmi2t
+    dataset_split: test
+    image_root: /home/mingyi/synthesis/val2014
+    video_root: /home/mingyi/synthesis/videos
+    audio_root: /home/mingyi/synthesis/videos
+    frame_root: /home/mingyi/synthesis/frames_omini
+    num_frames: 8
+    max_frames_saved: 16
+    input_mod: ['I']
+    query_mod: ['T']
+    cand_mod: ['T', 'I', 'V', 'A']
+    eval_type: local
+
+MSCOCO_i2v:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cmi2v
+    dataset_split: test
+    image_root: /home/mingyi/synthesis/val2014
+    video_root: /home/mingyi/synthesis/videos
+    audio_root: /home/mingyi/synthesis/videos
+    frame_root: /home/mingyi/synthesis/frames_omini
+    num_frames: 8
+    max_frames_saved: 16
+    input_mod: ['I']
+    query_mod: ['V']
+    cand_mod: ['T', 'I', 'V', 'A']
+    eval_type: local
+
+MSCOCO_i2a:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cmi2a
+    dataset_split: test
+    image_root: /home/mingyi/synthesis/val2014
+    video_root: /home/mingyi/synthesis/videos
+    audio_root: /home/mingyi/synthesis/videos
+    frame_root: /home/mingyi/synthesis/frames_omini
+    num_frames: 8
+    max_frames_saved: 16
+    input_mod: ['I']
+    query_mod: ['A']
+    cand_mod: ['T', 'I', 'V', 'A']
+    eval_type: local
+
+
+MSCOCO_v2t:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cmv2t
+    dataset_split: test
+    image_root: /home/mingyi/synthesis/val2014
+    video_root: /home/mingyi/synthesis/videos
+    audio_root: /home/mingyi/synthesis/videos
+    frame_root: /home/mingyi/synthesis/frames_omini
+    num_frames: 8
+    max_frames_saved: 16
+    input_mod: ['V']
+    query_mod: ['T']
+    cand_mod: ['T', 'I', 'V', 'A']
+    eval_type: local
+
+MSCOCO_v2i:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cmv2i
+    dataset_split: test
+    image_root: /home/mingyi/synthesis/val2014
+    video_root: /home/mingyi/synthesis/videos
+    audio_root: /home/mingyi/synthesis/videos
+    frame_root: /home/mingyi/synthesis/frames_omini
+    num_frames: 8
+    max_frames_saved: 16
+    input_mod: ['V']
+    query_mod: ['I']
+    cand_mod: ['T', 'I', 'V', 'A']
+    eval_type: local
+
+MSCOCO_v2a:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cmv2a
+    dataset_split: test
+    image_root: /home/mingyi/synthesis/val2014
+    video_root: /home/mingyi/synthesis/videos
+    audio_root: /home/mingyi/synthesis/videos
+    frame_root: /home/mingyi/synthesis/frames_omini
+    num_frames: 8
+    max_frames_saved: 16
+    input_mod: ['V']
+    query_mod: ['A']
+    cand_mod: ['T', 'I', 'V', 'A']
+    eval_type: local
+
+
+MSCOCO_a2t:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cma2t
+    dataset_split: test
+    image_root: /home/mingyi/synthesis/val2014
+    video_root: /home/mingyi/synthesis/videos
+    audio_root: /home/mingyi/synthesis/videos
+    frame_root: /home/mingyi/synthesis/frames_omini
+    num_frames: 8
+    max_frames_saved: 16
+    input_mod: ['A']
+    query_mod: ['T']
+    cand_mod: ['T', 'I', 'V', 'A']
+    eval_type: local
+
+MSCOCO_a2v:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cma2v
+    dataset_split: test
+    image_root: /home/mingyi/synthesis/val2014
+    video_root: /home/mingyi/synthesis/videos
+    audio_root: /home/mingyi/synthesis/videos
+    frame_root: /home/mingyi/synthesis/frames_omini
+    num_frames: 8
+    max_frames_saved: 16
+    input_mod: ['A']
+    query_mod: ['V']
+    cand_mod: ['T', 'I', 'V', 'A']
+    eval_type: local
+
+MSCOCO_a2i:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cma2i
+    dataset_split: test
+    image_root: /home/mingyi/synthesis/val2014
+    video_root: /home/mingyi/synthesis/videos
+    audio_root: /home/mingyi/synthesis/videos
+    frame_root: /home/mingyi/synthesis/frames_omini
+    num_frames: 8
+    max_frames_saved: 16
+    input_mod: ['A']
+    query_mod: ['I']
+    cand_mod: ['T', 'I', 'V', 'A']
     eval_type: local
