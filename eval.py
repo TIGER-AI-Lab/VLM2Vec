@@ -479,7 +479,11 @@ def main():
             print_master(f"--- Evaluating {dataset_name} ---")
 
             query_embed_path = os.path.join(data_args.encode_output_path, f"{dataset_name}_qry")
-            cand_embed_path = os.path.join(data_args.encode_output_path, f"{dataset_name}_tgt")
+            # special care for mscoco cross modal retrieval candidates, as they share the same candidate pool
+            if task_config['dataset_parser'] == "mscoco_cmret":
+                cand_embed_path = os.path.join(data_args.encode_output_path, f"mscoco_cmret_tgt")
+            else:
+                cand_embed_path = os.path.join(data_args.encode_output_path, f"{dataset_name}_tgt")
             dataset_info_path = os.path.join(data_args.encode_output_path, f"{dataset_name}_info.jsonl")
 
             do_query = not os.path.exists(query_embed_path) or not os.path.exists(dataset_info_path)

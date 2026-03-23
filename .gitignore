@@ -26,3 +26,5 @@ core.*
 Environment
 exps/
 *.whl
+
+*debug*/

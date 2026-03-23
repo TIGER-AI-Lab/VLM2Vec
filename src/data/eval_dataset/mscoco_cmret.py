@@ -3,15 +3,47 @@ import sys
 
 from src.utils.basic_utils import print_rank, print_master
 from datasets import load_dataset, Dataset
-from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook, RESOLUTION_MAPPING, ImageVideoInstance, coco_filename_with_ext
+from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook, RESOLUTION_MAPPING, ImageVideoInstance
 from src.model.processor import process_input_text
 from src.utils.vision_utils.vision_utils import save_frames, process_video_frames
 
-MODALITY_INST_MAPPING = {
-    'T': "Find the text that best matches the given image: ",
-    'V': "Find the video that best matches the given image: ",
-    'A': "Find the audio that best matches the given image: "
+from typing import Literal
+
+# ============== Cross Modality Utilities ==============
+MODALITIES = ['T', 'I', 'V', 'A']
+MODALITY_NAME_MAPPING = {
+    'T': "text", 
+    'I': 'image', 
+    'V': 'video', 
+    'A': 'audio'
 }
+MODALITY_EXT_MAPPING = {
+    'T': 'txt',
+    'I': 'jpg',
+    'V': 'mp4', 
+    'A': 'wav'
+}
+# MODALITY_INST_MAPPING = {
+#     'T': "Find the text that best matches the given image and video.",
+#     'I': "Find the image that best matches the given text: ",
+#     'V': "Find the video that best matches the given text: ",
+#     'A': "Find the audio that best matches the given text: "
+# }
+
+def coco_filename(id):
+    return f'COCO_val2014_{str(id).zfill(12)}'
+
+def coco_filename_with_ext(id, modality='I'):
+    ext = MODALITY_EXT_MAPPING[modality]
+    return f'{coco_filename(id)}.{ext}'
+
+def coco_id(filename):
+    return int(filename.split('_')[-1].split('.')[0])
+
+def get_instruction(input_mod:Literal['T','I','V','A'], query_mod:Literal['T','I','V','A']):
+    assert input_mod != query_mod, f"Input modality and query modality cannot be the same, or it will be too simple"
+    return f"Find the {MODALITY_NAME_MAPPING[query_mod]} that best matches the given {MODALITY_NAME_MAPPING[input_mod]}: "
+
 SPECIAL_SEP_TOKEN = "|<<<FILENAME|CAPTION>>>|" # this is a strange enough token to separate the text filename and text content, since there is no actual text file, use like this f"{filename}.txt{SPECIAL_SEP_TOKEN}{caption}"
 
 def generate_omnidirectional_dataset(dataset, *args, **kwargs):
@@ -23,40 +55,53 @@ def generate_omnidirectional_dataset(dataset, *args, **kwargs):
         Target (Positive): [Video of a dog running]
         Candidate pool: [Video of a dog running, Image of a dog, Audio of a dog barking, Text description of a dog]
     """
-    CAND_MODS=['T', 'I', 'V', 'A'] # possible candidate modalities, where T=text, I=image, V=video, A=audio
-    img_ids, pos_filenames, qry_texts, qry_images, tgt_texts, tgt_images, tgt_videos, tgt_audios = [], [], [], [], [], [], [], []
+    QRY_MODS, INPUT_MODS, CAND_MODS = kwargs['query_mod'], kwargs['input_mod'], kwargs['cand_mod']
+    img_ids, pos_filenames, qry_instrs = [], [], []
+    qry_texts, qry_images, qry_videos, qry_audios = [], [], [], []
+    tgt_texts, tgt_images, tgt_videos, tgt_audios = [], [], [], []
     # Generating candidate pools, same for all three query instances based on the same image_id
     for img_id, caption, neg_ids in zip(dataset['image_id'], dataset['qry_text'], dataset['hard_negatives']):
         tgt_lsts = {k: [] for k in CAND_MODS} # store the candidates of each modality separately for easier processing later
         candidate_ids_pool = list(set(neg_ids+[img_id])) 
         # three nested for loops looks weird but actually saves lots of lines :)
         for tgt_id in candidate_ids_pool:
-            for mod in CAND_MODS:
-                tgt_lsts[mod].append(f"{coco_filename_with_ext(tgt_id, 'T')}{SPECIAL_SEP_TOKEN}{caption}" 
-                                     if mod == 'T' else coco_filename_with_ext(tgt_id, mod))
-                for other_mod in [k for k in CAND_MODS if k != mod]:
+            for qry_mod in CAND_MODS:
+                tgt_lsts[qry_mod].append(f"{coco_filename_with_ext(tgt_id, 'T')}{SPECIAL_SEP_TOKEN}{caption}" 
+                                     if qry_mod == 'T' else coco_filename_with_ext(tgt_id, qry_mod))
+                for other_mod in [k for k in CAND_MODS if k != qry_mod]:
                     tgt_lsts[other_mod].append("" if other_mod == 'T' else None)
 
         assert len(tgt_lsts['T']) == len(tgt_lsts['I']) == len(tgt_lsts['V']) == len(tgt_lsts['A']), \
             f"Error: Inconsistent candidate pool lengths: {len(tgt_lsts['T'])} text candidates, {len(tgt_lsts['I'])} image candidates, {len(tgt_lsts['V'])} video candidates, {len(tgt_lsts['A'])} audio candidates."
-        QRY_MODS = ['T', 'V', 'A'] # we only query the three modalities without image, which is the query modality
+        
+        # we only query the three modalities without image, which is the query modality
         # now generate the query instance (positive sample) for each modality
-        for mod in QRY_MODS:
-            img_ids.append(img_id)
-            pos_filename = coco_filename_with_ext(img_id, mod) # caption text is not actually a file, but we still name it .txt to distinguish btw the other three modalities in the candidate pool
-            pos_filenames.append(pos_filename)
-            qry_texts.append(MODALITY_INST_MAPPING[mod]) # pos filename and qry insts are the only two that are different
-            qry_images.append(coco_filename_with_ext(img_id, 'I')) # the query image is always the same
-            tgt_texts.append(tgt_lsts['T'])
-            tgt_images.append(tgt_lsts['I'])
-            tgt_videos.append(tgt_lsts['V'])
-            tgt_audios.append(tgt_lsts['A'])
+        for inp_mod in INPUT_MODS:
+            for qry_mod in QRY_MODS:
+                img_ids.append(img_id)
+                # SPECIAL: caption text is not actually a file, but we still name it .txt to distinguish btw the other three modalities in the candidate pool
+                pos_filename = coco_filename_with_ext(img_id, qry_mod) 
+                pos_filenames.append(pos_filename)
+                qry_instrs.append(get_instruction(inp_mod, qry_mod))
+                queries = {k: ("" if k == 'T' else None) for k in MODALITIES}
+                queries[inp_mod] = caption if inp_mod == 'T' else coco_filename_with_ext(img_id, inp_mod)
+                qry_texts.append(queries['T'])
+                qry_images.append(queries['I'])
+                qry_videos.append(queries['V'])
+                qry_audios.append(queries['A'])
+                tgt_texts.append(tgt_lsts['T'])
+                tgt_images.append(tgt_lsts['I'])
+                tgt_videos.append(tgt_lsts['V'])
+                tgt_audios.append(tgt_lsts['A'])
 
     return Dataset.from_dict({
         "image_id": img_ids,
         "pos_filename": pos_filenames,
+        "qry_instr": qry_instrs,
         "qry_text": qry_texts,
         "qry_image": qry_images,
+        "qry_video": qry_videos, 
+        "qry_audio": qry_audios,
         "tgt_text": tgt_texts,
         "tgt_image": tgt_images,
         "tgt_video": tgt_videos,
@@ -72,18 +117,41 @@ def data_prepare(batch_dict, *args, **kwargs):
     model_backbone = kwargs['model_backbone']
 
     TGT_INST = "Represent the given text, image, video, or audio."
-    query_texts, query_images, cand_texts, cand_images, cand_videos, cand_audios, dataset_infos = [], [], [], [], [], [], []
-    for (pos_id, pos_filename, qry_txt, qry_img, 
+    query_texts, query_images, query_videos, query_audios = [], [], [], []
+    cand_texts, cand_images, cand_videos, cand_audios, dataset_infos = [], [], [], [], []
+    for (pos_id, pos_filename, qry_instr, \
+         qry_txt, qry_img, qry_vid, qry_aud, \
          tgt_txts, tgt_imgs, tgt_vids, tgt_auds) in \
-        zip(batch_dict['image_id'], batch_dict['pos_filename'], batch_dict['qry_text'], batch_dict['qry_image'], \
+        zip(batch_dict['image_id'], batch_dict['pos_filename'], batch_dict['qry_instr'], \
+            batch_dict['qry_text'], batch_dict['qry_image'],batch_dict['qry_video'], batch_dict['qry_audio'], \
             batch_dict['tgt_text'], batch_dict['tgt_image'], batch_dict['tgt_video'], batch_dict['tgt_audio']):
         
-        query_texts.append([qry_txt])
-        query_images.append([ImageVideoInstance(
-                        bytes=[None],
-                        paths=[os.path.join(image_root, qry_img)],
-                        resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
-                    ).to_dict()])
+        query_texts.append([f"{qry_instr}{qry_txt}"])
+        if qry_img is not None:
+            query_images.append([ImageVideoInstance(
+                            bytes=[None],
+                            paths=[os.path.join(image_root, qry_img)],
+                            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
+                        ).to_dict()])
+        else:
+            query_images.append([None])
+        if qry_vid is not None:
+            frame_dir = os.path.join(frame_root, qry_vid.split('.')[0])
+            save_frames(video_path=os.path.join(video_root, qry_vid),
+                                frame_dir=frame_dir,
+                                max_frames_saved=max_frames_saved)
+            video_frame_paths = process_video_frames(frame_dir, num_frames=num_frames)
+            query_videos.append([ImageVideoInstance(
+                bytes=[None] * len(video_frame_paths),
+                paths=video_frame_paths,
+                resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)] * len(video_frame_paths),
+            ).to_dict()])
+        else:
+            query_videos.append([None])
+        if qry_aud is not None:
+            query_audios.append({"path": os.path.join(audio_root, qry_aud), "bytes": None})
+        else:
+            query_audios.append(None)
         
         # processed candidate pool for each sample in a batch
         name_insts, txt_insts, img_insts, vid_insts, aud_insts = [], [], [], [], [] 
@@ -160,7 +228,7 @@ def data_prepare(batch_dict, *args, **kwargs):
         })
 
     return {
-        "query_text": query_texts, "query_image": query_images, "query_audio": [None]*len(query_texts),
+        "query_text": query_texts, "query_image": query_images, "query_video": query_videos, "query_audio": query_audios,
         "cand_text": cand_texts, "cand_image": cand_images, "cand_video": cand_videos, "cand_audio": cand_audios,
         "dataset_infos": dataset_infos
     }
@@ -184,9 +252,11 @@ def load_mscoco_cmret_dataset(model_args, data_args, *args, **kwargs):
 
     # print_master(f"Start preparing dataset {dataset_name} with model backbone {model_args.model_backbone} and image resolution {data_args.image_resolution}. Total number of samples: {len(dataset)}.")
     dataset = generate_omnidirectional_dataset(dataset, *args, **kwargs)
+    # TODO: DEBUGGING PURPOSE
+    dataset.to_json(f"debug_cm_input/{dataset_name}_debug.json")
     dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True,
                           batch_size=256, num_proc=4,
                           drop_last_batch=False, load_from_cache_file=False)
-    dataset = dataset.select_columns(["query_text", "query_image", "query_audio", "cand_text", "cand_image", "cand_video", "cand_audio", "dataset_infos"])
+    dataset = dataset.select_columns(["query_text", "query_image", "query_video", "query_audio", "cand_text", "cand_image", "cand_video", "cand_audio", "dataset_infos"])
 
     return dataset, None

@@ -1,8 +1,8 @@
 DATA_BASEDIR="/home/mingyi/synthesis/mscoco_omini"
-OUTPUT_PATH="/home/mingyi/AI-Projects/VLM2VEC_fork/VLM2Vec/eval_cross_modality_outputs/i2tvanemotrontestGlobal"
+OUTPUT_PATH="/home/mingyi/AI-Projects/VLM2VEC_fork/VLM2Vec/eval_cross_modality_outputs/all_mods"
 
 # CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7" torchrun --nproc_per_node=8 --master_port=2277 --max_restarts=0 eval.py \
-CUDA_VISIBLE_DEVICES="1" python eval.py \
+CUDA_VISIBLE_DEVICES="4" python eval.py \
       --pooling "mean" \
       --normalize true \
       --per_device_eval_batch_size 16 \
