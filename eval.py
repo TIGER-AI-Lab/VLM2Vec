@@ -392,13 +392,13 @@ def main():
     local_rank = int(os.environ.get("LOCAL_RANK", 0)) if dist.is_initialized() else 0
     world_size = dist.get_world_size() if dist.is_initialized() else 1
     # DEBUG PRINTS for Distributed Setup
-    print_master("Distributed init debug info:")
-    print_master(f"RANK: {os.environ.get('RANK')}")
-    print_master(f"LOCAL_RANK: {os.environ.get('LOCAL_RANK')}")
-    print_master(f"WORLD_SIZE: {os.environ.get('WORLD_SIZE')}")
-    print_master(f"MASTER_ADDR: {os.environ.get('MASTER_ADDR')}")
-    print_master(f"MASTER_PORT: {os.environ.get('MASTER_PORT')}")
     if dist.is_initialized():
+        print_master("Distributed init debug info:")
+        print_master(f"RANK: {os.environ.get('RANK')}")
+        print_master(f"LOCAL_RANK: {os.environ.get('LOCAL_RANK')}")
+        print_master(f"WORLD_SIZE: {os.environ.get('WORLD_SIZE')}")
+        print_master(f"MASTER_ADDR: {os.environ.get('MASTER_ADDR')}")
+        print_master(f"MASTER_PORT: {os.environ.get('MASTER_PORT')}")
         print_rank(f"dist.get_rank(): {dist.get_rank()}")
         print_rank(f"dist.get_world_size(): {dist.get_world_size()}")
 

@@ -165,10 +165,10 @@ def data_prepare(batch_dict, *args, **kwargs):
         "dataset_infos": dataset_infos
     }
 
-DATASET_PARSER_NAME = "i2tva"
+DATASET_PARSER_NAME = "mscoco_cmret"
 DATASET_HF_PATH = "MINGYISU/t2iv" # can still use t2iv, will rename the dataset in the future
 @AutoEvalPairDataset.register(DATASET_PARSER_NAME)
-def load_i2tva_dataset(model_args, data_args, *args, **kwargs):
+def load_mscoco_cmret_dataset(model_args, data_args, *args, **kwargs):
     dataset_name = kwargs["dataset_name"]
 
     dataset = load_dataset(DATASET_HF_PATH, split="test")

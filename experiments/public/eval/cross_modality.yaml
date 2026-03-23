@@ -1,45 +1,86 @@
-MSCOCO_ti2v:
-    dataset_parser: ti2v
-    dataset_name: MSCOCO_ti2v
-    dataset_split: test
-    image_root: /home/mingyi/synthesis/val2014
-    video_root: /home/mingyi/synthesis/output
-    frame_root: /home/mingyi/synthesis/frames
-    num_frames: 8
-    max_frames_saved: 16
-    eval_type: local
+# MSCOCO_ti2v:
+#     dataset_parser: ti2v
+#     dataset_name: MSCOCO_ti2v
+#     dataset_split: test
+#     image_root: /home/mingyi/synthesis/val2014
+#     video_root: /home/mingyi/synthesis/output
+#     frame_root: /home/mingyi/synthesis/frames
+#     num_frames: 8
+#     max_frames_saved: 16
+#     eval_type: local
 
-MSCOCO_t2iv:
-    dataset_parser: t2iv
-    dataset_name: MSCOCO_t2iv
+# MSCOCO_t2iv:
+#     dataset_parser: t2iv
+#     dataset_name: MSCOCO_t2iv
+#     dataset_split: test
+#     image_root: /home/mingyi/synthesis/val2014
+#     video_root: /home/mingyi/synthesis/mscoco_omini
+#     frame_root: /home/mingyi/synthesis/frames_omini
+#     num_frames: 8
+#     max_frames_saved: 16
+#     eval_type: global
+
+# MSCOCO_t2iva:
+#     dataset_parser: t2iva
+#     dataset_name: MSCOCO_t2iva
+#     dataset_split: test
+#     image_root: /home/mingyi/synthesis/val2014
+#     video_root: /home/mingyi/synthesis/mscoco_omini
+#     frame_root: /home/mingyi/synthesis/frames_omini
+#     num_frames: 8
+#     max_frames_saved: 16
+#     eval_type: global
+
+# MSCOCO_i2tva:
+#     dataset_parser: cmret
+#     dataset_name: MSCOCO_i2tva
+#     dataset_split: test
+#     image_root: /home/mingyi/synthesis/val2014
+#     video_root: /home/mingyi/synthesis/mscoco_omini
+#     audio_root: /home/mingyi/synthesis/mscoco_omini
+#     frame_root: /home/mingyi/synthesis/frames_omini
+#     num_frames: 8
+#     max_frames_saved: 16
+#     eval_type: global
+
+MSCOCO_t2i:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cmt2i
     dataset_split: test
     image_root: /home/mingyi/synthesis/val2014
-    video_root: /home/mingyi/synthesis/mscoco_omini
+    video_root: /home/mingyi/synthesis/videos
+    audio_root: /home/mingyi/synthesis/audios
     frame_root: /home/mingyi/synthesis/frames_omini
     num_frames: 8
     max_frames_saved: 16
+    query_mod: ['I']
+    cand_mod: ['T', 'I', 'V', 'A']
     eval_type: local
 
-MSCOCO_t2iva:
-    dataset_parser: t2iva
-    dataset_name: MSCOCO_t2iva
+MSCOCO_t2v:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cmt2v
     dataset_split: test
     image_root: /home/mingyi/synthesis/val2014
-    video_root: /home/mingyi/synthesis/mscoco_omini
+    video_root: /home/mingyi/synthesis/videos
+    audio_root: /home/mingyi/synthesis/audios
     frame_root: /home/mingyi/synthesis/frames_omini
     num_frames: 8
     max_frames_saved: 16
+    query_mod: ['V']
+    cand_mod: ['T', 'I', 'V', 'A']
     eval_type: local
 
-MSCOCO_i2tva:
-    dataset_parser: i2tva
-    dataset_name: MSCOCO_i2tva
+MSCOCO_t2a:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cmt2i
     dataset_split: test
     image_root: /home/mingyi/synthesis/val2014
-    video_root: /home/mingyi/synthesis/mscoco_omini
-    audio_root: /home/mingyi/synthesis/mscoco_omini
+    video_root: /home/mingyi/synthesis/videos
+    audio_root: /home/mingyi/synthesis/audios
     frame_root: /home/mingyi/synthesis/frames_omini
     num_frames: 8
     max_frames_saved: 16
+    query_mod: ['A']
+    cand_mod: ['T', 'I', 'V', 'A']
     eval_type: local
-
