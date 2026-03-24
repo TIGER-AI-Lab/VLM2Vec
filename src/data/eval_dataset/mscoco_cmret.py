@@ -234,7 +234,7 @@ def data_prepare(batch_dict, *args, **kwargs):
     }
 
 DATASET_PARSER_NAME = "mscoco_cmret"
-DATASET_HF_PATH = "MINGYISU/t2iv" # can still use t2iv, will rename the dataset in the future
+DATASET_HF_PATH = "MINGYISU/mscoco_cmret" # can still use t2iv, will rename the dataset in the future
 @AutoEvalPairDataset.register(DATASET_PARSER_NAME)
 def load_mscoco_cmret_dataset(model_args, data_args, *args, **kwargs):
     dataset_name = kwargs["dataset_name"]
@@ -253,7 +253,7 @@ def load_mscoco_cmret_dataset(model_args, data_args, *args, **kwargs):
     # print_master(f"Start preparing dataset {dataset_name} with model backbone {model_args.model_backbone} and image resolution {data_args.image_resolution}. Total number of samples: {len(dataset)}.")
     dataset = generate_omnidirectional_dataset(dataset, *args, **kwargs)
     # TODO: DEBUGGING PURPOSE
-    dataset.to_json(f"debug_cm_input/{dataset_name}_debug.json")
+    # dataset.to_json(f"debug_cm_input/{dataset_name}_debug.json")
     dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True,
                           batch_size=256, num_proc=4,
                           drop_last_batch=False, load_from_cache_file=False)
