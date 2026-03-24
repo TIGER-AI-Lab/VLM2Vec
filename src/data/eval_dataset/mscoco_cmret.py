@@ -167,7 +167,7 @@ def data_prepare(batch_dict, *args, **kwargs):
                 aud_path = os.path.join(audio_root, aud)
                 assert os.path.exists(aud_path), f"Audio {aud_path} does not exist."
                 aud_insts.append({"path": aud_path, "bytes": None})
-                txt_insts.append(f"<|audio_pad|> {TGT_INST} {txt}") # actually no tgt txt here
+                txt_insts.append(f"<|audio_pad|> {TGT_INST}") # universal instruction only, no extra tgt text 
                 name_insts.append(aud)
             else:
                 aud_insts.append(None)
@@ -180,7 +180,7 @@ def data_prepare(batch_dict, *args, **kwargs):
                     paths=[img_path],
                     resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)],
                 ).to_dict())
-                txt_insts.append(process_input_text(TGT_INST, text=txt, model_backbone=model_backbone, add_image_token=True))
+                txt_insts.append(process_input_text(TGT_INST, text="", model_backbone=model_backbone, add_image_token=True)) # no tgt text here, only a universal instruction 
                 name_insts.append(img)
             else:
                 img_insts.append(None)
@@ -200,7 +200,7 @@ def data_prepare(batch_dict, *args, **kwargs):
                         paths=video_frame_paths,
                         resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)] * len(video_frame_paths),
                     ).to_dict())
-                    txt_insts.append(process_input_text(TGT_INST, text=txt, model_backbone=model_backbone, add_video_token=True))
+                    txt_insts.append(process_input_text(TGT_INST, text="", model_backbone=model_backbone, add_video_token=True)) # no tgt text here, only the universal instruction
                     name_insts.append(vid)
                 except: # simply skip the cand video if not exist, however, if the pos sample is a video, raise error
                     print_rank(f"Loading frames for {vid_path} failed.")
@@ -208,9 +208,7 @@ def data_prepare(batch_dict, *args, **kwargs):
                         raise FileNotFoundError(f"Positive sample video {vid_path} not found or failed to load!")
                     else:
                         print_rank(f"Skipping candidate video {vid_path}.")
-                        # vid_insts.append(None) 
-                        # txt_insts.append(None)
-                        continue # if as expected, no candidate will have more than 1 modality, so we can simply skip, if we append None here, no inputs will be available
+                        continue
             else:
                 vid_insts.append(None)
             
@@ -234,7 +232,7 @@ def data_prepare(batch_dict, *args, **kwargs):
     }
 
 DATASET_PARSER_NAME = "mscoco_cmret"
-DATASET_HF_PATH = "MINGYISU/t2iv" # can still use t2iv, will rename the dataset in the future
+DATASET_HF_PATH = "MINGYISU/mscoco_cmret" # can still use t2iv, will rename the dataset in the future
 @AutoEvalPairDataset.register(DATASET_PARSER_NAME)
 def load_mscoco_cmret_dataset(model_args, data_args, *args, **kwargs):
     dataset_name = kwargs["dataset_name"]
@@ -253,7 +251,7 @@ def load_mscoco_cmret_dataset(model_args, data_args, *args, **kwargs):
     # print_master(f"Start preparing dataset {dataset_name} with model backbone {model_args.model_backbone} and image resolution {data_args.image_resolution}. Total number of samples: {len(dataset)}.")
     dataset = generate_omnidirectional_dataset(dataset, *args, **kwargs)
     # TODO: DEBUGGING PURPOSE
-    dataset.to_json(f"debug_cm_input/{dataset_name}_debug.json")
+    # dataset.to_json(f"debug_cm_input/{dataset_name}_debug.json")
     dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True,
                           batch_size=256, num_proc=4,
                           drop_last_batch=False, load_from_cache_file=False)
