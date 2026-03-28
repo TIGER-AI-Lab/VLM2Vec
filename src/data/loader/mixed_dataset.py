@@ -45,7 +45,7 @@ def init_mixed_dataset(dataset_config, model_args, data_args, training_args):
             ("query_audio", audio_feature),
             ("pos_audio", audio_feature),
         ]:
-            if col in train_dataset.column_names:
+            if hasattr(train_dataset, "cast_column") and train_dataset.column_names and col in train_dataset.column_names:
                 train_dataset = train_dataset.cast_column(col, feature)
 
         # cast_column may return a new IterableDataset object and drop dynamically-set attributes.

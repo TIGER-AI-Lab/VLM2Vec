@@ -84,8 +84,8 @@ class TrainingArguments(TrainingArguments):
     interleave_stopping_strategy: str = field(default="all_exhausted", metadata={"help": "all_exhausted or first_exhausted"})
     interleave_batch_size: float = field(default=0, metadata={"help": "Specify mini-batch size to interleave data from multi-sources, 0/None means random sampling by examples, 1 means full batch."})
     export_full_checkpoint: int = field(default=0, metadata={"help": "Export full HF dir at a specific checkpoint step; 0 disables."})
-    loss_stage: str = field(default="infonce", metadata={"help": "Training loss stage: infonce | jepa | mixed"})
-    loss_alpha: float = field(default=0.5, metadata={"help": "Alpha for mixed loss: alpha*jepa + (1-alpha)*infonce"})
+    loss_mode: str = field(default="infonce", metadata={"help": "Training loss mode: infonce | jepa | mixed"})
+    jepa_loss_weight: float = field(default=0.5, metadata={"help": "Weight for JEPA loss: weight*jepa + (1-weight)*infonce"})
     jepa_predictor_hidden: int = field(default=0, metadata={"help": "Hidden dim for JEPA predictor MLP. <=0 means use emb dim."})
 
     def __post_init__(self):

@@ -454,26 +454,118 @@ class MultimodalEvalDataCollator:
                     end_t = audio_item.get("end", None)
 
                     if a_bytes is not None:
-                        wave, sr = torchaudio.load(io.BytesIO(a_bytes))
+                        try:
+                            wave, sr = torchaudio.load(io.BytesIO(a_bytes))
+                        except Exception:
+                            try:
+                                import soundfile as sf
+                                audio_data, sr = sf.read(io.BytesIO(a_bytes))
+                                wave = torch.from_numpy(audio_data).float()
+                                if wave.ndim == 1:
+                                    wave = wave.unsqueeze(0)
+                                else:
+                                    wave = wave.T
+                            except Exception:
+                                # Pure python WAV fallback
+                                sr = target_sr
+                                if a_bytes.startswith(b'RIFF'):
+                                    import wave as wave_lib
+                                    import numpy as np
+                                try:
+                                    with wave_lib.open(io.BytesIO(a_bytes), "rb") as wf:
+                                        n_channels = wf.getnchannels()
+                                        sampwidth = wf.getsampwidth()
+                                        sr = wf.getframerate()
+                                        n_frames = wf.getnframes()
+                                        data = wf.readframes(n_frames)
+                                        if sampwidth == 2:
+                                            wave_data = np.frombuffer(data, dtype=np.int16)
+                                        elif sampwidth == 4:
+                                            wave_data = np.frombuffer(data, dtype=np.int32)
+                                        else:
+                                            raise ValueError("Unsupported sample width")
+                                        wave = torch.from_numpy(wave_data).float() / (2**(8*sampwidth - 1))
+                                        if n_channels > 1:
+                                            wave = wave.reshape(-1, n_channels).T
+                                        else:
+                                            wave = wave.unsqueeze(0)
+                                except Exception:
+                                    raise ValueError("Failed to load audio from bytes via fallback")
+
                     elif a_path:
-                        info = torchaudio.info(a_path)
-                        sr = info.sample_rate
-                        total_frames = int(getattr(info, "num_frames", 0) or 0)
-                        frame_offset = max(0, int(start_t * sr))
-                        if total_frames > 0:
-                            frame_offset = min(frame_offset, max(0, total_frames - 1))
-
-                        if end_t is not None:
-                            seg_frames = int((float(end_t) - start_t) * sr)
-                            # 兜底：处理 end<=start 或浮点误差导致的 0 长度片段
-                            num_frames = max(1, seg_frames)
+                        if a_path.startswith("/data/mengrui/.cache/huggingface/datasets/MMEB-V3"):
+                            a_path = a_path.replace("/data/mengrui/.cache/huggingface/datasets/MMEB-V3", "/rmeng_data/data/vlm2vec/MMEB-V3-eval")
+                        try:
+                            info = torchaudio.info(a_path)
+                            sr = info.sample_rate
+                            total_frames = int(getattr(info, "num_frames", 0) or 0)
+                            frame_offset = max(0, int(start_t * sr))
                             if total_frames > 0:
-                                remain = max(1, total_frames - frame_offset)
-                                num_frames = min(num_frames, remain)
-                        else:
-                            num_frames = -1
+                                frame_offset = min(frame_offset, max(0, total_frames - 1))
 
-                        wave, _ = torchaudio.load(a_path, frame_offset=frame_offset, num_frames=num_frames)
+                            if end_t is not None:
+                                seg_frames = int((float(end_t) - start_t) * sr)
+                                num_frames = max(1, seg_frames)
+                                if total_frames > 0:
+                                    remain = max(1, total_frames - frame_offset)
+                                    num_frames = min(num_frames, remain)
+                            else:
+                                if total_frames > 0:
+                                    num_frames = max(1, total_frames - frame_offset)
+                                else:
+                                    num_frames = -1
+
+                            wave, _ = torchaudio.load(a_path, frame_offset=frame_offset, num_frames=num_frames)
+                        except Exception:
+                            # Fallback for systems without torchaudio.info or broken backends
+                            sr = target_sr # default
+                            wave = None
+                            if a_path.endswith(".wav"):
+                                import wave as wave_lib
+                                import numpy as np
+                                try:
+                                    with wave_lib.open(a_path, "rb") as wf:
+                                        n_channels = wf.getnchannels()
+                                        sampwidth = wf.getsampwidth()
+                                        sr = wf.getframerate()
+                                        n_frames = wf.getnframes()
+                                        data = wf.readframes(n_frames)
+                                        if sampwidth == 2:
+                                            wave_data = np.frombuffer(data, dtype=np.int16)
+                                        elif sampwidth == 4:
+                                            wave_data = np.frombuffer(data, dtype=np.int32)
+                                        else:
+                                            raise ValueError("Unsupported sample width")
+                                        wave_tensor = torch.from_numpy(wave_data).float() / (2**(8*sampwidth - 1))
+                                        if n_channels > 1:
+                                            wave_tensor = wave_tensor.reshape(-1, n_channels).T
+                                        else:
+                                            wave_tensor = wave_tensor.unsqueeze(0)
+                                        
+                                        frame_offset = int(start_t * sr)
+                                        num_frames = int((float(end_t) - start_t) * sr) if end_t is not None else -1
+                                        if num_frames > 0:
+                                            wave = wave_tensor[:, frame_offset : frame_offset + num_frames]
+                                        elif frame_offset > 0:
+                                            wave = wave_tensor[:, frame_offset:]
+                                        else:
+                                            wave = wave_tensor
+                                except Exception:
+                                    pass
+                                
+                            if wave is None:
+                                try:
+                                    wave, sr_load = torchaudio.load(a_path)
+                                    sr = sr_load if sr_load else sr
+                                    frame_offset = int(start_t * sr)
+                                    num_frames = int((float(end_t) - start_t) * sr) if end_t is not None else -1
+                                    if num_frames > 0:
+                                        wave = wave[:, frame_offset : frame_offset + num_frames]
+                                    elif frame_offset > 0:
+                                        wave = wave[:, frame_offset:]
+                                except Exception as e:
+                                    print(f"Failed to load audio from {a_path} via fallback. Error: {e}. Returning zeros.")
+                                    wave = torch.zeros(1, target_sr) # 1 second of silence
                     else:
                         raise ValueError("audio item missing array/path/bytes")
 

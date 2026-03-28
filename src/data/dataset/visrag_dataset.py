@@ -1,4 +1,6 @@
 from datasets import load_dataset
+import pyarrow as pa
+import datasets
 from PIL import Image
 from datasets.features.image import image_to_bytes
 from torch.jit import isinstance
@@ -74,6 +76,63 @@ def data_prepare(batch_dict, *args, **kwargs):
 
 
 DATASET_PARSER_NAME = "visrag"
+# Pure text preparation, bypassing image pulls in Python mapping
+def data_prepare_strings(batch_dict, *args, **kwargs):
+    model_backbone = kwargs['model_backbone']
+    query_texts, pos_texts, neg_texts = [], [], []
+    for query, source in zip(batch_dict['query'], batch_dict['source']):
+        query = process_query(query, prompt=query_source2prompt.get(source, ""), image_token="")
+        query_texts.append(query)
+        pos_text = process_query('', prompt=target_source2prompt.get(source, ""), image_token=VLM_IMAGE_TOKENS[model_backbone])
+        pos_texts.append(pos_text)
+        neg_texts.append("")
+    return {"query_text": query_texts, "query_image": [None]*len(query_texts),
+            "pos_text": pos_texts, "pos_audio": [None]*len(query_texts),
+            "neg_text": neg_texts, "neg_image": [None]*len(query_texts), "neg_audio": [None]*len(query_texts)}
+
+
+def _build_image_with_resolution(dataset, column, resolution_str):
+    if column not in dataset.column_names:
+        raise KeyError(f"missing column: {column}")
+    ds_table = dataset.data
+    pa_table = ds_table.table if hasattr(ds_table, "table") else ds_table
+    col_idx = pa_table.column_names.index(column)
+    src_col = pa_table.column(column)
+    
+    pair_type = pa.list_(pa.int32(), 2)
+    resolution = RESOLUTION_MAPPING.get(resolution_str, RESOLUTION_MAPPING["low"])
+    resolution_pair = [int(resolution[0]), int(resolution[1])]
+    
+    out_chunks = []
+    for chunk in src_col.chunks:
+        n = len(chunk)
+        if pa.types.is_struct(chunk.type):
+            field_names = set(chunk.type.names)
+            path_arr = chunk.field("path") if "path" in field_names else pa.nulls(n, type=pa.string())
+            bytes_arr = chunk.field("bytes") if "bytes" in field_names else pa.nulls(n, type=pa.binary())
+        else:
+            path_arr = pa.nulls(n, type=pa.string())
+            bytes_arr = chunk # assume chunk is binary bytes directly!
+            
+        offsets = pa.array(range(n + 1), type=pa.int32())
+        paths_list = pa.ListArray.from_arrays(offsets, path_arr, type=pa.list_(pa.string()))
+        bytes_list = pa.ListArray.from_arrays(offsets, bytes_arr, type=pa.list_(pa.binary()))
+        
+        pair_values = pa.array([resolution_pair] * n, type=pair_type)
+        resolutions_list = pa.ListArray.from_arrays(offsets, pair_values, type=pa.list_(pair_type))
+        
+        out_chunks.append(
+            pa.StructArray.from_arrays(
+                [paths_list, bytes_list, resolutions_list],
+                names=["paths", "bytes", "resolutions"],
+            )
+        )
+        
+    out_col = pa.chunked_array(out_chunks)
+    out_table = pa_table.set_column(col_idx, column, out_col)
+    return datasets.Dataset(out_table)
+
+
 @AutoPairDataset.register(DATASET_PARSER_NAME)
 def load_visreg_dataset(model_args, data_args, training_args, *args, **kwargs):
     dataset_name = kwargs.get("dataset_name", DATASET_PARSER_NAME)
@@ -82,29 +141,15 @@ def load_visreg_dataset(model_args, data_args, training_args, *args, **kwargs):
     dataset_path = kwargs.get("dataset_path", None)
 
     if dataset_path:
-        dataset = load_dataset("parquet", data_files=dataset_path, split="train")
+        dataset = load_dataset("parquet", data_files=dataset_path, split="train", streaming=True)
     elif dataset_name:
-        dataset = load_dataset(dataset_name, split=dataset_split)
-
-
-    num_sample_per_subset = kwargs.get("num_sample_per_subset", getattr(data_args, "num_sample_per_subset", None))
-    if num_sample_per_subset is not None and num_sample_per_subset < dataset.num_rows:
-        num_rows = int(num_sample_per_subset)
-        dataset = dataset.select(range(num_rows))
-    num_rows = dataset.num_rows
-
-    num_shards = training_args.dataloader_num_workers if training_args.dataloader_num_workers > 0 else 1
-    dataset = dataset.to_iterable_dataset(num_shards=num_shards)  # convert to IterableDataset and multiple shards
+        dataset = load_dataset(dataset_name, split=dataset_split, streaming=True)
 
     kwargs['model_backbone'] = model_args.model_backbone
     kwargs['image_resolution'] = data_args.image_resolution
     kwargs['global_dataset_name'] = global_dataset_name
-    # dataset = dataset.shuffle(buffer_size=8192, seed=training_args.seed)
-    dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True, batch_size=128,
-                          remove_columns=['image'],
-                          # remove_columns=['query', 'image', 'source'],
-                          drop_last_batch = True)
+
+    dataset = dataset.map(lambda x: data_prepare(x, **kwargs), batched=True, batch_size=8)
     dataset = dataset.cast(MULTIMODAL_FEATURES)
-    setattr(dataset, 'num_rows', num_rows)
-    # print_master(f"Loaded {DATASET_PARSER_NAME}/{dataset_name} dataset with {num_rows} samples")
+    setattr(dataset, 'num_rows', 1000000) # dummy value for Trainer
     return dataset

@@ -36,7 +36,7 @@ def data_prepare(batch_dict, *args, **kwargs):
             zip(batch_dict['video_name'], batch_dict['question'], batch_dict['answer'], batch_dict['question_id']):
         query = process_query(query + '? (A) yes; (B) no.', prompt=TASK_PROMPT, video_token=VLM_VIDEO_TOKENS[model_backbone])
         query_texts.append([query])
-        video_path = f'{video_root}/v_{video_name}.mp4'
+        video_path = f'{video_root}/r_{video_name}.mp4'
         frame_dir = f'{frame_root}/v_{video_name}'
         frames = load_frames(frame_dir)
         if not frames:

@@ -213,8 +213,8 @@ def load_audio_speechcoco_dataset(*args: Any, **kwargs: Any):
 
     parquet_files = _resolve_parquet_files(data_path, data_subdir, parquet_pattern)
     print_master(f"[SpeechCOCO] loading parquet shards: {len(parquet_files)} files")
-    dataset = _load_parquet_dataset(parquet_files, cache_dir=cache_dir)
-    print_master(f"[SpeechCOCO] raw rows: {len(dataset)}")
+    raw_dataset = _load_parquet_dataset(parquet_files, cache_dir=cache_dir)
+    print_master(f"[SpeechCOCO] raw rows: {len(raw_dataset)}")
 
     keep_cols = [
         c
@@ -233,43 +233,18 @@ def load_audio_speechcoco_dataset(*args: Any, **kwargs: Any):
             "disfluency_pos",
             "disfluency_val",
         ]
-        if c in dataset.column_names
+        if c in raw_dataset.column_names
     ]
-    dataset = dataset.select_columns(keep_cols)
-    dataset = sample_dataset(dataset, **kwargs)
-    dataset = dataset.filter(_is_valid_row)
-
-    if len(dataset) == 0:
-        raise ValueError("[SpeechCOCO] no valid rows after filtering")
-
-    # query: audio
-    dataset = dataset.rename_column("audio", "query_audio")
-    dataset = _build_audio_with_start_end(dataset, "query_audio")
-
-    # pos: image
-    dataset = dataset.rename_column("image", "pos_image")
+    # Push validation, reshaping, text-processing into generator
+    # We will just pass the raw dataset to the generator!
     image_resolution = kwargs.get("image_resolution", None)
     if image_resolution is None:
         data_args = kwargs.get("data_args", None)
         if data_args is not None:
             image_resolution = getattr(data_args, "image_resolution", None)
     resolution = RESOLUTION_MAPPING.get(image_resolution, RESOLUTION_MAPPING["low"])
-    dataset = _build_image_with_resolution(dataset, "pos_image", resolution)
 
     # align with eval by default: instruction-only query text
-    use_raw_text_in_query = bool(kwargs.get("use_raw_text_in_query", False))
-    query_texts: List[List[str]] = []
-    if use_raw_text_in_query:
-        raw_texts = dataset["text"]
-        for t in raw_texts:
-            q = build_query_text("SpeechCOCO", t)
-            assert isinstance(q, list) and len(q) == 1 and isinstance(q[0], str) and q[0].strip()
-            query_texts.append(q)
-    else:
-        q = build_query_text("SpeechCOCO")
-        assert isinstance(q, list) and len(q) == 1 and isinstance(q[0], str) and q[0].strip()
-        query_texts = [list(q) for _ in range(len(dataset))]
-
     model_backbone = kwargs.get("model_backbone", None)
     if model_backbone is None:
         model_args = kwargs.get("model_args")
@@ -278,65 +253,89 @@ def load_audio_speechcoco_dataset(*args: Any, **kwargs: Any):
     if model_backbone is None:
         raise ValueError("[SpeechCOCO] model_backbone is required")
 
-    pos_text = process_input_text(POS_TEXT_IMAGE_INST, model_backbone, add_image_token=True)
+    pos_text_val = process_input_text(POS_TEXT_IMAGE_INST, model_backbone, add_image_token=True)
+    fixed_query_q = build_query_text("SpeechCOCO")
+    assert isinstance(fixed_query_q, list) and len(fixed_query_q) == 1 and isinstance(fixed_query_q[0], str) and fixed_query_q[0].strip()
+    fixed_query_text = list(fixed_query_q)
 
-    num_rows = len(dataset)
-    ids = dataset["id"] if "id" in dataset.column_names else [None] * num_rows
-    image_ids = dataset["image_id"] if "image_id" in dataset.column_names else [None] * num_rows
-    texts = dataset["text"] if "text" in dataset.column_names else [None] * num_rows
-    durations = dataset["duration"] if "duration" in dataset.column_names else [None] * num_rows
-    timecodes = dataset["timecode"] if "timecode" in dataset.column_names else [None] * num_rows
-    speakers = dataset["speaker"] if "speaker" in dataset.column_names else [None] * num_rows
-    genders = dataset["gender"] if "gender" in dataset.column_names else [None] * num_rows
-    nationalities = dataset["nationality"] if "nationality" in dataset.column_names else [None] * num_rows
-    speeds = dataset["speed"] if "speed" in dataset.column_names else [None] * num_rows
-    disfluency_pos = (
-        dataset["disfluency_pos"] if "disfluency_pos" in dataset.column_names else [None] * num_rows
-    )
-    disfluency_val = (
-        dataset["disfluency_val"] if "disfluency_val" in dataset.column_names else [None] * num_rows
-    )
+    use_raw_text_in_query = bool(kwargs.get("use_raw_text_in_query", False))
 
-    dataset_infos: List[Dict[str, Any]] = []
-    for i in range(num_rows):
-        dataset_infos.append(
-            {
-                "id": ids[i],
-                "image_id": image_ids[i],
-                "text": texts[i],
-                "duration": durations[i],
-                "timecode": timecodes[i],
-                "speaker": speakers[i],
-                "gender": genders[i],
-                "nationality": nationalities[i],
-                "speed": speeds[i],
-                "disfluency_pos": disfluency_pos[i],
-                "disfluency_val": disfluency_val[i],
-            }
-        )
+    valid_cols = set(raw_dataset.column_names)
 
-    dataset = dataset.add_column("query_text", query_texts)
-    dataset = dataset.add_column("query_image", [None] * num_rows)
-    dataset = dataset.add_column("pos_text", [pos_text] * num_rows)
-    dataset = dataset.add_column("pos_audio", [None] * num_rows)
-    dataset = dataset.add_column("dataset_infos", dataset_infos)
+    def gen():
+        for row in raw_dataset:
+            if not _is_valid_row(row):
+                continue
+            
+            # transform row
+            res = {}
+            res["query_text"] = list(fixed_query_text)
+            res["query_image"] = None
+            
+            # Rename columns
+            # Wait, struct columns are tricky to yield if we don't match exactly. Let's just yield the dict.
+            res["query_audio"] = row["audio"] if "audio" in row else None
+            if res["query_audio"]:
+                # Ensure path, bytes, start, end are there
+                if "start" not in res["query_audio"]:
+                    res["query_audio"]["start"] = None
+                if "end" not in res["query_audio"]:
+                    res["query_audio"]["end"] = None
+                    
+            res["pos_text"] = pos_text_val
+            res["pos_image"] = row["image"] if "image" in row else None
+            if res["pos_image"]:
+                p = res["pos_image"].get("path")
+                b = res["pos_image"].get("bytes")
+                res["pos_image"] = {
+                    "paths": [p] if p else [],
+                    "bytes": [b] if b else [],
+                    "resolutions": [resolution]
+                }
+            res["pos_audio"] = None
+            
+            yield res
 
-    dataset = dataset.select_columns(
-        [
-            "query_text",
-            "query_image",
-            "query_audio",
-            "pos_text",
-            "pos_image",
-            "pos_audio",
-            "dataset_infos",
-        ]
-    )
+    # Preserve original length for interleaving
+    orig_length = len(raw_dataset)
+    
+    # Define explicit features to match MMEB schema expectations (int32 for resolutions)
+    import datasets
+    from datasets import Features, List, Value
+    
+    image_feature = Features({
+        "paths": List(Value("string")),
+        "bytes": List(Value("binary")),
+        "resolutions": List(List(Value("int32"), length=2)),
+    })
+    
+    sc_features = Features({
+        "query_text": List(Value("string")),
+        "query_image": image_feature,
+        "query_audio": Features({
+            "path": Value("string"),
+            "bytes": Value("binary"),
+            "start": Value("float32"),
+            "end": Value("float32"),
+        }),
+        "pos_text": Value("string"),
+        "pos_image": image_feature,
+        "pos_audio": Features({
+            "path": Value("string"),
+            "bytes": Value("binary"),
+            "start": Value("float32"),
+            "end": Value("float32"),
+        })
+    })
 
+    # Create a lazy IterableDataset from generator
+    dataset = datasets.IterableDataset.from_generator(gen, features=sc_features)
+    
     try:
-        setattr(dataset, "num_rows", len(dataset))
+        setattr(dataset, "num_rows", orig_length)
+        setattr(dataset, "column_names", ["query_text", "query_image", "query_audio", "pos_text", "pos_image", "pos_audio"])
     except (AttributeError, TypeError):
         pass
 
-    print_master(f"[SpeechCOCO] final rows: {len(dataset)}")
+    print_master(f"[SpeechCOCO] final rows: {orig_length}")
     return dataset

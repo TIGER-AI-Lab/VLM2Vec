@@ -276,7 +276,7 @@ class TwoStageLossOutput:
     components: Dict[str, Tensor]
 
 
-class OmniTwoStageLoss(nn.Module):
+class InfoNCEJepaMixedLoss(nn.Module):
     """
     A wrapper that exposes:
       - stage="jepa": JEPA(z_c, z_t)

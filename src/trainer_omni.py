@@ -33,7 +33,7 @@ import yaml
 
 # Import from VLM2Vec project
 from src.arguments import ModelArguments, DataArguments, TrainingArguments as VLMTrainingArguments
-from src.loss_omni import InfoNCELoss, DDPInfoNCELoss, OmniTwoStageLoss
+from src.loss_omni import InfoNCELoss, DDPInfoNCELoss, InfoNCEJepaMixedLoss
 from src.data.collator.train_collator_omni import OmniAutoProcessorCollator
 from src.data.loader.mixed_dataset import init_mixed_dataset
 from src.model.processor import load_processor, get_backbone_name
@@ -462,16 +462,16 @@ class OmniEmbedTrainer(Trainer):
         if temperature is None:
             temperature = 0.02
 
-        self.loss_stage = str(getattr(self.args, "loss_stage", "infonce")).strip().lower()
-        self.loss_alpha = float(getattr(self.args, "loss_alpha", 0.5))
-        if self.loss_stage not in {"infonce", "jepa", "mixed"}:
-            raise ValueError(f"Unsupported loss_stage={self.loss_stage}, expected one of infonce/jepa/mixed")
+        self.loss_mode = str(getattr(self.args, "loss_mode", "infonce")).strip().lower()
+        self.jepa_loss_weight = float(getattr(self.args, "jepa_loss_weight", 0.5))
+        if self.loss_mode not in {"infonce", "jepa", "mixed"}:
+            raise ValueError(f"Unsupported loss_mode={self.loss_mode}, expected one of infonce/jepa/mixed")
 
         loss_cls = DDPInfoNCELoss if (self.is_ddp and dist.get_world_size() > 1) else InfoNCELoss
         self.model.loss_fn = loss_cls(temperature=float(temperature), normalize=True)
-        self.model.loss_stage = self.loss_stage
+        self.model.loss_mode = self.loss_mode
 
-        if self.loss_stage in {"jepa", "mixed"}:
+        if self.loss_mode in {"jepa", "mixed"}:
             emb_dim = self._infer_embed_dim(self.model)
             if emb_dim is None and self.model_args is not None:
                 cfg_source = (
@@ -481,14 +481,14 @@ class OmniEmbedTrainer(Trainer):
                 emb_dim = self._infer_embed_dim_from_config_source(cfg_source)
             if emb_dim is None:
                 raise ValueError(
-                    "Cannot infer embedding dim for OmniTwoStageLoss. "
+                    "Cannot infer embedding dim for InfoNCEJepaMixedLoss. "
                     "Please ensure model config exposes hidden_size."
                 )
             jepa_hidden = int(getattr(self.args, "jepa_predictor_hidden", 0))
             if jepa_hidden <= 0:
                 jepa_hidden = None
             ref_param = next(self.model.parameters())
-            self.model.two_stage_loss = OmniTwoStageLoss(
+            self.model.two_stage_loss = InfoNCEJepaMixedLoss(
                 emb_dim=int(emb_dim),
                 infonce_temperature=float(temperature),
                 use_ddp_infonce=(self.is_ddp and dist.get_world_size() > 1),
@@ -626,7 +626,7 @@ class OmniEmbedTrainer(Trainer):
             if q_reps is None or p_reps is None:
                 loss = torch.tensor(0.0, device=next(real_model.parameters()).device)
             else:
-                stage = getattr(real_model, "loss_stage", "infonce")
+                stage = getattr(real_model, "loss_mode", "infonce")
                 if stage == "infonce":
                     loss = real_model.loss_fn(q_reps, p_reps, reduction="mean")
                 elif stage == "jepa":
@@ -639,7 +639,7 @@ class OmniEmbedTrainer(Trainer):
                         z_t=p_reps,
                         q=q_reps,
                         d=p_reps,
-                        alpha=self.loss_alpha,
+                        alpha=self.jepa_loss_weight,
                         reduction="mean",
                     )
                     loss = out.loss
@@ -764,15 +764,18 @@ class OmniEmbedTrainer(Trainer):
 
         enc: OmniEmbedder = self.model.encoder
         model_name_or_path = getattr(self.model_args, "model_name", None) if self.model_args is not None else None
-        if self.model_args is not None and getattr(self.model_args, "lora", False):
-            try:
-                from peft import PeftModel
-            except Exception as e:
-                raise RuntimeError("LoRA is enabled but PEFT is not available.") from e
+        try:
+            from peft import PeftModel
+            peft_available = True
+        except ImportError:
+            peft_available = False
 
-            peft_model = None
-            peft_source = None
+        peft_model = None
+        peft_source = None
+        
+        if peft_available:
             candidates = [
+                ("enc.model", getattr(enc, "model", None)),
                 ("enc.model.base_model", getattr(enc.model, "base_model", None)),
                 ("enc.model.model", getattr(enc.model, "model", None)),
             ]
@@ -787,9 +790,7 @@ class OmniEmbedTrainer(Trainer):
                     peft_source = name
                     break
 
-            if peft_model is None:
-                raise RuntimeError("LoRA is enabled but no PEFT adapter was found on enc.model.")
-
+        if peft_model is not None:
             logger.info(f"Saving LoRA adapter from {peft_source}.")
             peft_model.save_pretrained(output_dir, safe_serialization=True)
             adapter_cfg = os.path.join(output_dir, "adapter_config.json")

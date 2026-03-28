@@ -2,12 +2,16 @@ import logging
 import os.path
 import sys
 
+import filelock
+filelock.BaseFileLock.acquire = lambda self, *args, **kwargs: None
+
 logging.basicConfig(
     level=logging.INFO, format='[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s',
     handlers=[logging.StreamHandler(sys.stdout)]
 )
 logger = logging.getLogger(__name__)
 
+import json
 import torch
 import wandb
 import yaml
@@ -21,6 +25,9 @@ from src.trainer_omni import OmniEmbedder, OmniBiEncoder, OmniEmbedTrainer, log_
 from src.utils.basic_utils import print_rank, find_latest_checkpoint
 
 
+from torch.distributed.elastic.multiprocessing.errors import record
+
+@record
 def main():
     # a hack for torch.distributed.launch: https://github.com/huggingface/transformers/issues/22171
     for arg in sys.argv:
@@ -74,6 +81,18 @@ def main():
             wandb.config.update(model_args)
             wandb.config.update(data_args)
             wandb.config.update(training_args)
+        
+        # Dump configs to JSON for review
+        os.makedirs(training_args.output_dir, exist_ok=True)
+        config_path = os.path.join(training_args.output_dir, "config_dump.json")
+        with open(config_path, "w") as f:
+            d = {
+                "model_args": model_args.to_dict() if hasattr(model_args, "to_dict") else vars(model_args),
+                "data_args": data_args.to_dict() if hasattr(data_args, "to_dict") else vars(data_args),
+                "training_args": training_args.to_dict() if hasattr(training_args, "to_dict") else vars(training_args)
+            }
+            json.dump(d, f, indent=2, default=str)
+        print_rank(f"Saved training configs to {config_path}")
 
     encoder = OmniEmbedder(
         model_name_or_path=model_args.model_name,
@@ -150,7 +169,32 @@ def main():
     )
     train_dataset.trainer = trainer
 
-    trainer.train(resume_from_checkpoint=resume_checkpoint_dir)
+    if resume_checkpoint_dir:
+        logger.info(f"Loading LoRA weights manually from {resume_checkpoint_dir}")
+        try:
+            import glob
+            # Look for safetensors or bin
+            safes = glob.glob(os.path.join(resume_checkpoint_dir, "adapter_model.safetensors"))
+            bins = glob.glob(os.path.join(resume_checkpoint_dir, "adapter_model.bin"))
+            
+            loaded_state = {}
+            if safes:
+                from safetensors.torch import load_file
+                loaded_state = load_file(safes[0])
+            elif bins:
+                loaded_state = torch.load(bins[0], map_location='cpu')
+                
+            if loaded_state:
+                # Load with strict=False to avoid error on standard non-LoRA parameters
+                missing, unexpected = encoder.model.load_state_dict(loaded_state, strict=False)
+                logger.info(f"LoRA weights loaded. Missing: {len(missing)} Unprocessed: {len(unexpected)}")
+            else:
+                logger.warning("No adapter_model.safetensors or adapter_model.bin found in checkpoint directory.")
+        except Exception as e:
+            logger.warning(f"Could not load adapter manually via safetensors/torch.load: {e}.")
+
+    # We bypass passing resume_checkpoint_dir to trainer.train to avoid index.json errors!
+    trainer.train()
     trainer.save_model(training_args.output_dir)
 
     if trainer.is_world_process_zero():

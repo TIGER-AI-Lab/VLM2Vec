@@ -635,12 +635,9 @@ class MMEBModel(nn.Module):
             LLAVA_NEXT, QWEN2_VL, QWEN2_5_VL, QWEN2_VL_TOKENSELECTION, QWEN2_5_VL_TOKENSELECTION, QWEN2_5_OMNI, E5_V
         }:
             config = AutoConfig.from_pretrained(model_args.model_name, trust_remote_code=True)
-            try:
-                config._attn_implementation = "flash_attention_2"
-                if hasattr(config, "vision_config"):
-                    config.vision_config._attn_implementation = "flash_attention_2"
-            except Exception as e:
-                print_master(f"Warning: Could not set flash_attention_2 for {model_args.model_backbone}: {e}")
+            config._attn_implementation = "flash_attention_2"
+            if hasattr(config, "vision_config"):
+                config.vision_config._attn_implementation = "flash_attention_2"
 
             base_model = backbone2model[model_args.model_backbone].from_pretrained(
                 model_args.model_name,

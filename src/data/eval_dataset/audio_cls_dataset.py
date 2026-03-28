@@ -12,7 +12,54 @@ from src.utils.dataset_utils import load_hf_dataset, sample_dataset
 from src.data.eval_dataset.audio_instruction_utils import build_query_text
 from src.constant.dataset_hf_path import EVAL_DATASET_HF_PATH
 from src.constant.dataset_hflocal_path import EVAL_DATASET_HF_PATH as EVAL_DATASET_LOCAL_PATH
+import pyarrow as pa
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset
+
+def _build_audio_with_start_end(dataset: datasets.Dataset, column: str) -> datasets.Dataset:
+    """
+    将 struct<bytes,path> 规范成 struct<path,bytes,start,end>，避免 mixed_dataset.cast_column 失败。
+    这里直接在 Arrow 层重建 struct 字段，复用原有 bytes/path 缓冲区，不复制大音频 payload。
+    同时去除了 datasets.Audio() 的扩展类型元数据，绕过 torchcodec。
+    """
+    if column not in dataset.column_names:
+        raise KeyError(f"missing column: {column}")
+
+    ds_table = dataset.data
+    pa_table = ds_table.table if hasattr(ds_table, "table") else ds_table
+    col_idx = pa_table.column_names.index(column)
+    src_col = pa_table.column(column)
+
+    out_chunks = []
+    for chunk in src_col.chunks:
+        if not pa.types.is_struct(chunk.type):
+            raise TypeError(f"{column} must be a struct column, got={chunk.type}")
+        field_names = set(chunk.type.names)
+
+        path_arr = chunk.field("path") if "path" in field_names else pa.nulls(len(chunk), type=pa.string())
+        bytes_arr = (
+            chunk.field("bytes") if "bytes" in field_names else pa.nulls(len(chunk), type=pa.binary())
+        )
+        start_arr = (
+            chunk.field("start")
+            if "start" in field_names
+            else pa.nulls(len(chunk), type=pa.float32())
+        )
+        end_arr = (
+            chunk.field("end")
+            if "end" in field_names
+            else pa.nulls(len(chunk), type=pa.float32())
+        )
+
+        out_chunks.append(
+            pa.StructArray.from_arrays(
+                [path_arr, bytes_arr, start_arr, end_arr],
+                names=["path", "bytes", "start", "end"],
+            )
+        )
+
+    out_col = pa.chunked_array(out_chunks)
+    out_table = pa_table.set_column(col_idx, column, out_col)
+    return datasets.Dataset(out_table)
 
 
 # -------- 通用工具 --------
@@ -468,7 +515,12 @@ def build_audio_cls_dataset(dataset_name: str, path_info: Tuple[str, str, str], 
     # 添加dataset_name到kwargs，供data_prepare使用
     kwargs["dataset_name"] = dataset_name
 
-    dataset = sample_dataset(dataset, **kwargs)
+    if "audio" in dataset.column_names:
+        try:
+            dataset = _build_audio_with_start_end(dataset, "audio")
+        except Exception as e:
+            # If it fails, maybe it's not a struct, just skip
+            pass
 
     dataset = dataset.map(
         lambda x: data_prepare(x, **kwargs),

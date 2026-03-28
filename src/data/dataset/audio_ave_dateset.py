@@ -116,10 +116,14 @@ def load_audio_ave_dataset(*args: Any, **kwargs: Any):
         if not os.path.isfile(video_abs):
             continue
         try:
-            info = torchaudio.info(audio_abs)
-            if info.num_frames <= 0 or info.sample_rate <= 0:
-                continue
-        except Exception:
+            import wave
+            with wave.open(audio_abs, "r") as f:
+                frames = f.getnframes()
+                rate = f.getframerate()
+                if frames <= 0 or rate <= 0:
+                    continue
+        except Exception as e:
+            print(f"[AVE] wave opening failed for {audio_abs}: {e}")
             continue
         audio_records.append(
             {

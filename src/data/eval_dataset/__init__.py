@@ -30,7 +30,7 @@ from .image_t2i_eval import load_image_t2i_dataset
 from .image_i2t_eval import load_image_i2t_dataset
 from .image_i2i_vg_dataset import load_image_i2i_vg_dataset
 from .mcmr_dataset import load_mcmr_dataset
-from .mscoco_cmret import load_mscoco_cmret_dataset
+# from .mscoco_cmret import load_mscoco_cmret_dataset
 
 # VisDoc
 from .vidore_dataset import load_vidore_dataset

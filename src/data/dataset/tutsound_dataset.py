@@ -144,15 +144,17 @@ def build_tutsound_audio_dataset(*args: Any, **kwargs: Any):
         gt_events = info["events"]
 
         try:
-            audio_info = torchaudio.info(abs_path)
-            if audio_info.num_frames <= 0 or audio_info.sample_rate <= 0:
-                print(f"Warning: Invalid audio info for {abs_path}: {audio_info}")
-                continue
+            import wave
+            with wave.open(abs_path, "r") as f:
+                frames = f.getnframes()
+                rate = f.getframerate()
+                if frames <= 0 or rate <= 0:
+                    print(f"Warning: Invalid audio info for {abs_path}: frames={frames}, rate={rate}")
+                    continue
+                audio_dur = float(frames) / float(rate)
         except Exception as e:
             print(f"Warning: Failed to read audio info for {abs_path}: {e}")
             continue
-
-        audio_dur = float(audio_info.num_frames) / float(audio_info.sample_rate)
         normalized_events = []
         for ev in gt_events:
             seg_s, seg_e = _normalize_segment(ev["onset"], ev["offset"], audio_dur=audio_dur)

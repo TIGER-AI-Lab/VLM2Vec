@@ -18,9 +18,13 @@ from src.data.eval_dataset.audio_instruction_utils import build_query_text
 
 def _is_valid_audio_path(path: str) -> bool:
     try:
-        info = torchaudio.info(path)
-        return info.num_frames > 0 and info.sample_rate > 0
-    except Exception:
+        import wave
+        with wave.open(path, "r") as f:
+            frames = f.getnframes()
+            rate = f.getframerate()
+            return frames > 0 and rate > 0
+    except Exception as e:
+        print(f"[Clotho] wave opening failed for {path}: {e}")
         return False
 
 

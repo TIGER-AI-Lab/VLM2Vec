@@ -6,7 +6,7 @@ import requests
 import torchvision
 from PIL import Image
 from torchvision.datasets.folder import IMG_EXTENSIONS, pil_loader
-from torchvision.io import write_video
+# from torchvision.io import write_video
 from . import video_transforms
 
 VID_EXTENSIONS = (".mp4", ".avi", ".mov", ".mkv")
@@ -158,7 +158,8 @@ def save_sample(x, fps=8, save_path=None, normalize=True, value_range=(-1, 1), f
             x.clamp_(min=low, max=high)
             x.sub_(low).div_(max(high - low, 1e-5))
         x = x.mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 3, 0).to("cpu", torch.uint8)
-        write_video(save_path, x, fps=fps, video_codec="h264")
+        # write_video(save_path, x, fps=fps, video_codec="h264")
+        pass
     print(f"Saved to {save_path}")
     return save_path
 
@@ -717,7 +718,8 @@ if __name__ == "__main__":
     print(select_vframes_trans_int.dtype)
     print(select_vframes_trans_int.permute(0, 2, 3, 1).shape)
 
-    io.write_video("./test.avi", select_vframes_trans_int.permute(0, 2, 3, 1), fps=8)
+    # io.write_video("./test.avi", select_vframes_trans_int.permute(0, 2, 3, 1), fps=8)
+    pass
 
     for i in range(target_video_len):
         save_image(

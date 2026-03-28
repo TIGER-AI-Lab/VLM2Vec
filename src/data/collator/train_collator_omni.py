@@ -155,16 +155,72 @@ class OmniAutoProcessorCollator:
                 end_t = float(end_v) if end_v is not None else None
 
                 if a_bytes is not None:
-                    wave, sr = torchaudio.load(io.BytesIO(a_bytes))
+                    try:
+                        wave, sr = torchaudio.load(io.BytesIO(a_bytes))
+                    except Exception:
+                        # Pure python WAV fallback
+                        sr = target_sr
+                        if a_bytes.startswith(b'RIFF'):
+                            import wave as wave_lib
+                            import numpy as np
+                            try:
+                                with wave_lib.open(io.BytesIO(a_bytes), "rb") as wf:
+                                    n_channels = wf.getnchannels()
+                                    sampwidth = wf.getsampwidth()
+                                    sr = wf.getframerate()
+                                    n_frames = wf.getnframes()
+                                    data = wf.readframes(n_frames)
+                                    if sampwidth == 2:
+                                        wave_data = np.frombuffer(data, dtype=np.int16)
+                                    elif sampwidth == 4:
+                                        wave_data = np.frombuffer(data, dtype=np.int32)
+                                    else:
+                                        raise ValueError("Unsupported sample width")
+                                    wave = torch.from_numpy(wave_data).float() / (2**(8*sampwidth - 1))
+                                    if n_channels > 1:
+                                        wave = wave.reshape(-1, n_channels).T
+                                    else:
+                                        wave = wave.unsqueeze(0)
+                            except Exception:
+                                out.append(None)
+                                continue
+                        else:
+                            out.append(None)
+                            continue
                 elif a_path:
-                    info = torchaudio.info(a_path)
-                    sr = info.sample_rate
-                    frame_offset = int(start_t * sr)
-                    num_frames = int((end_t - start_t) * sr) if end_t is not None else -1
-                    if num_frames == 0:
-                        out.append(None)
-                        continue
-                    wave, _ = torchaudio.load(a_path, frame_offset=frame_offset, num_frames=num_frames)
+                    try:
+                        info = torchaudio.info(a_path)
+                        sr = info.sample_rate
+                        frame_offset = int(start_t * sr)
+                        num_frames = int((end_t - start_t) * sr) if end_t is not None else -1
+                        if num_frames == 0:
+                            out.append(None)
+                            continue
+                        wave, _ = torchaudio.load(a_path, frame_offset=frame_offset, num_frames=num_frames)
+                    except Exception:
+                        # Fallback for systems without torchaudio.info or broken backends
+                        sr = target_sr # default
+                        if a_path.endswith(".wav"):
+                            import wave as wave_lib
+                            try:
+                                with wave_lib.open(a_path, "rb") as wf:
+                                    sr = wf.getframerate()
+                            except Exception:
+                                pass
+                        
+                        try:
+                            # Load the whole file and slice in memory if partial load fails or info is missing
+                            wave, sr_load = torchaudio.load(a_path)
+                            sr = sr_load if sr_load else sr
+                            frame_offset = int(start_t * sr)
+                            num_frames = int((end_t - start_t) * sr) if end_t is not None else -1
+                            if num_frames > 0:
+                                wave = wave[:, frame_offset : frame_offset + num_frames]
+                            elif frame_offset > 0:
+                                wave = wave[:, frame_offset:]
+                        except Exception:
+                            out.append(None)
+                            continue
                 else:
                     out.append(None)
                     continue
