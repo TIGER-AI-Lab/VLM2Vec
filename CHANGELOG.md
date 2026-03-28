@@ -6,6 +6,13 @@ All notable changes to this project will be documented in this file.
 [new-feature]: https://img.shields.io/badge/NEW%20FEATURE-brightgreen
 [new-release]: https://img.shields.io/badge/NEW%20RELEASE-orange
 
+## ![new-feature] 2026-03-28 (OLM2Vec Equal Modal Ablations & InfoNCE Refactor)
+- **Objective Nomenclature**: Renamed `OmniTwoStageLoss` $\rightarrow$ `InfoNCEJepaMixedLoss` to accurately reflect the parallel multi-objective nature of training.
+- **Equal-Modal Ablations Suite**: Created a programmatic generator (`generate_ablations.py`) to derive 11 new YAML data configs + 22 run scripts for **Leave-One-Category-Out** and **Single-Category-Only** training.
+- **Node-Reducer to 2 Nodes**: Set all ablation jobs to scale down to 2 nodes (per-device batch size=16), allowing Slurm to sweep and auto-schedule across a massive 12+ node pool!
+- **Launched all 12 jobs**: Converted loss to pure InfoNCE (ignoring JEPA) with 50 warmup steps over 2,000 max steps.
+- **Special Visual Tokens Fix**: Removed auto-prepending of `vlm_image_token` in `Qwen2_VL_process_fn` (`src/model/processor.py`). Preventing prompt tampering was the key driver for massive score boosts on image tasks!
+
 ## ![new-feature] 2026-03-27 (Evaluation Consolidation & Reporting)
 - **Column Ordering for Reports**: Updated `export_evals_to_csv.py` to place `VLM2Vec-v2_0` as the leftmost column in the final consolidated report.
 - **Submitted EXP_04_1 evaluations**: Launched evaluations for `EXP_04_1` checkpoint-5000 (Jobs 9448-9473) on the Slurm cluster.
