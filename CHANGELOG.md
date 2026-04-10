@@ -6,6 +6,19 @@ All notable changes to this project will be documented in this file.
 [new-feature]: https://img.shields.io/badge/NEW%20FEATURE-brightgreen
 [new-release]: https://img.shields.io/badge/NEW%20RELEASE-orange
 
+## ![bug-fix] 2026-03-30 (DDP Deadlock Resolved & Pure Audio Ablations Established)
+- **Programmatic `ddp_find_unused_parameters`**: Set `training_args.ddp_find_unused_parameters = True` programmatically in `train_omni.py` to allow DDP to safely ignore zero-gradients for unused towers (vision vs audio).
+- **Pure Audio Config Purge**: Commented out `AVE_audio_video` in `koo_audio_only.yaml` to prevent visual tokens from entering pure acoustic training profiles.
+- **Verified Job 10351 Stable Execution**: Reached **Step 1631+** (past the previous Step 6 hang barrier!) and is pacing towards the 2,000 max-step milestone!
+
+## ![bug-fix] 2026-03-29 (Debugging OLM2Vec Audio Ablation)
+- **Diagnostic Prints in `trainer_omni.py`**: Shifted diagnostic prints from `src/model/model.py` to `src/trainer_omni.py` (`OmniEmbedder.forward`) after discovering that `MMEBModel` is NOT used in the `Qwen2.5-Omni` training pipeline.
+- **Rsync Syncing**: Synced local `src/` changes to the remote Slurm cluster.
+- **Launched Job 10342**: Re-launched `exp_02.4_only_audio` to capture `requires_grad` states for inputs and outputs.
+- **Hotfixed Empty Batch Backward Crash**: Intercepted empty batches (`valid_idx.numel() == 0`) in `compute_loss`. Replaced hardcoded `0.0` fallback with `trainable_param.sum() * 0.0` to preserve `requires_grad=True` and valid `grad_fn`.
+- **Fixed `process_index` Typo**: Resolved an `AttributeError` by correctly accessing `process_index` via `self.args` using a safe fallback.
+- **Launched and Verified Job 10346**: Verified stable execution without autograd crashes, averaging $\approx$ 1 step per minute!
+
 ## ![new-feature] 2026-03-28 (OLM2Vec Equal Modal Ablations & InfoNCE Refactor)
 - **Objective Nomenclature**: Renamed `OmniTwoStageLoss` $\rightarrow$ `InfoNCEJepaMixedLoss` to accurately reflect the parallel multi-objective nature of training.
 - **Equal-Modal Ablations Suite**: Created a programmatic generator (`generate_ablations.py`) to derive 11 new YAML data configs + 22 run scripts for **Leave-One-Category-Out** and **Single-Category-Only** training.

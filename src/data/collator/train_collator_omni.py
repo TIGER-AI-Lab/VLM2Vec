@@ -473,7 +473,7 @@ class OmniAutoProcessorCollator:
         # replace invalid samples with pure text dummy (keeps batch size stable)
         for i, ok in enumerate(valid):
             if not ok:
-                q_texts[i], p_texts[i] = " ", " "
+                q_texts[i], p_texts[i] = "Understand the content: ", "Understand the content: "
                 q_imgs[i], p_imgs[i] = None, None
                 q_vids[i], p_vids[i] = None, None
                 q_wavs[i], p_wavs[i] = None, None

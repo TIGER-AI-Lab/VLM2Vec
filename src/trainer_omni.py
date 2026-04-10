@@ -382,11 +382,20 @@ class OmniEmbedder(nn.Module):
             print(f"[DEBUG] fwd devices: {devs}")
             print(f"[DEBUG] fwd shapes: {shapes}")
 
+        # --- DIAGNOSTIC PRINT ---
+        if True: # Always print for now to debug
+            shapes = {k: (tuple(v.shape) if isinstance(v, torch.Tensor) else type(v)) for k, v in inputs.items()}
+            print(f"[OMNI_FWD] keys: {list(inputs.keys())}, shapes: {shapes}", flush=True)
+
         # No generation; just hidden states
         try:
             outputs = self.model(**inputs, output_hidden_states=True, return_dict=True, use_cache=False)
         except TypeError:
             outputs = self.model(**inputs)
+
+        # --- DIAGNOSTIC PRINT ---
+        hs = self._extract_hidden(outputs)
+        print(f"[OMNI_FWD] outputs type: {type(outputs)}, hs requires_grad: {hs.requires_grad if isinstance(hs, torch.Tensor) else 'None'}", flush=True)
 
         if hasattr(outputs, "embeddings") and outputs.embeddings is not None:
             emb = outputs.embeddings
@@ -602,7 +611,13 @@ class OmniEmbedTrainer(Trainer):
                 valid_mask = valid_mask.to(next(real_model.parameters()).device)
             valid_idx = torch.nonzero(valid_mask, as_tuple=False).squeeze(1)
             if valid_idx.numel() == 0:
-                loss = torch.tensor(0.0, device=next(real_model.parameters()).device)
+                print(f"[COMP_LOSS_EMPTY] process_index: {getattr(self.args, 'process_index', 'unknown')}", flush=True)
+                # Find a trainable parameter to attach gradient to so backward doesn't crash
+                trainable_param = next((p for p in real_model.parameters() if p.requires_grad), None)
+                if trainable_param is not None:
+                    loss = trainable_param.sum() * 0.0
+                else:
+                    loss = torch.tensor(0.0, device=next(real_model.parameters()).device)
             else:
                 def _slice_batch(batch, idxs):
                     sliced = {}
@@ -624,7 +639,12 @@ class OmniEmbedTrainer(Trainer):
             q_reps = real_model.encode(qry_batch)
             p_reps = real_model.encode(tgt_batch)
             if q_reps is None or p_reps is None:
-                loss = torch.tensor(0.0, device=next(real_model.parameters()).device)
+                print(f"[COMP_LOSS_NONE] q_reps is None: {q_reps is None}, p_reps is None: {p_reps is None}", flush=True)
+                trainable_param = next((p for p in real_model.parameters() if p.requires_grad), None)
+                if trainable_param is not None:
+                    loss = trainable_param.sum() * 0.0
+                else:
+                    loss = torch.tensor(0.0, device=next(real_model.parameters()).device)
             else:
                 stage = getattr(real_model, "loss_mode", "infonce")
                 if stage == "infonce":
@@ -645,6 +665,9 @@ class OmniEmbedTrainer(Trainer):
                     loss = out.loss
                 else:
                     raise ValueError(f"Unknown loss stage: {stage}")
+        
+        print(f"[COMP_LOSS_END] loss.requires_grad: {loss.requires_grad if isinstance(loss, torch.Tensor) else 'None'}", flush=True)
+
         if not hasattr(self, "_debug_loss_once"):
             self._debug_loss_once = True
             q_ids = qry_batch.get("input_ids")

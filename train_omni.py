@@ -42,6 +42,15 @@ def main():
     model_args: ModelArguments
     data_args: DataArguments
     training_args: TrainingArguments
+    
+    # Programmatically set find_unused_parameters to prevent DDP deadlock of visual/audio mixed batches
+    try:
+        training_args.ddp_find_unused_parameters = True
+    except (AttributeError, Exception):
+        try:
+            training_args.find_unused_parameters = True
+        except Exception:
+            pass
 
     # Initialize distributed/device state early to avoid AcceleratorState reset after Accelerator creation.
     _ = training_args._setup_devices

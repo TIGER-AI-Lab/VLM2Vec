@@ -211,6 +211,8 @@ class DDPInfoNCELoss(nn.Module):
                 parts.append(g[:b].detach()) # remote constant negatives
         all_d = torch.cat(parts, dim=0) if parts else d
 
+        print(f"[DDP_LOSS] q.requires_grad: {q.requires_grad}, d.requires_grad: {d.requires_grad}, all_d.requires_grad: {all_d.requires_grad}", flush=True)
+
         if self.normalize:
             q = l2norm(q)
             all_d = l2norm(all_d)
@@ -220,6 +222,7 @@ class DDPInfoNCELoss(nn.Module):
 
         logits = q @ all_d.t()
         loss = F.cross_entropy(logits / self.temperature, target, reduction=reduction)
+        print(f"[DDP_LOSS] loss.requires_grad: {loss.requires_grad}", flush=True)
         return loss
 
 

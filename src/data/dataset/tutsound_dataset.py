@@ -14,7 +14,7 @@ from src.data.eval_dataset.audio_instruction_utils import build_query_text
 from src.data.dataset.base_pair_dataset import AutoPairDataset
 
 
-POS_TEXT_AUDIO = "[AUDIO]"
+POS_TEXT_AUDIO = "Understand the audio event: [AUDIO]"
 
 
 def _read_evaluate_file(eval_path: str) -> List[Tuple[str, str, float, float, str]]:

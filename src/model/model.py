@@ -390,6 +390,14 @@ class MMEBModel(nn.Module):
                 }
                 if is_wave:
                     forward_kwargs["pred_embeds"] = bool(getattr(self, "wave_pred_embeds", True))
+                
+                # --- DIAGNOSTIC PRINT ---
+                ids = model_input.get("input_ids", None)
+                feats = model_input.get("input_features", None)
+                print(f"[DEBUG OMNI] input_ids: {ids.shape if isinstance(ids, torch.Tensor) else None}, "
+                      f"input_features: {feats.shape if isinstance(feats, torch.Tensor) else None}, "
+                      f"has_multimodal: {has_multimodal}", flush=True)
+                
                 outputs = self.encoder(**forward_kwargs)
                 attn_mask = model_input.get("attention_mask", None)
             else:
@@ -810,6 +818,12 @@ class MMEBModel(nn.Module):
     def forward(self, qry: Dict[str, Tensor] = None, tgt: Dict[str, Tensor] = None, *args, **kwargs):
         qry_reps = self.encode_input(qry) if qry else None
         tgt_reps = self.encode_input(tgt) if tgt else None
+
+        # --- DIAGNOSTIC PRINT FOR REPS GRADIENTS ---
+        if qry_reps is not None:
+            print(f"[REPS GRAD] Rank: {self.process_rank if hasattr(self, 'process_rank') else 'n/a'}, qry_reps.requires_grad={qry_reps.requires_grad}", flush=True)
+        if tgt_reps is not None:
+            print(f"[REPS GRAD] Rank: {self.process_rank if hasattr(self, 'process_rank') else 'n/a'}, tgt_reps.requires_grad={tgt_reps.requires_grad}", flush=True)
 
         if qry_reps is None or tgt_reps is None:
             return {"qry_reps": qry_reps, "tgt_reps": tgt_reps}

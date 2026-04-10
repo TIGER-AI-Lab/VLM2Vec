@@ -131,7 +131,7 @@ def load_audio_clotho_dataset(*args: Any, **kwargs: Any):
         query_images.append(None)
         query_audios.append(None)
 
-        pos_texts.append("[AUDIO]")
+        pos_texts.append("Understand the audio content: [AUDIO]")
         pos_images.append(None)
         pos_audios.append({"path": audio_path, "bytes": None, "start": None, "end": None})
 
