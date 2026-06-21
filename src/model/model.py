@@ -684,6 +684,17 @@ class MMEBModel(nn.Module):
                     config.vision_config._attn_implementation = "flash_attention_2"
             except Exception as e:
                 print_master(f"Warning: Could not set flash_attention_2 for {model_args.model_backbone}: {e}")
+            # flash-attn's Triton rotary kernel (_apply_rotary_pos_emb_flashatt) errors
+            # ("Triton CUDA: invalid argument") on long video-frame sequences (e.g. K700).
+            # Route the vision rotary through the library's pure-torch apply_rotary_pos_emb_vision
+            # (identical to the sdpa path's rotary); flash attention itself (varlen) is unaffected.
+            try:
+                from transformers.models.qwen2_5_omni import modeling_qwen2_5_omni as _qomni
+                _qomni.Qwen2_5OmniVisionFlashAttention2._apply_rotary_pos_emb_flashatt = (
+                    lambda self, tensor, freqs: _qomni.apply_rotary_pos_emb_vision(tensor, freqs)
+                )
+            except Exception as e:
+                print_master(f"Warning: could not patch vision rotary: {e}")
             base_model = AutoModel.from_pretrained(
                 model_args.model_name,
                 torch_dtype=torch.bfloat16,
