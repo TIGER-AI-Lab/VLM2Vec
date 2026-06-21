@@ -1,0 +1,13 @@
+# Smoke test: one memory task + one small tool subtask to validate both loaders + nvomniembed
+memory/PeerQA:
+  dataset_parser: memory_retrieval
+  dataset_name: PeerQA
+  data_path: memory-tasks/Semantic/PeerQA
+  eval_type: global
+
+toolde/code/toolink:
+  dataset_parser: toolde
+  subset_name: code/toolink
+  query_file: tool-tasks/ToolDe-Queries/code/toolink/queries-00000-of-00001.parquet
+  candidate_file: tool-tasks/ToolDe-Candidates/code/tools-00000-of-00001.parquet
+  eval_type: global
