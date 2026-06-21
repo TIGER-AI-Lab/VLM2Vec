@@ -1,0 +1,99 @@
+# Cross-modality config for models without audio support (e.g., Qwen3-VL-Embedding).
+# - Removes all tasks with audio query/input.
+# - Removes audio candidates from cand_mod.
+
+MSCOCO_t2i:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cmt2i
+    dataset_split: test
+    data_path: mscoco_cmret.jsonl
+    image_root: val2014
+    video_root: videos
+    audio_root: audios
+    frame_root: frames_omni
+    num_frames: 8
+    max_frames_saved: 16
+    input_mod: ['T']
+    query_mod: ['I']
+    cand_mod: ['T', 'I', 'V']
+    eval_type: local
+
+MSCOCO_t2v:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cmt2v
+    dataset_split: test
+    data_path: mscoco_cmret.jsonl
+    image_root: val2014
+    video_root: videos
+    audio_root: audios
+    frame_root: frames_omni
+    num_frames: 8
+    max_frames_saved: 16
+    input_mod: ['T']
+    query_mod: ['V']
+    cand_mod: ['T', 'I', 'V']
+    eval_type: local
+
+MSCOCO_i2t:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cmi2t
+    dataset_split: test
+    data_path: mscoco_cmret.jsonl
+    image_root: val2014
+    video_root: videos
+    audio_root: audios
+    frame_root: frames_omni
+    num_frames: 8
+    max_frames_saved: 16
+    input_mod: ['I']
+    query_mod: ['T']
+    cand_mod: ['T', 'I', 'V']
+    eval_type: local
+
+MSCOCO_i2v:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cmi2v
+    dataset_split: test
+    data_path: mscoco_cmret.jsonl
+    image_root: val2014
+    video_root: videos
+    audio_root: audios
+    frame_root: frames_omni
+    num_frames: 8
+    max_frames_saved: 16
+    input_mod: ['I']
+    query_mod: ['V']
+    cand_mod: ['T', 'I', 'V']
+    eval_type: local
+
+MSCOCO_v2t:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cmv2t
+    dataset_split: test
+    data_path: mscoco_cmret.jsonl
+    image_root: val2014
+    video_root: videos
+    audio_root: audios
+    frame_root: frames_omni
+    num_frames: 8
+    max_frames_saved: 16
+    input_mod: ['V']
+    query_mod: ['T']
+    cand_mod: ['T', 'I', 'V']
+    eval_type: local
+
+MSCOCO_v2i:
+    dataset_parser: mscoco_cmret
+    dataset_name: MSCOCO_cmv2i
+    dataset_split: test
+    data_path: mscoco_cmret.jsonl
+    image_root: val2014
+    video_root: videos
+    audio_root: audios
+    frame_root: frames_omni
+    num_frames: 8
+    max_frames_saved: 16
+    input_mod: ['V']
+    query_mod: ['I']
+    cand_mod: ['T', 'I', 'V']
+    eval_type: local
