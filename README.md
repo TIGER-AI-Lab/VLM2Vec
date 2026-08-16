@@ -306,4 +306,4 @@ DDP inference on multiple GPUs is supported. The whole evaluation process is str
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=TIGER-AI-Lab/VLM2Vec&type=Date)](https://star-history.com/#TIGER-AI-Lab/VLM2Vec&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=TIGER-AI-Lab/VLM2Vec&type=Date)](https://star-history.dera.page/#TIGER-AI-Lab/VLM2Vec&Date)
