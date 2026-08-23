@@ -2088,7 +2088,7 @@ def process_input_text(instruction, model_backbone, text=None, add_video_token=F
             suffix = "\nSummarize the above audio in one word:"
         else:
             suffix = "\nSummarize the above text in one word:"
-        if text and not add_image_token and not add_video_token:
+        if text:
             return text + suffix
         return suffix
 
