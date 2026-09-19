@@ -217,8 +217,8 @@ ActivityNetQA. Three things on `main` differ from that older base and matter for
    SmthSmthV2 (89%, median 48), MSR-VTT (84%, median 41) and MVBench (15%); the other 13 sets
    are at most 3%. Measured on `main`: HMDB51 84.50 padded vs 86.80 with the reference
    behaviour (the number in the tables above), MSR-VTT 59.10 vs 59.50, MVBench 68.17 vs 68.27.
-   The branch leaves `main`'s behaviour in place; to reproduce the leaderboard on those sets,
-   restore the `num_frames <= len(frames)` guard in `process_video_frames`.
+   The branch restores the `num_frames <= len(frames)` guard in a separate commit, so short
+   clips are used as saved.
 3. **VisRAG loader memory.** `main` maps the VisRAG corpus with `num_proc=4, batch_size=1024`.
    With 8 ranks that is 32 workers decoding 1024 pages each; the node (512 GB) OOM-killed on
    VisRAG_ArxivQA. The branch restores the previous `num_proc=1, batch_size=256`.
