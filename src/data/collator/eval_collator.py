@@ -287,6 +287,9 @@ class MultimodalEvalDataCollator:
 
         if any(a is not None for a in audios):
             inputs["audios"] = audios
+        # encode_side lets a process_fn treat the instruction differently on the query and
+        # candidate sides (Qwen3-VL-Embedding only routes the query instruction to the system turn).
+        inputs["encode_side"] = self.encode_side
         return inputs
 
     def _tensor_only(self, batch: Dict[str, Any]) -> Dict[str, torch.Tensor]:

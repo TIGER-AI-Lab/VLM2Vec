@@ -5,7 +5,7 @@ from datasets import load_dataset
 from src.constant.dataset_hflocal_path import EVAL_DATASET_HF_PATH as EVAL_DATASET_LOCAL_PATH
 from src.utils.dataset_utils import load_hf_dataset
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook, RESOLUTION_MAPPING
-from src.model.processor import process_input_text
+from src.model.processor import process_input_text, QWEN3_VL
 
 
 @add_metainfo_hook
@@ -35,7 +35,12 @@ def data_prepare(batch_dict, *args, **kwargs):
             tgt_inst = tgt_inst.replace("<|image_1|>", "")
             tgt_inst_captions = []
             for tgt_cap in tgt_captions:
-                tgt_inst_caption = process_input_text(tgt_inst + ' ' + tgt_cap, model_backbone, text='', add_image_token=True)
+                if model_backbone == QWEN3_VL:
+                    # The caption is content, not instruction: keep it in the text slot so the
+                    # process_fn can drop the target instruction and keep the caption.
+                    tgt_inst_caption = process_input_text(tgt_inst, model_backbone, text=tgt_cap, add_image_token=True)
+                else:
+                    tgt_inst_caption = process_input_text(tgt_inst + ' ' + tgt_cap, model_backbone, text='', add_image_token=True)
                 tgt_inst_caption = tgt_inst_caption.replace(" \n", "\n") + '\n'
                 tgt_inst_captions.append(tgt_inst_caption)
             cand_texts.append(tgt_inst_captions)
