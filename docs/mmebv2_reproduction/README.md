@@ -201,10 +201,10 @@ Run times on one 8xH100 node: image 27 min, visdoc 43 min, video (64 frames) 2 h
 ## Running on current `main`
 
 The numbers above were produced on a branch based on `0a28744`. The fix set was re-applied
-onto `main` at `8713911` (2026-09-19) and re-run: image 36/36 datasets bit-identical, visdoc
-23/24 identical (VisRAG_PlotQA +0.11, one query out of 863), video identical on the five sets
-re-run (HMDB51, MSR-VTT, MVBench, DiDeMo, ActivityNetQA) once item 2 below is applied. Three
-things on `main` differ from that older base and matter for this recipe:
+onto `main` at `8713911` (2026-09-19) and all three suites re-run: image 36/36 datasets
+bit-identical (80.12), video 18/18 identical (67.62), visdoc 23/24 identical (82.04;
+VisRAG_PlotQA +0.11, one query out of 863). Three things on `main` differ from that older base
+and matter for this recipe:
 
 1. **Candidate-side video frames.** The rewritten eval collator downsamples candidate videos to
    `--video_max_frames` (default 8) and squares each frame to `--video_frame_size` (default
