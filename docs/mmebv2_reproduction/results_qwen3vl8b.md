@@ -1,97 +1,99 @@
 # Qwen3-VL-Embedding-8B on MMEB-v1/v2: per-dataset results
 
-Ours = final run with all fixes (`scores/qwen3vl8b/`); original = the inference code before any fix; LB = leaderboard file `leaderboard/Qwen3-VL-Embedding-8B.json`. Image/video: hit@1; visdoc: ndcg_linear@5.
+before = inference code before any fix; after = all fixes on the original branch (`scores/qwen3vl8b/`); PR = the same fixes rebased onto `main` (branch `rmeng/qwen3vl-mmebv2-fix`); LB = leaderboard file `leaderboard/Qwen3-VL-Embedding-8B.json`. Image/video: hit@1; visdoc: ndcg_linear@5. Blank = not in that run.
 
+## image (36 datasets): PR 80.12 vs LB 80.12
 
-## image (36 datasets): ours 80.12 vs LB 80.12
+| dataset | before | after | PR | LB | PR − LB |
+|---|--:|--:|--:|--:|--:|
+| A-OKVQA | 67.20 | 72.60 | 72.60 | 72.90 | -0.30 |
+| CIRR | 56.60 | 74.70 | 74.70 | 74.90 | -0.20 |
+| ChartQA | 70.20 | 74.60 | 74.60 | 74.30 | +0.30 |
+| Country211 | 25.10 | 27.60 | 27.60 | 27.30 | +0.30 |
+| DocVQA | 95.10 | 96.20 | 96.20 | 96.30 | -0.10 |
+| EDIS | 88.60 | 96.40 | 96.40 | 96.30 | +0.10 |
+| FashionIQ | 32.00 | 44.00 | 44.00 | 44.50 | -0.50 |
+| GQA | 88.50 | 92.50 | 92.50 | 92.60 | -0.10 |
+| HatefulMemes | 67.50 | 77.40 | 77.40 | 77.50 | -0.10 |
+| ImageNet-1K | 75.10 | 82.20 | 82.20 | 81.90 | +0.30 |
+| ImageNet-A | 61.70 | 77.30 | 77.30 | 77.10 | +0.20 |
+| ImageNet-R | 91.80 | 94.10 | 94.10 | 93.90 | +0.20 |
+| InfographicsVQA | 81.60 | 87.90 | 87.90 | 88.40 | -0.50 |
+| MSCOCO | 75.50 | 86.00 | 86.00 | 86.30 | -0.30 |
+| MSCOCO_i2t | 73.50 | 79.60 | 79.60 | 79.10 | +0.50 |
+| MSCOCO_t2i | 74.40 | 80.90 | 80.90 | 81.10 | -0.20 |
+| N24News | 63.80 | 80.40 | 80.40 | 80.60 | -0.20 |
+| NIGHTS | 68.10 | 72.90 | 72.90 | 72.70 | +0.20 |
+| OK-VQA | 74.70 | 78.00 | 78.00 | 77.80 | +0.20 |
+| OVEN | 70.20 | 79.10 | 79.10 | 79.20 | -0.10 |
+| ObjectNet | 78.40 | 80.40 | 80.40 | 79.90 | +0.50 |
+| Place365 | 38.20 | 48.10 | 48.10 | 47.60 | +0.50 |
+| RefCOCO | 93.90 | 95.80 | 95.80 | 95.70 | +0.10 |
+| RefCOCO-Matching | 93.60 | 90.90 | 90.90 | 91.10 | -0.20 |
+| SUN397 | 65.00 | 82.90 | 82.90 | 82.70 | +0.20 |
+| ScienceQA | 75.30 | 81.00 | 81.00 | 81.00 | +0.00 |
+| TextVQA | 90.20 | 92.60 | 92.60 | 92.80 | -0.20 |
+| VOC2007 | 84.80 | 93.30 | 93.30 | 93.40 | -0.10 |
+| VisDial | 66.50 | 87.40 | 87.40 | 87.60 | -0.20 |
+| Visual7W | 65.90 | 70.60 | 70.60 | 70.90 | -0.30 |
+| Visual7W-Pointing | 87.90 | 95.90 | 95.90 | 96.10 | -0.20 |
+| VisualNews_i2t | 81.90 | 85.10 | 85.10 | 85.70 | -0.60 |
+| VisualNews_t2i | 75.60 | 81.20 | 81.20 | 81.10 | +0.10 |
+| VizWiz | 59.30 | 64.80 | 64.80 | 64.40 | +0.40 |
+| WebQA | 90.00 | 91.80 | 91.80 | 91.80 | +0.00 |
+| Wiki-SS-NQ | 81.10 | 88.00 | 88.00 | 87.90 | +0.10 |
+| **MEAN** | **73.02** (n=36) | **80.12** | **80.12** | **80.12** | **-0.01** |
 
-| dataset | original | ours | LB | ours − LB |
-|---|--:|--:|--:|--:|
-| A-OKVQA | 67.2 | 72.6 | 72.9 | -0.3 |
-| CIRR | 56.6 | 74.7 | 74.9 | -0.2 |
-| ChartQA | 70.2 | 74.6 | 74.3 | +0.3 |
-| Country211 | 25.1 | 27.6 | 27.3 | +0.3 |
-| DocVQA | 95.1 | 96.2 | 96.3 | -0.1 |
-| EDIS | 88.6 | 96.4 | 96.3 | +0.1 |
-| FashionIQ | 32.0 | 44.0 | 44.5 | -0.5 |
-| GQA | 88.5 | 92.5 | 92.6 | -0.1 |
-| HatefulMemes | 67.5 | 77.4 | 77.5 | -0.1 |
-| ImageNet-1K | 75.1 | 82.2 | 81.9 | +0.3 |
-| ImageNet-A | 61.7 | 77.3 | 77.1 | +0.2 |
-| ImageNet-R | 91.8 | 94.1 | 93.9 | +0.2 |
-| InfographicsVQA | 81.6 | 87.9 | 88.4 | -0.5 |
-| MSCOCO | 75.5 | 86.0 | 86.3 | -0.3 |
-| MSCOCO_i2t | 73.5 | 79.6 | 79.1 | +0.5 |
-| MSCOCO_t2i | 74.4 | 80.9 | 81.1 | -0.2 |
-| N24News | 63.8 | 80.4 | 80.6 | -0.2 |
-| NIGHTS | 68.1 | 72.9 | 72.7 | +0.2 |
-| OK-VQA | 74.7 | 78.0 | 77.8 | +0.2 |
-| OVEN | 70.2 | 79.1 | 79.2 | -0.1 |
-| ObjectNet | 78.4 | 80.4 | 79.9 | +0.5 |
-| Place365 | 38.2 | 48.1 | 47.6 | +0.5 |
-| RefCOCO | 93.9 | 95.8 | 95.7 | +0.1 |
-| RefCOCO-Matching | 93.6 | 90.9 | 91.1 | -0.2 |
-| SUN397 | 65.0 | 82.9 | 82.7 | +0.2 |
-| ScienceQA | 75.3 | 81.0 | 81.0 | +0.0 |
-| TextVQA | 90.2 | 92.6 | 92.8 | -0.2 |
-| VOC2007 | 84.8 | 93.3 | 93.4 | -0.1 |
-| VisDial | 66.5 | 87.4 | 87.6 | -0.2 |
-| Visual7W | 65.9 | 70.6 | 70.9 | -0.3 |
-| Visual7W-Pointing | 87.9 | 95.9 | 96.1 | -0.2 |
-| VisualNews_i2t | 81.9 | 85.1 | 85.7 | -0.6 |
-| VisualNews_t2i | 75.6 | 81.2 | 81.1 | +0.1 |
-| VizWiz | 59.3 | 64.8 | 64.4 | +0.4 |
-| WebQA | 90.0 | 91.8 | 91.8 | +0.0 |
-| Wiki-SS-NQ | 81.1 | 88.0 | 87.9 | +0.1 |
+## video (18 datasets): PR 67.62 vs LB 67.15
 
-## video (18 datasets): ours 67.62 vs LB 67.15
+| dataset | before | after | PR | LB | PR − LB |
+|---|--:|--:|--:|--:|--:|
+| ActivityNetQA | 80.00 | 83.30 | 83.30 | 80.10 | +3.20 |
+| Breakfast | 39.49 | 64.20 | 64.20 | 64.67 | -0.47 |
+| Charades-STA | 26.55 | 33.43 | 33.43 | 34.11 | -0.68 |
+| DiDeMo | 45.22 | 65.24 | 65.24 | 66.04 | -0.80 |
+| EgoSchema | 65.20 | 68.40 | 68.40 | 69.00 | -0.60 |
+| HMDB51 | 75.30 | 86.80 | 86.80 | 83.40 | +3.40 |
+| K700 | 51.90 | 67.50 | 67.50 | 67.60 | -0.10 |
+| MSR-VTT | 50.60 | 59.50 | 59.50 | 58.20 | +1.30 |
+| MSVD | 72.69 | 76.57 | 76.57 | 75.67 | +0.90 |
+| MVBench | 64.98 | 68.27 | 68.27 | 66.90 | +1.37 |
+| MomentSeeker | 46.67 | 54.37 | 54.37 | 54.93 | -0.56 |
+| NExTQA | 72.48 | 75.74 | 75.74 | 76.19 | -0.45 |
+| QVHighlight | 71.28 | 80.06 | 80.06 | 79.22 | +0.84 |
+| SmthSmthV2 | 73.50 | 81.50 | 81.50 | 81.20 | +0.30 |
+| UCF101 | 85.50 | 95.30 | 95.30 | 95.10 | +0.20 |
+| VATEX | 44.95 | 54.98 | 54.98 | 54.87 | +0.11 |
+| Video-MME | 55.63 | 62.44 | 62.44 | 62.63 | -0.19 |
+| YouCook2 | 31.77 | 39.57 | 39.57 | 38.85 | +0.72 |
+| **MEAN** | **58.54** (n=18) | **67.62** | **67.62** | **67.15** | **+0.47** |
 
-| dataset | original | ours | LB | ours − LB |
-|---|--:|--:|--:|--:|
-| ActivityNetQA | 80.0 | 83.3 | 80.1 | +3.2 |
-| Breakfast | 39.5 | 64.2 | 64.7 | -0.5 |
-| Charades-STA | 26.5 | 33.4 | 34.1 | -0.7 |
-| DiDeMo | 45.2 | 65.2 | 66.0 | -0.8 |
-| EgoSchema | 65.2 | 68.4 | 69.0 | -0.6 |
-| HMDB51 | 75.3 | 86.8 | 83.4 | +3.4 |
-| K700 | 51.9 | 67.5 | 67.6 | -0.1 |
-| MSR-VTT | 50.6 | 59.5 | 58.2 | +1.3 |
-| MSVD | 72.7 | 76.6 | 75.7 | +0.9 |
-| MVBench | 65.0 | 68.3 | 66.9 | +1.4 |
-| MomentSeeker | 46.7 | 54.4 | 54.9 | -0.6 |
-| NExTQA | 72.5 | 75.7 | 76.2 | -0.5 |
-| QVHighlight | 71.3 | 80.1 | 79.2 | +0.8 |
-| SmthSmthV2 | 73.5 | 81.5 | 81.2 | +0.3 |
-| UCF101 | 85.5 | 95.3 | 95.1 | +0.2 |
-| VATEX | 45.0 | 55.0 | 54.9 | +0.1 |
-| Video-MME | 55.6 | 62.4 | 62.6 | -0.2 |
-| YouCook2 | 31.8 | 39.6 | 38.8 | +0.7 |
+## visdoc (24 datasets): PR 82.04 vs LB 82.36
 
-## visdoc (24 datasets): ours 82.03 vs LB 82.36
-
-| dataset | original | ours | LB | ours − LB |
-|---|--:|--:|--:|--:|
-| MMLongBench-doc | 53.9 | 58.4 | 58.3 | +0.1 |
-| MMLongBench-page-fixed | nan | 59.8 | 60.3 | -0.5 |
-| ViDoRe_arxivqa | 79.4 | 86.6 | 87.0 | -0.4 |
-| ViDoRe_biomedical_lectures_v2_multilingual | 60.8 | 71.4 | 71.6 | -0.2 |
-| ViDoRe_docvqa | 46.3 | 53.8 | 54.0 | -0.2 |
-| ViDoRe_economics_reports_v2_multilingual | 50.6 | 66.0 | 67.2 | -1.2 |
-| ViDoRe_esg_reports_human_labeled_v2 | 54.9 | 68.9 | 71.4 | -2.5 |
-| ViDoRe_esg_reports_v2_multilingual | 50.7 | 69.0 | 69.3 | -0.3 |
-| ViDoRe_infovqa | 85.6 | 91.0 | 90.9 | +0.1 |
-| ViDoRe_shiftproject | 80.1 | 84.4 | 84.1 | +0.2 |
-| ViDoRe_syntheticDocQA_artificial_intelligence | 96.4 | 98.5 | 99.3 | -0.7 |
-| ViDoRe_syntheticDocQA_energy | 88.9 | 94.0 | 94.4 | -0.4 |
-| ViDoRe_syntheticDocQA_government_reports | 93.8 | 97.9 | 98.0 | -0.1 |
-| ViDoRe_syntheticDocQA_healthcare_industry | 95.7 | 98.0 | 97.8 | +0.2 |
-| ViDoRe_tabfquad | 94.7 | 97.0 | 96.7 | +0.3 |
-| ViDoRe_tatdqa | 59.7 | 70.0 | 70.0 | -0.0 |
-| ViDoSeek-doc | 84.7 | 86.2 | 86.1 | +0.1 |
-| ViDoSeek-page-fixed | nan | 87.0 | 88.4 | -1.4 |
-| VisRAG_ArxivQA | 78.4 | 88.0 | 88.2 | -0.2 |
-| VisRAG_ChartQA | 87.2 | 88.9 | 88.3 | +0.6 |
-| VisRAG_InfoVQA | 90.5 | 94.7 | 94.7 | -0.1 |
-| VisRAG_MP-DocVQA | 80.5 | 88.8 | 89.3 | -0.5 |
-| VisRAG_PlotQA | 66.0 | 73.9 | 74.8 | -0.9 |
-| VisRAG_SlideVQA | 93.1 | 96.8 | 96.7 | +0.1 |
+| dataset | before | after | PR | LB | PR − LB |
+|---|--:|--:|--:|--:|--:|
+| MMLongBench-doc | 53.87 | 58.40 | 58.40 | 58.29 | +0.11 |
+| MMLongBench-page-fixed | nan | 59.79 | 59.79 | 60.29 | -0.50 |
+| ViDoRe_arxivqa | 79.41 | 86.56 | 86.56 | 87.00 | -0.44 |
+| ViDoRe_biomedical_lectures_v2_multilingual | 60.80 | 71.41 | 71.41 | 71.59 | -0.18 |
+| ViDoRe_docvqa | 46.26 | 53.79 | 53.79 | 54.02 | -0.23 |
+| ViDoRe_economics_reports_v2_multilingual | 50.60 | 66.02 | 66.02 | 67.18 | -1.16 |
+| ViDoRe_esg_reports_human_labeled_v2 | 54.91 | 68.86 | 68.86 | 71.39 | -2.53 |
+| ViDoRe_esg_reports_v2_multilingual | 50.75 | 69.00 | 69.00 | 69.28 | -0.28 |
+| ViDoRe_infovqa | 85.58 | 90.96 | 90.96 | 90.86 | +0.10 |
+| ViDoRe_shiftproject | 80.07 | 84.35 | 84.35 | 84.14 | +0.21 |
+| ViDoRe_syntheticDocQA_artificial_intelligence | 96.42 | 98.52 | 98.52 | 99.26 | -0.74 |
+| ViDoRe_syntheticDocQA_energy | 88.86 | 94.04 | 94.04 | 94.41 | -0.37 |
+| ViDoRe_syntheticDocQA_government_reports | 93.82 | 97.89 | 97.89 | 98.02 | -0.13 |
+| ViDoRe_syntheticDocQA_healthcare_industry | 95.68 | 98.02 | 98.02 | 97.79 | +0.23 |
+| ViDoRe_tabfquad | 94.74 | 97.01 | 97.01 | 96.67 | +0.34 |
+| ViDoRe_tatdqa | 59.67 | 69.95 | 69.95 | 69.97 | -0.02 |
+| ViDoSeek-doc | 84.69 | 86.18 | 86.18 | 86.10 | +0.08 |
+| ViDoSeek-page-fixed | nan | 86.99 | 86.99 | 88.38 | -1.39 |
+| VisRAG_ArxivQA | 78.41 | 87.99 | 87.99 | 88.21 | -0.22 |
+| VisRAG_ChartQA | 87.23 | 88.93 | 88.93 | 88.34 | +0.59 |
+| VisRAG_InfoVQA | 90.48 | 94.67 | 94.67 | 94.75 | -0.08 |
+| VisRAG_MP-DocVQA | 80.48 | 88.79 | 88.79 | 89.27 | -0.48 |
+| VisRAG_PlotQA | 66.00 | 73.87 | 73.98 | 74.80 | -0.82 |
+| VisRAG_SlideVQA | 93.09 | 96.80 | 96.80 | 96.73 | +0.07 |
+| **MEAN** | **nan** (n=24) | **82.03** | **82.04** | **82.36** | **-0.33** |
