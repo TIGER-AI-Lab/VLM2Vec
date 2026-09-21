@@ -32,8 +32,8 @@ def data_prepare(batch_dict, *args, **kwargs):
         video_frame_paths = sample_frames(video_frame_paths, num_segments=num_frames)
 
         pos_texts.append(process_input_text(TASK_INST_TGT, model_backbone, add_video_token=True))
-        pos_images.append({"bytes": [None] * num_frames, "paths": video_frame_paths,
-                            "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)] * num_frames})
+        pos_images.append({"bytes": [None] * len(video_frame_paths), "paths": video_frame_paths,
+                            "resolutions": [RESOLUTION_MAPPING.get(image_resolution, None)] * len(video_frame_paths)})
         neg_images.append(None)
         neg_texts.append(None)
     return {"query_text": query_texts, "query_image": query_images,
