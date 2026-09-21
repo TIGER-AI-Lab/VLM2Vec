@@ -2,6 +2,15 @@
 
 before = inference code before any fix; after = all fixes on the original branch (`scores/qwen3vl8b/`); PR = the same fixes rebased onto `main` (branch `rmeng/qwen3vl-mmebv2-fix`); LB = leaderboard file `leaderboard/Qwen3-VL-Embedding-8B.json`. Image/video: hit@1; visdoc: ndcg_linear@5. Blank = not in that run; the MEAN of a column is over the sets it has.
 
+## Summary by modality
+
+| modality | n | before | after | PR | LB | PR − LB |
+|---|--:|--:|--:|--:|--:|--:|
+| image | 36 | 73.02 | 80.12 | 80.12 | 80.12 | -0.01 |
+| video | 18 | 58.54 | 67.62 | 67.62 | 67.15 | +0.47 |
+| visdoc | 24 | 75.99 (n=22) | 82.03 | 82.04 | 82.36 | -0.33 |
+| all (plain mean over datasets) | 78 | 70.45 (n=76) | 77.82 | 77.82 | 77.82 | +0.01 |
+
 ## image (36 datasets): PR 80.12 vs LB 80.12
 
 | dataset | before | after | PR | LB | PR − LB |
