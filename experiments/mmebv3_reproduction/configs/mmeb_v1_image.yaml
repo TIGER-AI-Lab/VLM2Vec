@@ -1,0 +1,230 @@
+# MMEB-V1 / MMEB-V2 image suite (36 tasks).
+# Identical to experiments/public/eval/image.yaml minus MCMR (a V3-only dataset).
+#
+# Run with DATA_BASEDIR=<MMEB-V2-eval root>, whose image-tasks/<ds>/ holds the
+# ziyjiang/MMEB_Test_Instruct parquets (columns qry_text + qry_inst) and whose
+# image-tasks/MMEB/ is the shared image store.
+#
+# Both releases carry the same instruction text; they differ in how it is stored.
+# V3 inlines it in qry_text; the instruct release puts it in qry_inst. The parser
+# strips `<|image_1|>` from qry_inst but not from qry_text, so the V3 path leaves
+# a literal `<|image_1|>` and a doubled space in every image query:
+#   V3      '<|image_pad|>  <|image_1|>\nIdentify the scene shown in the image\n\n'
+#   instruct '<|image_pad|>\nIdentify the scene shown in the image\n'
+# This config exists to measure how much of the v1/v2-vs-v3 image gap that accounts for.
+ImageNet-1K:
+  dataset_parser: image_cls
+  dataset_name: ImageNet-1K
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+N24News:
+  dataset_parser: image_cls
+  dataset_name: N24News
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+HatefulMemes:
+  dataset_parser: image_cls
+  dataset_name: HatefulMemes
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+VOC2007:
+  dataset_parser: image_cls
+  dataset_name: VOC2007
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+SUN397:
+  dataset_parser: image_cls
+  dataset_name: SUN397
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+Place365:
+  dataset_parser: image_cls
+  dataset_name: Place365
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+ImageNet-A:
+  dataset_parser: image_cls
+  dataset_name: ImageNet-A
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+ImageNet-R:
+  dataset_parser: image_cls
+  dataset_name: ImageNet-R
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+ObjectNet:
+  dataset_parser: image_cls
+  dataset_name: ObjectNet
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+Country211:
+  dataset_parser: image_cls
+  dataset_name: Country211
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+OK-VQA:
+  dataset_parser: image_qa
+  dataset_name: OK-VQA
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+A-OKVQA:
+  dataset_parser: image_qa
+  dataset_name: A-OKVQA
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+DocVQA:
+  dataset_parser: image_qa
+  dataset_name: DocVQA
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+InfographicsVQA:
+  dataset_parser: image_qa
+  dataset_name: InfographicsVQA
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+ChartQA:
+  dataset_parser: image_qa
+  dataset_name: ChartQA
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+Visual7W:
+  dataset_parser: image_qa
+  dataset_name: Visual7W
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+ScienceQA:
+  dataset_parser: image_qa
+  dataset_name: ScienceQA
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+VizWiz:
+  dataset_parser: image_qa
+  dataset_name: VizWiz
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+GQA:
+  dataset_parser: image_qa
+  dataset_name: GQA
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+TextVQA:
+  dataset_parser: image_qa
+  dataset_name: TextVQA
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+MSCOCO_i2t:
+  dataset_parser: image_i2t
+  dataset_name: MSCOCO_i2t
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+VisualNews_i2t:
+  dataset_parser: image_i2t
+  dataset_name: VisualNews_i2t
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+VisDial:
+  dataset_parser: image_t2i
+  dataset_name: VisDial
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+MSCOCO_t2i:
+  dataset_parser: image_t2i
+  dataset_name: MSCOCO_t2i
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+VisualNews_t2i:
+  dataset_parser: image_t2i
+  dataset_name: VisualNews_t2i
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+WebQA:
+  dataset_parser: image_t2i
+  dataset_name: WebQA
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+EDIS:
+  dataset_parser: image_t2i
+  dataset_name: EDIS
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+Wiki-SS-NQ:
+  dataset_parser: image_t2i
+  dataset_name: Wiki-SS-NQ
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+CIRR:
+  dataset_parser: image_i2i_vg
+  dataset_name: CIRR
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+NIGHTS:
+  dataset_parser: image_i2i_vg
+  dataset_name: NIGHTS
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+OVEN:
+  dataset_parser: image_i2i_vg
+  dataset_name: OVEN
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+FashionIQ:
+  dataset_parser: image_i2i_vg
+  dataset_name: FashionIQ
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+MSCOCO:
+  dataset_parser: image_i2i_vg
+  dataset_name: MSCOCO
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+RefCOCO:
+  dataset_parser: image_i2i_vg
+  dataset_name: RefCOCO
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+RefCOCO-Matching:
+  dataset_parser: image_i2i_vg
+  dataset_name: RefCOCO-Matching
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local
+Visual7W-Pointing:
+  dataset_parser: image_i2i_vg
+  dataset_name: Visual7W-Pointing
+  dataset_split: test
+  image_root: image-tasks/MMEB/
+  eval_type: local

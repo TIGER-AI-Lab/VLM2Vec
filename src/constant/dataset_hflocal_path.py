@@ -56,6 +56,10 @@ EVAL_DATASET_HF_PATH = {
     "ViDoSeek-page": (os.path.join(BASE_RAW_DATA_DIR, "visdoc-tasks", "data", "ViDoSeek-page"), None, "test"),
     "MMLongBench-doc": (os.path.join(BASE_RAW_DATA_DIR, "visdoc-tasks", "data", "MMLongBench-doc"), None, "test"),
     "MMLongBench-page": (os.path.join(BASE_RAW_DATA_DIR, "visdoc-tasks", "data", "MMLongBench"), None, "test"),
+    # Corrected page releases the leaderboard scores against (VLM2Vec/*-page-fixed on the Hub).
+    # Stage the snapshot (queries/ qrels/ corpus/ parquet dirs) under visdoc-tasks/data/.
+    "ViDoSeek-page-fixed": (os.path.join(BASE_RAW_DATA_DIR, "visdoc-tasks", "data", "ViDoSeek-page-fixed"), None, "test"),
+    "MMLongBench-page-fixed": (os.path.join(BASE_RAW_DATA_DIR, "visdoc-tasks", "data", "MMLongBench-page-fixed"), None, "test"),
 
     # Visdoc-ViDoRe_v2
     "ViDoRe_esg_reports_human_labeled_v2": (os.path.join(BASE_RAW_DATA_DIR, "visdoc-tasks", "data", "esg_reports_human_labeled_v2"), None, "test"),

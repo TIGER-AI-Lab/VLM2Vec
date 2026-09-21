@@ -33,7 +33,7 @@ def data_prepare_v5(batch_dict, *args, **kwargs):
             # Use [0, 0] as placeholder for unknown resolution to satisfy List<List<int>> schema
             default_res = RESOLUTION_MAPPING.get(image_resolution, [224, 224])
             if default_res is None: default_res = [224, 224]
-            video_frames = {"bytes": [None] * num_frames, "paths": frame_paths, "resolutions": [default_res] * num_frames}
+            video_frames = {"bytes": [None] * len(frame_paths), "paths": frame_paths, "resolutions": [default_res] * len(frame_paths)}
             query_texts.append(query)
             pos_texts.append(pos_text)
             neg_texts.append([])

@@ -575,13 +575,21 @@ class MMEBModel(nn.Module):
 
         # ===== Fallback: all other HF backbones =====
         else:
-            forward_kwargs = dict(return_dict=True, output_hidden_states=True, use_cache=False)
             if backbone == QWEN3_VL:
-                # Qwen3-VL ForConditionalGeneration defaults to full-sequence logits (very memory heavy).
-                # We only need hidden states for embedding pooling, so keep logits to a minimal slice.
-                forward_kwargs["logits_to_keep"] = 1
-            outputs = self.encoder(**input, **forward_kwargs)
-            hidden_states = outputs.hidden_states[-1] if getattr(outputs, "hidden_states", None) is not None else outputs.last_hidden_state
+                # Match the model's own reference impl (scripts/qwen3_vl_embedding.py): run the base
+                # Qwen3VLModel and pool its last_hidden_state, i.e. the output *after* the final
+                # RMSNorm. Going through Qwen3VLForConditionalGeneration and reading
+                # hidden_states[-1] gives the last decoder layer's output *before* that norm (the
+                # CausalLM output has no last_hidden_state for check_model_inputs to swap in): a
+                # different vector, cos 0.87-0.97 to the reference, 2-14 points on MMEB retrieval.
+                # It also avoids the full-sequence lm_head logits.
+                base_input = {k: v for k, v in input.items()
+                              if v is not None and k not in {"texts", "images", "audios"}}
+                outputs = self.encoder.model(**base_input, return_dict=True, use_cache=False)
+                hidden_states = outputs.last_hidden_state
+            else:
+                outputs = self.encoder(**input, return_dict=True, output_hidden_states=True, use_cache=False)
+                hidden_states = outputs.hidden_states[-1] if getattr(outputs, "hidden_states", None) is not None else outputs.last_hidden_state
             attn_mask = input.get("attention_mask", None)
             if attn_mask is not None:
                 if not isinstance(attn_mask, torch.Tensor):

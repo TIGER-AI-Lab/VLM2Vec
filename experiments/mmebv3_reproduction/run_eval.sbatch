@@ -24,6 +24,18 @@
 #   POOLING=mean(nvomni)|last(qwen3vl)   BATCH=32   NPROC=8
 #   AUDIO_MAX_SECONDS=30   (REQUIRED for audio: avoids the 10.24s _crop_audio default)
 #   REPO=<this checkout>   (defaults to $SLURM_SUBMIT_DIR or cwd)
+#   RESIZE_MIN_PIXELS / RESIZE_MAX_PIXELS   per-image pixel budget. Defaults are the
+#       Qwen2-VL-era 28*28*4 / 28*28*1280. Qwen3-VL-Embedding's own reference impl uses
+#       4*32*32=4096 / 1800*32*32=1843200 — pass those to match the published numbers.
+#   EXTRA_PYTHONPATH   prepended to PYTHONPATH, e.g. a side-installed qwen-vl-utils>=0.0.14
+#       (Qwen3-VL needs image_patch_size=16; 0.0.8 silently resizes on the 28-px grid).
+#   VIDEO_MAX_FRAMES / VIDEO_FRAME_SIZE   candidate-side video frames. The eval collator caps
+#       candidate videos at --video_max_frames (default 8) and squares each frame to
+#       --video_frame_size px (default 224). A 64-frame config needs VIDEO_MAX_FRAMES=64
+#       VIDEO_FRAME_SIZE=0 (0 = keep native frame size) or the retrieval sets run at 8x224.
+# Qwen3-VL-Embedding on MMEB-v1/v2 as the leaderboard scores it: configs/mmeb_v1_image.yaml,
+# configs/mmeb_v2_visdoc.yaml (24 sets, *-page-fixed), configs/mmeb_v2_video_64f.yaml, with
+# the RESIZE_* values above. See docs/mmebv2_reproduction/README.md.
 set -euo pipefail
 MODEL_PATH=${MODEL_PATH:?set MODEL_PATH}
 MODEL_BACKBONE=${MODEL_BACKBONE:?set MODEL_BACKBONE}
@@ -40,7 +52,7 @@ REPO=${REPO:-${SLURM_SUBMIT_DIR:-$(pwd)}}
 ENVBIN="$(dirname "$ENV_PYTHON")"
 ENVLIB="$(dirname "$ENVBIN")/lib"
 cd "$REPO"
-export PYTHONPATH=.
+export PYTHONPATH="${EXTRA_PYTHONPATH:+$EXTRA_PYTHONPATH:}."   # e.g. a side-installed qwen-vl-utils>=0.0.14
 export TOKENIZERS_PARALLELISM=false
 export HF_HUB_OFFLINE=${HF_HUB_OFFLINE:-1}
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
@@ -59,6 +71,10 @@ MINFREE=$(nvidia-smi --query-gpu=memory.free --format=csv,noheader,nounits | sor
 
 EXTRA=()
 [ -n "$AUDIO_MAX_SECONDS" ] && EXTRA+=(--audio_max_seconds "$AUDIO_MAX_SECONDS")
+[ -n "${RESIZE_MIN_PIXELS:-}" ] && EXTRA+=(--resize_min_pixels "$RESIZE_MIN_PIXELS")
+[ -n "${RESIZE_MAX_PIXELS:-}" ] && EXTRA+=(--resize_max_pixels "$RESIZE_MAX_PIXELS")
+[ -n "${VIDEO_MAX_FRAMES:-}" ] && EXTRA+=(--video_max_frames "$VIDEO_MAX_FRAMES")
+[ -n "${VIDEO_FRAME_SIZE:-}" ] && EXTRA+=(--video_frame_size "$VIDEO_FRAME_SIZE")
 
 "$ENV_PYTHON" -m torch.distributed.run --nproc_per_node "$NPROC" \
   --master_port $((20000 + RANDOM % 10000)) eval.py \

@@ -56,6 +56,8 @@ EVAL_DATASET_HF_PATH = {
     "ViDoSeek-page": ("VLM2Vec/ViDoSeek-page-fixed", None, "test"),
     "MMLongBench-doc": ("VLM2Vec/MMLongBench-doc", None, "test"),
     "MMLongBench-page": ("VLM2Vec/MMLongBench-page-fixed", None, "test"),
+    "ViDoSeek-page-fixed": ("VLM2Vec/ViDoSeek-page-fixed", None, "test"),
+    "MMLongBench-page-fixed": ("VLM2Vec/MMLongBench-page-fixed", None, "test"),
 
     # Visdoc-ViDoRe_v2
     "ViDoRe_esg_reports_human_labeled_v2": ("vidore/esg_reports_human_labeled_v2", None, "test"),

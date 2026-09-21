@@ -32,9 +32,9 @@ def data_prepare(batch_dict, **kwargs):
 
         cand_texts.append([process_input_text(TASK_INST_TGT, model_backbone, add_video_token=True)])
         cand_images.append([ImageVideoInstance(
-            bytes=[None] * num_frames,
+            bytes=[None] * len(video_frame_paths),
             paths=video_frame_paths,
-            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)] * num_frames,
+            resolutions=[RESOLUTION_MAPPING.get(image_resolution, None)] * len(video_frame_paths),
         ).to_dict()])
         dataset_infos.append({
             "cand_names": [video_name],

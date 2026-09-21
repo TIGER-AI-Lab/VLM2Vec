@@ -10,6 +10,7 @@ __pycache__/
 .env
 wandb/
 outputs/
+out/
 datasets/
 
 # editors / OS

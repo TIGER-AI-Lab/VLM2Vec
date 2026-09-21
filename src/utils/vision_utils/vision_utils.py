@@ -283,7 +283,10 @@ def process_video_frames(frame_dir, num_frames=None):
     frames = load_frames(frame_dir)
     if num_frames is None or not frames:
         return frames
-    if num_frames:
+    # Only subsample. A clip with fewer saved frames than num_frames is used as is;
+    # sample_frames would pad it by repeating the last frame, which the MMEB leaderboard
+    # recipe (and Qwen3-VL-Embedding's reference eval) does not do.
+    if num_frames <= len(frames):
         frames = sample_frames(frames, num_segments=num_frames)
     return frames
 

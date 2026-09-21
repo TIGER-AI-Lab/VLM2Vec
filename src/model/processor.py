@@ -1,5 +1,6 @@
 import logging
 import math
+import unicodedata
 import warnings
 from collections import defaultdict
 
@@ -404,6 +405,18 @@ QWEN2_VL = 'qwen2_vl'
 QWEN2_VL_TOKENSELECTION = 'qwen2_vl'
 QWEN2_5_VL = 'qwen2_5_vl'
 QWEN3_VL = 'qwen3_vl'
+QWEN3_VL_PATCH_SIZE = 16  # Qwen3-VL ViT patch size; with merge_size=2 this is a 32-px resize grid
+# Pixel budgets from the model's reference impl (scripts/qwen3_vl_embedding.py). Images get a
+# per-image min/max; a video gets one total budget shared across its frames (10 * 768 tokens).
+QWEN3_VL_MIN_PIXELS = 4 * 32 * 32
+QWEN3_VL_MAX_PIXELS = 1800 * 32 * 32
+QWEN3_VL_MAX_TOTAL_PIXELS = 10 * 768 * 32 * 32
+# Qwen3-VL-Embedding takes the task instruction in the *system* turn, not glued into the user
+# turn (see the model's own scripts/qwen3_vl_embedding.py). The eval parsers hand the process_fn
+# a single pre-joined string, so process_input_text marks the boundary with this sentinel and
+# Qwen3_VL_Embedding_process_fn splits it back out. Contains no whitespace, so the special-token
+# stripping in that function leaves it intact.
+QWEN3_VL_INST_SEP = "\x00<<INST>>\x00"
 QWEN2_VL_TOKENSELECTION = 'qwen2_vl_tokenselection'
 QWEN2_5_VL_TOKENSELECTION = 'qwen2_5_vl_tokenselection'
 QWEN2_5_OMNI = 'qwen2_5_omni'  # Qwen2.5-Omni / Omni-Embed
@@ -877,6 +890,11 @@ def Qwen3_VL_Embedding_process_fn(model_inputs: dict, processor, max_length=None
     - processor(text=..., images=..., videos=...)
     """
     texts = model_inputs.get("text", []) or []
+    # Only the query side carries an instruction. Qwen's own MMEB-V2 eval
+    # (QwenLM/Qwen3-VL-Embedding, src/evaluation/mmeb_v2) encodes every candidate -- image,
+    # document page, video clip, label -- under the default system prompt with no task
+    # instruction, so on the candidate side the instruction part is dropped, not routed.
+    route_inst_to_system = model_inputs.get("encode_side", "qry") != "cand"
     images = model_inputs.get("images", None)
     videos = model_inputs.get("videos", None)
     audios = model_inputs.get("audios", None)
@@ -893,14 +911,18 @@ def Qwen3_VL_Embedding_process_fn(model_inputs: dict, processor, max_length=None
         from src.model.vlm_backbone.qwen2_vl.qwen_vl_utils import process_vision_info
 
     def _strip_special_tokens(text: str) -> str:
+        # Remove the placeholder tokens process_input_text prefixes (visual content is passed as
+        # structured items instead) and the outer whitespace the parsers add "for v1
+        # consistency". Internal whitespace is kept verbatim: the reference feeds the raw text,
+        # and e.g. VisDial's newline-separated dialogue tokenises differently when collapsed.
         if text is None:
             return ""
         stripped = text
         all_mm_tokens = set(VLM_IMAGE_TOKENS.values()) | set(VLM_VIDEO_TOKENS.values())
         for tok in all_mm_tokens:
             if tok:
-                stripped = stripped.replace(tok, " ")
-        return " ".join(stripped.split())
+                stripped = stripped.replace(tok + " ", "").replace(tok, "")
+        return stripped.strip()
 
     def _normalize_video_frames(video_item):
         if video_item is None:
@@ -917,34 +939,62 @@ def Qwen3_VL_Embedding_process_fn(model_inputs: dict, processor, max_length=None
                 flat.append(frame)
         return flat if flat else None
 
+    # Per-content pixel budgets, as in the reference impl's format_model_input. qwen_vl_utils
+    # resizes on these and the processor is then called with do_resize=False, so they are the
+    # only resize. Image bounds follow --resize_min_pixels/--resize_max_pixels when set.
+    image_processor = getattr(processor, "image_processor", None)
+    img_min_pixels = getattr(image_processor, "min_pixels", None) or QWEN3_VL_MIN_PIXELS
+    img_max_pixels = getattr(image_processor, "max_pixels", None) or QWEN3_VL_MAX_PIXELS
+
+    video_token = VLM_VIDEO_TOKENS.get(QWEN3_VL, "")
     conversations = []
     for idx, text in enumerate(texts):
         content = []
-
-        image_item = None
-        if images is not None and idx < len(images):
-            image_item = images[idx]
-        if image_item is not None:
-            if isinstance(image_item, list):
-                for image in image_item:
-                    if image is not None:
-                        content.append({"type": "image", "image": image})
-            else:
-                content.append({"type": "image", "image": image_item})
+        raw = text if isinstance(text, str) else str(text)
 
         video_item = None
         if videos is not None and idx < len(videos):
             video_item = _normalize_video_frames(videos[idx])
+        image_item = None
+        if images is not None and idx < len(images):
+            image_item = images[idx]
+        # The eval collator delivers video frames as a list under 'images' and marks the text
+        # with the video token (process_input_text(add_video_token=True)). Encode those as one
+        # video, as the reference does, not as N independent images.
+        if video_item is None and isinstance(image_item, list) and video_token and video_token in raw:
+            video_item, image_item = _normalize_video_frames(image_item), None
+
+        # Reference order within the user turn: videos, then images, then text.
         if video_item is not None:
-            content.append({"type": "video", "video": video_item})
+            content.append({"type": "video", "video": video_item,
+                            "total_pixels": QWEN3_VL_MAX_TOTAL_PIXELS})
+        if image_item is not None:
+            for image in (image_item if isinstance(image_item, list) else [image_item]):
+                if image is not None:
+                    content.append({"type": "image", "image": image,
+                                    "min_pixels": img_min_pixels, "max_pixels": img_max_pixels})
 
-        clean_text = _strip_special_tokens(text if isinstance(text, str) else str(text))
-        if not clean_text:
-            clean_text = " "
-        content.append({"type": "text", "text": clean_text})
+        instruction, _, body = raw.partition(QWEN3_VL_INST_SEP)
+        if not _:
+            # No sentinel (e.g. a parser that bypassed process_input_text): treat it all as body.
+            instruction, body = "", raw
+        elif not route_inst_to_system:
+            # Candidate side: the reference encodes candidates under the default system prompt
+            # with no task instruction anywhere, so drop it and keep only the content.
+            instruction = ""
+        instruction = _strip_special_tokens(instruction)
+        clean_text = _strip_special_tokens(body)
+        if clean_text:
+            content.append({"type": "text", "text": clean_text})
+        elif not content:
+            content.append({"type": "text", "text": "NULL"})  # reference placeholder for empty input
 
+        # Match the reference impl: the instruction is the system turn and ends in punctuation.
+        if instruction and not unicodedata.category(instruction[-1]).startswith("P"):
+            instruction += "."
         conversations.append([
-            {"role": "system", "content": [{"type": "text", "text": "Represent the user's input."}]},
+            {"role": "system",
+             "content": [{"type": "text", "text": instruction or "Represent the user's input."}]},
             {"role": "user", "content": content},
         ])
 
@@ -965,50 +1015,54 @@ def Qwen3_VL_Embedding_process_fn(model_inputs: dict, processor, max_length=None
             text = str(text)
         chat_texts.append(text)
 
+    # Qwen3-VL uses patch_size=16 / merge_size=2, so visual inputs must be resized on a
+    # 32-px grid. qwen_vl_utils defaults to image_patch_size=14 (the Qwen2-VL 28-px grid),
+    # and versions < 0.0.14 do not accept the argument at all -- on those the call below
+    # falls through to the untyped fallback and silently misaligns every image. The model's
+    # own reference impl (scripts/qwen3_vl_embedding.py) passes image_patch_size=16.
+    # return_video_metadata mirrors the reference impl: the processor then receives the frame
+    # metadata plus do_sample_frames=False, so it neither resamples nor re-resizes the frames.
+    video_kwargs = {}
     try:
-        image_inputs, video_inputs, _video_kwargs = process_vision_info(conversations, return_video_kwargs=True)
+        image_inputs, video_inputs, video_kwargs = process_vision_info(
+            conversations, image_patch_size=QWEN3_VL_PATCH_SIZE,
+            return_video_kwargs=True, return_video_metadata=True)
     except TypeError:
-        image_inputs, video_inputs = process_vision_info(conversations)
+        logger.warning(
+            "qwen_vl_utils.process_vision_info does not accept image_patch_size; visual inputs "
+            "will be resized on the Qwen2-VL 28-px grid instead of Qwen3-VL's 32-px grid. "
+            "Install qwen-vl-utils>=0.0.14 to match the published numbers.")
+        try:
+            image_inputs, video_inputs, video_kwargs = process_vision_info(conversations, return_video_kwargs=True)
+        except TypeError:
+            image_inputs, video_inputs = process_vision_info(conversations)
+    video_metadata = None
+    if video_inputs and isinstance(video_inputs[0], tuple):
+        video_inputs, video_metadata = (list(x) for x in zip(*video_inputs))
 
-    def _has_visual_payload(visual_inputs):
-        if visual_inputs is None:
-            return False
-        if not isinstance(visual_inputs, list):
-            return True
-        for item in visual_inputs:
-            if item is None:
-                continue
-            if isinstance(item, list):
-                if any(x is not None for x in item):
-                    return True
-            else:
-                return True
-        return False
-
-    has_visual_inputs = _has_visual_payload(image_inputs) or _has_visual_payload(video_inputs)
     effective_max_length = 8192 if max_length is None else int(max_length)
-    # NOTE:
-    # Qwen3-VL fast image processor may fail on some raw resolutions when do_resize=False
-    # (invalid patch reshape). Use processor default resizing behavior for robustness.
+    # Same processor call as the reference: inputs were resized above (do_resize=False) and
+    # sequences are truncated at the model's 8192.
     processor_kwargs = dict(
         text=chat_texts,
         images=image_inputs,
         videos=video_inputs,
         padding=True,
+        truncation=True,
+        max_length=effective_max_length,
+        do_resize=False,
         return_tensors="pt",
     )
-    if has_visual_inputs:
-        # Keep multimodal placeholders intact; truncation may break image/video token alignment.
-        processor_kwargs["truncation"] = False
-    else:
-        processor_kwargs["truncation"] = True
-        processor_kwargs["max_length"] = effective_max_length
+    if video_metadata is not None:
+        processor_kwargs["video_metadata"] = video_metadata
+    processor_kwargs.update(video_kwargs or {})
     try:
         outputs = processor(**processor_kwargs)
     except RuntimeError as e:
         if "shape" in str(e) and "invalid for input of size" in str(e):
             logger.warning("Qwen3-VL preprocess failed with raw size; retrying with do_resize=True.")
-            outputs = processor(**processor_kwargs, do_resize=True)
+            processor_kwargs["do_resize"] = True
+            outputs = processor(**processor_kwargs)
         else:
             raise
     return outputs
@@ -2093,7 +2147,10 @@ def process_input_text(instruction, model_backbone, text=None, add_video_token=F
         return suffix
 
     prompt = instruction
-    if text:
+    if model_backbone == QWEN3_VL:
+        # Keep the instruction/text boundary recoverable so it can be routed to the system turn.
+        prompt = (instruction or "") + QWEN3_VL_INST_SEP + (text or "")
+    elif text:
         prompt = prompt + " " + text
     if add_video_token:
         video_token = VLM_VIDEO_TOKENS[model_backbone]

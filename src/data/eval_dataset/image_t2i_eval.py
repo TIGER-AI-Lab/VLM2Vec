@@ -5,7 +5,7 @@ from datasets import load_dataset
 from src.constant.dataset_hflocal_path import EVAL_DATASET_HF_PATH as EVAL_DATASET_LOCAL_PATH
 from src.utils.dataset_utils import load_hf_dataset
 from src.data.eval_dataset.base_eval_dataset import AutoEvalPairDataset, add_metainfo_hook, RESOLUTION_MAPPING
-from src.model.processor import VLM_IMAGE_TOKENS
+from src.model.processor import VLM_IMAGE_TOKENS, QWEN3_VL
 from src.model.processor import process_input_text
 
 
@@ -20,10 +20,14 @@ def data_prepare(batch_dict, *args, **kwargs):
     tgt_insts = batch_dict['tgt_inst'] if 'tgt_inst' in batch_dict else [""] * n
     for qry_inst, qry_text, tgt_inst, tgt_captions, tgt_img_paths in (
             zip(qry_insts, batch_dict['qry_text'], tgt_insts, batch_dict['tgt_text'], batch_dict['tgt_img_path'])):
-        qry_inst = qry_inst.replace("<|image_1|>", VLM_IMAGE_TOKENS[model_backbone])
-        query_text = qry_inst + ' ' + qry_text + '\n'
-        if kwargs['dataset_name'] == 'VisDial':
-            query_text += '\n' # to be consistent with v1
+        if model_backbone == QWEN3_VL:
+            # Go through process_input_text so the instruction can be routed to the system turn.
+            query_text = process_input_text(qry_inst.replace("<|image_1|>", "").strip(), model_backbone, text=qry_text)
+        else:
+            qry_inst = qry_inst.replace("<|image_1|>", VLM_IMAGE_TOKENS[model_backbone])
+            query_text = qry_inst + ' ' + qry_text + '\n'
+            if kwargs['dataset_name'] == 'VisDial':
+                query_text += '\n' # to be consistent with v1
         query_texts.append([query_text])
         query_images.append([None])
 
@@ -34,7 +38,12 @@ def data_prepare(batch_dict, *args, **kwargs):
             tgt_inst = tgt_inst.replace("<|image_1|>", "")
             tgt_inst_captions = []
             for tgt_cap in tgt_captions:
-                tgt_inst_caption = process_input_text(tgt_inst + ' ' + tgt_cap, model_backbone, text='', add_image_token=True)
+                if model_backbone == QWEN3_VL:
+                    # The caption is content, not instruction: keep it in the text slot so the
+                    # process_fn can drop the target instruction and keep the caption.
+                    tgt_inst_caption = process_input_text(tgt_inst, model_backbone, text=tgt_cap, add_image_token=True)
+                else:
+                    tgt_inst_caption = process_input_text(tgt_inst + ' ' + tgt_cap, model_backbone, text='', add_image_token=True)
                 tgt_inst_caption = tgt_inst_caption.replace(" \n", "\n") + '\n'
                 tgt_inst_captions.append(tgt_inst_caption)
             cand_texts.append(tgt_inst_captions)
