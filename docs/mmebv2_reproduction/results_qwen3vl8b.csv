@@ -58,7 +58,7 @@ video,YouCook2,hit@1,31.77,39.57,39.57,38.85,+0.72
 video,MEAN,hit@1,58.54,67.62,67.62,67.15,+0.47
 video,N,hit@1,18,18,18,18,
 visdoc,MMLongBench-doc,ndcg_linear@5,53.87,58.40,58.40,58.29,+0.11
-visdoc,MMLongBench-page-fixed,ndcg_linear@5,nan,59.79,59.79,60.29,-0.50
+visdoc,MMLongBench-page-fixed,ndcg_linear@5,,59.79,59.79,60.29,-0.50
 visdoc,ViDoRe_arxivqa,ndcg_linear@5,79.41,86.56,86.56,87.00,-0.44
 visdoc,ViDoRe_biomedical_lectures_v2_multilingual,ndcg_linear@5,60.80,71.41,71.41,71.59,-0.18
 visdoc,ViDoRe_docvqa,ndcg_linear@5,46.26,53.79,53.79,54.02,-0.23
@@ -74,12 +74,12 @@ visdoc,ViDoRe_syntheticDocQA_healthcare_industry,ndcg_linear@5,95.68,98.02,98.02
 visdoc,ViDoRe_tabfquad,ndcg_linear@5,94.74,97.01,97.01,96.67,+0.34
 visdoc,ViDoRe_tatdqa,ndcg_linear@5,59.67,69.95,69.95,69.97,-0.02
 visdoc,ViDoSeek-doc,ndcg_linear@5,84.69,86.18,86.18,86.10,+0.08
-visdoc,ViDoSeek-page-fixed,ndcg_linear@5,nan,86.99,86.99,88.38,-1.39
+visdoc,ViDoSeek-page-fixed,ndcg_linear@5,,86.99,86.99,88.38,-1.39
 visdoc,VisRAG_ArxivQA,ndcg_linear@5,78.41,87.99,87.99,88.21,-0.22
 visdoc,VisRAG_ChartQA,ndcg_linear@5,87.23,88.93,88.93,88.34,+0.59
 visdoc,VisRAG_InfoVQA,ndcg_linear@5,90.48,94.67,94.67,94.75,-0.08
 visdoc,VisRAG_MP-DocVQA,ndcg_linear@5,80.48,88.79,88.79,89.27,-0.48
 visdoc,VisRAG_PlotQA,ndcg_linear@5,66.00,73.87,73.98,74.80,-0.82
 visdoc,VisRAG_SlideVQA,ndcg_linear@5,93.09,96.80,96.80,96.73,+0.07
-visdoc,MEAN,ndcg_linear@5,nan,82.03,82.04,82.36,-0.33
-visdoc,N,ndcg_linear@5,24,24,24,24,
+visdoc,MEAN,ndcg_linear@5,75.99,82.03,82.04,82.36,-0.33
+visdoc,N,ndcg_linear@5,22,24,24,24,

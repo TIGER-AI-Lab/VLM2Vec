@@ -1,6 +1,6 @@
 # Qwen3-VL-Embedding-8B on MMEB-v1/v2: per-dataset results
 
-before = inference code before any fix; after = all fixes on the original branch (`scores/qwen3vl8b/`); PR = the same fixes rebased onto `main` (branch `rmeng/qwen3vl-mmebv2-fix`); LB = leaderboard file `leaderboard/Qwen3-VL-Embedding-8B.json`. Image/video: hit@1; visdoc: ndcg_linear@5. Blank = not in that run.
+before = inference code before any fix; after = all fixes on the original branch (`scores/qwen3vl8b/`); PR = the same fixes rebased onto `main` (branch `rmeng/qwen3vl-mmebv2-fix`); LB = leaderboard file `leaderboard/Qwen3-VL-Embedding-8B.json`. Image/video: hit@1; visdoc: ndcg_linear@5. Blank = not in that run; the MEAN of a column is over the sets it has.
 
 ## image (36 datasets): PR 80.12 vs LB 80.12
 
@@ -73,7 +73,7 @@ before = inference code before any fix; after = all fixes on the original branch
 | dataset | before | after | PR | LB | PR − LB |
 |---|--:|--:|--:|--:|--:|
 | MMLongBench-doc | 53.87 | 58.40 | 58.40 | 58.29 | +0.11 |
-| MMLongBench-page-fixed | nan | 59.79 | 59.79 | 60.29 | -0.50 |
+| MMLongBench-page-fixed |  | 59.79 | 59.79 | 60.29 | -0.50 |
 | ViDoRe_arxivqa | 79.41 | 86.56 | 86.56 | 87.00 | -0.44 |
 | ViDoRe_biomedical_lectures_v2_multilingual | 60.80 | 71.41 | 71.41 | 71.59 | -0.18 |
 | ViDoRe_docvqa | 46.26 | 53.79 | 53.79 | 54.02 | -0.23 |
@@ -89,11 +89,11 @@ before = inference code before any fix; after = all fixes on the original branch
 | ViDoRe_tabfquad | 94.74 | 97.01 | 97.01 | 96.67 | +0.34 |
 | ViDoRe_tatdqa | 59.67 | 69.95 | 69.95 | 69.97 | -0.02 |
 | ViDoSeek-doc | 84.69 | 86.18 | 86.18 | 86.10 | +0.08 |
-| ViDoSeek-page-fixed | nan | 86.99 | 86.99 | 88.38 | -1.39 |
+| ViDoSeek-page-fixed |  | 86.99 | 86.99 | 88.38 | -1.39 |
 | VisRAG_ArxivQA | 78.41 | 87.99 | 87.99 | 88.21 | -0.22 |
 | VisRAG_ChartQA | 87.23 | 88.93 | 88.93 | 88.34 | +0.59 |
 | VisRAG_InfoVQA | 90.48 | 94.67 | 94.67 | 94.75 | -0.08 |
 | VisRAG_MP-DocVQA | 80.48 | 88.79 | 88.79 | 89.27 | -0.48 |
 | VisRAG_PlotQA | 66.00 | 73.87 | 73.98 | 74.80 | -0.82 |
 | VisRAG_SlideVQA | 93.09 | 96.80 | 96.80 | 96.73 | +0.07 |
-| **MEAN** | **nan** (n=24) | **82.03** | **82.04** | **82.36** | **-0.33** |
+| **MEAN** | **75.99** (n=22) | **82.03** | **82.04** | **82.36** | **-0.33** |
