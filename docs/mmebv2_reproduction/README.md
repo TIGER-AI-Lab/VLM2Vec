@@ -219,7 +219,10 @@ and matter for this recipe:
    are at most 3%. Measured on `main`: HMDB51 84.50 padded vs 86.80 with the reference
    behaviour (the number in the tables above), MSR-VTT 59.10 vs 59.50, MVBench 68.17 vs 68.27.
    The branch restores the `num_frames <= len(frames)` guard in a separate commit, so short
-   clips are used as saved.
+   clips are used as saved. This function is shared with every other video parser and with the
+   msrvtt/msvd/didemo/llavahound training datasets, so it changes short-clip inputs for all
+   backbones; those training datasets now size their frame lists by the frames loaded (they
+   sized them by `num_frames`, which the train collator indexes).
 3. **VisRAG loader memory.** `main` maps the VisRAG corpus with `num_proc=4, batch_size=1024`.
    With 8 ranks that is 32 workers decoding 1024 pages each; the node (512 GB) OOM-killed on
    VisRAG_ArxivQA. The branch restores the previous `num_proc=1, batch_size=256`.
