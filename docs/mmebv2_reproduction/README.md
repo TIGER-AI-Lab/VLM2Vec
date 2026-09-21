@@ -227,7 +227,7 @@ and matter for this recipe:
 ## Files
 
 - `README.md` - this document
-- `results_qwen3vl8b.md` / `results_qwen3vl8b.csv` - per-dataset before / after / PR-branch / leaderboard, with a by-modality summary (`results_qwen3vl8b_summary.csv`)
+- `results_qwen3vl8b.md` / `results_qwen3vl8b.csv` - per-dataset before fix / PR branch / leaderboard; `results_qwen3vl8b_summary.csv` - the same by modality
 - `scores/qwen3vl8b/{image,video,visdoc}/` - `*_score.json` of the final runs
 - `leaderboard/Qwen3-VL-Embedding-8B.json` - the leaderboard's per-dataset file
 - code: `src/model/model.py`, `src/model/processor.py`, `src/data/collator/eval_collator.py`,

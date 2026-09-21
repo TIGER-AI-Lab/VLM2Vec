@@ -1,5 +1,5 @@
-modality,n_datasets,before_fix,n_before,after_fix,pr_version,leaderboard,pr_minus_lb,after_minus_before
-image,36,73.02,36,80.12,80.12,80.12,-0.01,+7.09
-video,18,58.54,18,67.62,67.62,67.15,+0.47,+9.08
-visdoc,24,75.99,22,82.03,82.04,82.36,-0.33,+6.04
-all (plain mean over datasets),78,70.45,76,77.82,77.82,77.82,+0.01,+7.37
+modality,n_datasets,before_fix,n_before_fix,pr_branch_main_plus_fixes,leaderboard,pr_branch_minus_leaderboard
+image,36,73.02,36,80.12,80.12,-0.01
+video,18,58.54,18,67.62,67.15,+0.47
+visdoc,24,75.99,22,82.04,82.36,-0.33
+all datasets (plain mean),78,70.45,76,77.82,77.82,+0.01
