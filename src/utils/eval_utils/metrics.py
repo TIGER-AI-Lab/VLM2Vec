@@ -199,7 +199,15 @@ class RankingMetrics:
             true_labels = case["label"]
             if not isinstance(true_labels, (list, set)): # Allow set for true_labels
                 true_labels = [true_labels]
-            true_labels = list(set(true_labels)) # Ensure unique true labels and convert to list for consistency
+            rel_scores = case["rel_scores"] if "rel_scores" in case else None
+            if rel_scores is not None:
+                if isinstance(true_labels, set) or len(true_labels) != len(rel_scores):
+                    raise ValueError("Graded relevance requires ordered labels and one score per label.")
+                label_rels = dict(zip(true_labels, rel_scores))
+                true_labels = list(label_rels.keys())
+                rel_scores = list(label_rels.values())
+            else:
+                true_labels = list(dict.fromkeys(true_labels))
 
             # For MAP and MRR, we often want the original list of true_labels,
             # even if empty, for consistent calculation across cases.
@@ -218,7 +226,6 @@ class RankingMetrics:
                 if "f1" in self.metric_list:
                     metric_results_accumulators["f1"][k].append(self.f1_at_k(prediction, true_labels, k))
                 if "ndcg" in self.metric_list:
-                    rel_scores = case["rel_scores"]
                     metric_results_accumulators["ndcg_linear"][k].append(
                         self.ndcg_at_k(prediction, true_labels, k, rel_scores, form="linear"))
                     metric_results_accumulators["ndcg_exponential"][k].append(
