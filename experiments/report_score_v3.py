@@ -25,6 +25,7 @@ EXAMPLES = [
             "max_length_tokens": None,   # Please fill in
             "model_release_date": "2025-04-01", # Please adjust this date
             "score_source": "",           # e.g., "Self-Reported" or "TIGER-Lab"
+            "reported_by": ...,          # credit name shown in the "Reported By" column, should be institution/company name, or a preferred name if you are independent researcher. e.g., "Google DeepMind", "Anthropic", "University of Waterloo", or a personal name; falls back to data_source if empty
             "url": ""                    # e.g., Paper, GitHub, or Hugging Face link
         }
     },
@@ -37,6 +38,7 @@ EXAMPLES = [
             "max_length_tokens": None,   # Please fill in
             "model_release_date": "2025-05-15", # Please adjust this date
             "score_source": "",           # e.g., "Self-Reported" or "TIGER-Lab"
+            "reported_by": ...,          # credit name shown in the "Reported By" column, should be institution/company name, or a preferred name if you are independent researcher. e.g., "Google DeepMind", "Anthropic", "University of Waterloo", or a personal name; falls back to data_source if empty
             "url": ""                    # e.g., Paper, GitHub, or Hugging Face link
         }
     },
@@ -58,6 +60,7 @@ EXPERIMENTS = [
             "max_length_tokens": ...,
             "model_release_date": ...,
             "data_source": "Self-Reported",
+            "reported_by": ...,          # credit name shown in the "Reported By" column, should be institution/company name, or a preferred name if you are an independent researcher. e.g., "Google DeepMind", "Anthropic", "University of Waterloo", or a personal name; falls back to data_source if empty
             "url": ..., 
             "contact": ...,
         }
